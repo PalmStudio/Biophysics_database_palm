@@ -32,8 +32,8 @@ Period_needed =
 
 # Computing corresponding periods -----------------------------------------
 
-mic3_climate$DateTime_start = 0
-mic3_climate$DateTime_end = 0
+mic3_climate$DateTime_start = NA
+mic3_climate$DateTime_end = NA
 
 for (i in 1:nrow(Period_needed)) {
   all_in_period_i = mic3_climate$DateTime >= Period_needed$DateTime_start[i] & mic3_climate$DateTime <= Period_needed$DateTime_end[i]
@@ -41,8 +41,15 @@ for (i in 1:nrow(Period_needed)) {
   mic3_climate$DateTime_end[all_in_period_i] = Period_needed$DateTime_end[i]
 }
 
-mic3_climate%>%
-  filter(DateTime_start != 0)%>%
+mic3_climate_int = 
+  mic3_climate%>%
+  filter(!is.na(DateTime_start))%>%
   group_by(DateTime_start)%>%
-  # summarise()
-# !!! RV: Continue here, summarise each column to integrate it for the time-step
+  summarise_if(is.numeric,mean)%>%
+  mutate(DateTime_start = lubridate::as_datetime(DateTime_start),
+         DateTime_end = lubridate::as_datetime(DateTime_end))
+
+
+# Saving the integrated database ------------------------------------------
+
+data.table::fwrite(mic3_climate_int, "0-data/1-climate/mic3_climate_5min.csv")
