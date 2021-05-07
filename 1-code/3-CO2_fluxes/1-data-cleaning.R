@@ -17,7 +17,6 @@ df_CO2 =
   mutate(DateTime = lubridate::dmy_hm(MPV1_time),
          DateTime_30min = lubridate::round_date(DateTime, "30minute"))
 
-
 # Importing the data to know when the chamber was opened ------------------
 
 df_open = 
@@ -31,15 +30,27 @@ df_open =
 
 
 # Importing the chamber climate -------------------------------------------
+# NB: this database is computed in the script "1-code/2-climate/2-make-5min-timestep-climate.R"
+# This file is integrated at a 5min time-step
 
-# ...
-
+df_climate_5min = 
+  data.table::fread("0-data/1-climate/mic3_climate_5min.csv", 
+                    data.table = FALSE)%>%
+  mutate(DateTime = floor_date(lubridate::ymd_hms(DateTime_start), 
+                               unit = "minute"))
 
 # Joining the data --------------------------------------------------------
 
+# Both df_CO2 and df_climate_5min share the same time-steps because the latter 
+# was computing using the former. Joining them together:
+df = left_join(df_CO2, df_climate_5min, by = "DateTime")
+
+# Joining the door data at 30min resolution (because if finner resolution, can 
+# happen at a time where we don't measure CO2):
 df = 
-  left_join(df_CO2, df_open, by = "DateTime_30min",suffix = c("_CO2", "_open"))%>%
+  left_join(df, df_open, by = "DateTime_30min",suffix = c("_CO2", "_open"))%>%
   mutate(door = if_else(is.na(door),0,1))
+
 
 # Plotting the moment when the door was opened:
 p =
@@ -70,5 +81,24 @@ plotly::ggplotly(p_filt)
 
 # Filter points around CO2 instruction change -----------------------------
 
-df$around_instruction = is_val_around(df$door,1,points_after,points_before)
+p_filt =
+  df_filtered%>%
+  ggplot(aes(x = DateTime_CO2))+
+  geom_point(aes(y = flux_umol_s, color = CO2_change))
+
+plotly::ggplotly(p_filt)
+
+df_filtered_change = df_filtered%>%filter(CO2_change != "change")
+
+p_filt_change =
+  df_filtered_change%>%
+  ggplot(aes(x = DateTime_CO2))+
+  geom_point(aes(y = CO2_dry_MPV2, color = CO2_change))
+
+plotly::ggplotly(p_filt_change)
+
+
+# Saving the new cleaned database -----------------------------------------
+
+data.table::fwrite(df_filtered_change, "0-data/2-CO2/CO2_fluxes.csv")
 
