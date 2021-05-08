@@ -68,11 +68,11 @@ points_after = 9  # Number of points to filter-out after the opening of the door
 # Flag time-steps that match points_before and points_after around a door opening:
 df$around_opening = is_val_around(df$door,1,points_after,points_before)
 
-df_filtered= df%>%filter(around_opening != 1)
+df$filter_door = df$around_opening != 1
 
 # Plotting the moment when the door was opened:
 p_filt =
-  df_filtered%>%
+  df%>%
   ggplot(aes(x = DateTime_CO2))+
   geom_point(aes(y = flux_umol_s, color = as.factor(door)))
 
@@ -82,23 +82,51 @@ plotly::ggplotly(p_filt)
 # Filter points around CO2 instruction change -----------------------------
 
 p_filt =
-  df_filtered%>%
+  df%>%
+  # filter(filter_door)%>%
   ggplot(aes(x = DateTime_CO2))+
   geom_point(aes(y = flux_umol_s, color = CO2_change))
 
 plotly::ggplotly(p_filt)
 
-df_filtered_change = df_filtered%>%filter(CO2_change != "change")
+df$filter_change = df$CO2_change != "change"
+
+# Filter out points with [CO2] in between instructions --------------------
 
 p_filt_change =
-  df_filtered_change%>%
+  df%>%
+  filter(filter_door & filter_change)%>%
   ggplot(aes(x = DateTime_CO2))+
-  geom_point(aes(y = CO2_dry_MPV2, color = CO2_change))
+  geom_point(aes(y = CO2_dry_MPV1, color = as.factor(CO2_instruction)))
 
 plotly::ggplotly(p_filt_change)
 
+df$filter_change2 = 
+  (df$CO2_instruction == 400 & df$CO2_dry_MPV1 < 430) |
+  (df$CO2_instruction == 600 & df$CO2_dry_MPV1 > 570)|
+  (df$CO2_instruction == 800 & df$CO2_dry_MPV1 > 770)
+
+p_filt_change2 =
+  df%>%
+  filter(filter_door & filter_change & filter_change2)%>%
+  ggplot(aes(x = DateTime_CO2))+
+  geom_point(aes(y = flux_umol_s, color = as.factor(CO2_instruction)))
+
+plotly::ggplotly(p_filt_change2)
+
+
+# All filters -------------------------------------------------------------
+
+df = df%>%mutate(to_keep = filter_door & filter_change & filter_change2)
+
+p_to_keep =
+  df%>%
+  ggplot(aes(x = DateTime_CO2))+
+  geom_point(aes(y = flux_umol_s, color = to_keep))
+
+plotly::ggplotly(p_to_keep)
 
 # Saving the new cleaned database -----------------------------------------
 
-data.table::fwrite(df_filtered_change, "0-data/2-CO2/CO2_fluxes.csv")
+data.table::fwrite(df%>%filter(to_keep), "0-data/2-CO2/CO2_fluxes.csv")
 

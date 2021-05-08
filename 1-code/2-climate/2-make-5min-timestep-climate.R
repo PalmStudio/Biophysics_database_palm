@@ -22,12 +22,12 @@ mic3_climate =
   mutate(DateTime = lubridate::ymd_hms(DateTime))%>%
   mutate(CO2_instruction = 0.0)
 
-# p =
-#   mic3_climate%>%
-#   filter(DateTime>=as.POSIXct("2021-03-27T00:00:00") & DateTime<as.POSIXct("2021-03-29T00:00:00"))%>%
-#   ggplot(aes(x = DateTime))+
-#   geom_point(aes(y = CO2_flux))
-# plotly::ggplotly(p)
+p =
+  mic3_climate%>%
+  filter(DateTime>=as.POSIXct("2021-04-26T00:00:00") & DateTime<as.POSIXct("2021-04-27T00:00:00"))%>%
+  ggplot(aes(x = DateTime))+
+  geom_point(aes(y = Ta_instruction))
+plotly::ggplotly(p)
 
 # Recomputing the CO2 forcing in the chamber from the input flux, which is itself
 # quite noisy:
@@ -91,7 +91,7 @@ mic3_climate_int_char =
 # Flag values just before or after a change as change to be large:
 mic3_climate_int_char$CO2_change = 
   is_val_around(mic3_climate_int_char$CO2_change,"change",
-                points_after = 2,
+                points_after = 5,
                 points_before = 1)
 
 mic3_climate_int = mic3_climate_int_num
