@@ -1,3 +1,43 @@
+extract_temperature = function(img_file, mask_file, climate){
+  
+  img = read_image(image_file)
+  
+  DateTime_img = 
+    round_date(as.POSIXct(img$settings$Dates$FileModificationDateTime, tz = "UTC") - 3510, "30 second")
+  # There was a delay of 58m32s in the camera clock
+  
+  climate_img = 
+    climate_mic3%>%
+    filter(.data$DateTime == DateTime_img)%>%
+    select(Rh_measurement, Ta_measurement)
+  
+  temperature = get_temperature(img$img,
+                                img$settings,
+                                Tair = climate_img$Ta_measurement,
+                                Rh = climate_img$Rh_measurement)
+  
+  # plotTherm(temperature, h = img$settings$h, w = img$settings$w, 
+  #           minrangeset = 30, 
+  #           maxrangeset = 42,
+  #           trans="rotate270.matrix")
+  
+  mask = 
+    fread(mask_file, data.table = FALSE)%>%
+    mutate_all(round)
+  
+  mask_polygon = sp::SpatialPolygons(list(sp::Polygons(list(sp::Polygon(mask)), ID = "A")))
+  
+  temp_raster = raster(temperature, xmn = 0, xmx = ncol(temperature), ymn = 0, 
+                       ymx = nrow(temperature))
+  
+  temp_P1F3_S4 = raster::extract(temp_raster,mask_polygon)
+  # plot(temp_raster, col = viridis(50))
+  # plot(mask_polygon, add = TRUE)
+  list(mean = mean(temp_P1F3_S4[[1]]), min = min(temp_P1F3_S4[[1]]),
+       max = max(temp_P1F3_S4[[1]]), sd = sd(temp_P1F3_S4[[1]]))
+}
+
+
 #' Read thermal image
 #'
 #' @param image_file The path to a thermal image

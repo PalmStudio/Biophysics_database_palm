@@ -18,7 +18,7 @@ function extract_temperature(img_file, mask_file, climate)
     # Import the mask
     mask = CSV.read(mask_file, DataFrame)
 
-    mask_temperature(temp_mat, mask)
+    (mask_temperature(temp_mat, mask)..., :DateTime => DateTime_img)
 end
 
 """
