@@ -17,6 +17,24 @@ df_CO2 =
   mutate(DateTime = lubridate::dmy_hm(MPV1_time),
          DateTime_30min = lubridate::round_date(DateTime, "30minute"))
 
+# MPV1_time
+# Valve is open during 5 minutes. The two first minutes are thrown away (purge time),
+# then we use the 3 remaining minutes to compute the fluxes. Then the time is also 
+# integrated.
+# MPV1_time: measuring the input of the chamber
+# MPV2_time: output of the chamber
+# We consider th emeasurement instantaneous, the air is well mixed + transport of 
+# the flux to the machone is fast.
+# Response time is way faster in a Walz than in a chamber. We can compute the response 
+# time using volume of the chamber / (Flow m3/h). The measurement of the fluxes are 
+# amortazided by the response time of the system.
+# Utiliser filtre passe-bas pour recalculer la mesure instantanee.
+# Si on coupe la lumiere d'un coup, on va mesurer la reponse tout de suite mais son
+# amplitude va etre tamponnee a cause du temps de reponse du systeme (a cause du 
+# volume eleve de la chambre).
+# Pour eviter l'effet de temps de reponse, on peut integrer les flux a l'echelle du
+# pas de temps de reponse.
+
 # Importing the data to know when the chamber was opened ------------------
 
 df_open = 
@@ -56,7 +74,7 @@ df =
 p =
   df%>%
   ggplot(aes(x = DateTime_CO2))+
-  geom_point(aes(y = CO2_dry_MPV2, color = as.factor(door)))
+  geom_point(aes(y = flux_umol_s, color = as.factor(door)))
 
 plotly::ggplotly(p)
 

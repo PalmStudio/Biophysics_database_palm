@@ -24,7 +24,7 @@ mic3_climate =
 
 p =
   mic3_climate%>%
-  filter(DateTime>=as.POSIXct("2021-04-26T00:00:00") & DateTime<as.POSIXct("2021-04-27T00:00:00"))%>%
+  # filter(DateTime>=as.POSIXct("2021-04-26T00:00:00") & DateTime<as.POSIXct("2021-04-27T00:00:00"))%>%
   ggplot(aes(x = DateTime))+
   geom_point(aes(y = Ta_instruction))
 plotly::ggplotly(p)
@@ -32,7 +32,7 @@ plotly::ggplotly(p)
 # Recomputing the CO2 forcing in the chamber from the input flux, which is itself
 # quite noisy:
 
-mic3_climate$CO2_instruction[mic3_climate$CO2_flux>=30 &
+mic3_climate$CO2_instruction[mic3_climate$CO2_flux >=30 &
                                mic3_climate$CO2_flux <= 45] = 400.0
 
 mic3_climate$CO2_instruction[mic3_climate$CO2_flux>=45 &
