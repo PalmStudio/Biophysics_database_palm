@@ -27,3 +27,20 @@ climate_mic3 = CSV.read("0-data/1-climate/climate_mic3.csv", DataFrame, dateform
 extract_temperature(img_file, mask_file, climate_mic3) # 1.659 per image, compared to 2.30 in R
 
 # plot_mask(img_file, mask_file)
+
+
+# Apply the mask on the whole set of images:
+images = readdir("D:/Cirad/PalmStudio - Manip EcoTron 2021/stageRValentin/thermal_camera_photos/valentin/P1-S4-S5-S6-20210330_152159-20210331_103918/1", join = true)
+leaf = "P1F3-S4-S5-S6"
+df_temp = DataFrame(:id => String[], :DateTime => DateTime[], :mean => Float64[], :min => Float64[], :max => Float64[], :std => Float64[])
+for (i, path) in enumerate(images)
+    temps = extract_temperature(path, mask_file, climate_mic3)
+    push!(df_temp, (temps..., id = leaf))
+end
+
+scatter(df_temp.DateTime,df_temp.mean, label = "")
+xlabel!("Time")
+ylabel!("Leaf temperature (°C)")
+title!(leaf)
+
+CSV.write("D:/Cirad/PalmStudio - Manip EcoTron 2021/stageRValentin/thermal_camera_photos/valentin/P1F3-S4-S5-S6-20210330_142758-20210331_103918.csv", df_temp)

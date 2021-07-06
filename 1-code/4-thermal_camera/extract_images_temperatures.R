@@ -19,7 +19,5 @@ climate_mic3 =
   fread(climate_file, data.table = FALSE)%>%
   mutate(DateTime = as.POSIXct(DateTime))
 
-
-
-
-microbenchmark(test = extract_temperature(image_file,mask_file,climate_mic3))
+# Carefull!!!! The function does not work the mask is not properly oriented
+extract_temperature(image_file,mask_file,climate_mic3)
