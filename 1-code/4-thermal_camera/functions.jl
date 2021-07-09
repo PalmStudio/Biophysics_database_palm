@@ -1,11 +1,44 @@
+
+"""
+    parse_mask_name(mask_name)
+
+Parse a mask file name into a Dictionary with plant name, leaf name, scenario, first and last
+images dates.
+"""
+function parse_mask_name(mask_name)
+    # println(mask_name)
+    file_name = splitext(basename(mask_name))[1]
+    split_file_name = split(file_name, "-")
+    plant, leaf = parse.(Int, split(popfirst!(split_file_name)[2:end], "F"))
+
+    info = Dict(:plant => plant, :leaf => leaf, :scenario => [])
+
+    # There may be a list of scenarios in the name:
+    i = 0
+    while true
+        i += 1
+        if occursin(r"^[A-Z]", split_file_name[1])
+            # This is a scenario name
+            push!(info[:scenario], popfirst!(split_file_name))
+        else
+            break
+        end
+    end
+
+    # This is the date
+    push!(info, :date_first_image => DateTime(popfirst!(split_file_name), DateFormat("yyyymmdd_HHMMSS")))
+    push!(info, :date_last_image => DateTime(split(popfirst!(split_file_name), r"_[A-Z\s]")[1], DateFormat("yyyymmdd_HHMMSS")))
+    info
+end
+
 """
     extract_temperature(img_file, mask_file, climate_file)
 
-Return a summary of the temperature data of the mask in `mask_file` for the `img_file` thermal image.
+Return a summary of the temperature data of the mask(s) in `mask_file` for the `img_file` thermal image.
 The computation of the temperature is corrected by the chamber air temperature and relative humidity
 measured at the same time.
 """
-function extract_temperature(img_file, mask_file, climate)
+function extract_temperature(img_file, mask, climate)
     # Importing the chamber temperature and humidity:
     DateTime_img = DateTime(ZonedDateTime(CSV.File(`exiftool -FileModifyDate -n -csv $img_file`).FileModifyDate[1], DateFormat("yyyy:mm:dd HH:MM:SSzzzz")))
     DateTime_img -= Dates.Second(3512) # There was a delay of 58m32s in the camera clock
@@ -14,12 +47,84 @@ function extract_temperature(img_file, mask_file, climate)
     climate_img = select(climate_img, [:Rh_measurement, :Ta_measurement]) # Extract Tair and Rh
 
     temp_mat = compute_temperature(img_file, climate_img.Ta_measurement[1], climate_img.Rh_measurement[1]) # 1.067s for each image
-
-    # Import the mask
-    mask = CSV.read(mask_file, DataFrame)
+    # temp_mat = compute_temperature(img_file, 22.0, 0.6)
 
     (mask_temperature(temp_mat, mask)..., DateTime = DateTime_img)
 end
+
+function extract_temperature(img_file, mask::T, mask_info, climate) where T <: Dict{String,DataFrame}
+    # Importing the chamber temperature and humidity:
+    DateTime_img = DateTime(ZonedDateTime(CSV.File(`exiftool -FileModifyDate -n -csv $img_file`).FileModifyDate[1], DateFormat("yyyy:mm:dd HH:MM:SSzzzz")))
+    DateTime_img -= Dates.Second(3512) # There was a delay of 58m32s in the camera clock
+    DateTime_img = round(DateTime_img, Dates.Second(30)) # round at 30s as for the climate data
+    climate_img = filter(:DateTime => ==(DateTime_img), climate)  # Extract climate at that time
+    climate_img = select(climate_img, [:Rh_measurement, :Ta_measurement]) # Extract Tair and Rh
+
+    temp_mat = compute_temperature(img_file, climate_img.Ta_measurement[1], climate_img.Rh_measurement[1]) # 1.067s for each image
+    # temp_mat = compute_temperature(img_file, 22.0, 0.6)
+
+    # Import the masks
+    df_temp = DataFrame(:plant => Int[], :leaf => Int[], :DateTime => DateTime[],
+                        :Tl_mean => Float64[], :Tl_min => Float64[], :Tl_max => Float64[],
+                        :Tl_std => Float64[], :n_pixel => Int[], :mask =>  String[]
+                        )
+
+    for (k, v) in mask
+        mask_info_i = filter(:path => ==(k), mask_info)
+        push!(
+            df_temp,
+            (mask_temperature(temp_mat, v)...,
+            DateTime = DateTime_img,
+            leaf = mask_info_i.leaf[1],
+            plant = mask_info_i.plant[1],
+            mask = basename(k))
+        )
+    end
+
+    return df_temp
+end
+
+function compute_all_images(image_files, mask_files, climate)
+
+    mask_df = DataFrame(parse_mask_name.(mask_files))
+    mask_df[!,:path] = mask_files
+    sort!(mask_df, :date_first_image)
+
+    # Import all masks in-memory for efficiency:
+    masks = Dict{String,DataFrame}()
+    for i in 1:size(mask_df, 1)
+        push!(masks, mask_df[i,:path] => CSV.read(mask_df[i,:path], DataFrame))
+    end
+    d_format = DateFormat("yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")
+    image_dates = DateTime.(basename.(image_files), d_format)
+    img_df = DataFrame(path = image_files, date = image_dates)
+
+    df_temp = DataFrame(:plant => Int[], :leaf => Int[], :DateTime => DateTime[],
+                        :Tl_mean => Float64[], :Tl_min => Float64[], :Tl_max => Float64[],
+                        :Tl_std => Float64[], :n_pixel => Int[], :mask =>  String[]
+                        )
+
+    for i in 1:size(img_df, 1)
+        img_date = img_df[i,:date]
+        masks_img_i = filter([:date_first_image,:date_last_image] => (x, y) -> x <= img_date && y >= img_date, mask_df)
+        filter([:date_first_image,:date_last_image] => (x, y) -> x <= img_date && y >= img_date, mask_df)
+
+        if size(masks_img_i, 1) > 0
+            # We have at least one mask for this image
+            append!(
+                df_temp,
+                extract_temperature(
+                    img_df[i,:path],
+                    filter(x -> x.first in masks_img_i.path, masks), # use only the filters we need
+                    masks_img_i,
+                    climate
+                )
+            )
+        end
+    end
+    return df_temp
+end
+
 
 """
     plot_mask(image, mask)
@@ -51,7 +156,8 @@ function mask_temperature(temp_mat, mask)
     min_t = minimum(buffer)
     max_t = maximum(buffer)
     sd_t = std(buffer)
-    (mean = mean(buffer), min = minimum(buffer), max = maximum(buffer), std = std(buffer))
+
+    (Tl_mean = mean(buffer), Tl_min = minimum(buffer), Tl_max = maximum(buffer), Tl_std = std(buffer), n_pixel = length(buffer))
 end
 
 function standardize(mat)
@@ -99,18 +205,24 @@ end
 # @btime convert.(Int64, reinterpret(UInt16, load(tempfile)))
 # @btime reinterpret(UInt16, load(tempfile))
 """
-    compute_temperature(file)
+    compute_temperature(file, Tair, Rh, emmissivity = 0.98)
 
 Computes the temperature from a FLIR camera image. The `file` argument is the path to the
-image.
+image. `Tair` is in °C, `Rh` in %. The default `emmissivity` is 0.98 as taken from López et
+al. (2012).
 
+# References
+
+López, A., F. D. Molina-Aiz, D. L. Valera, et A. Peña. 2012. « Determining the Emissivity of
+the Leaves of Nine Horticultural Crops by Means of Infrared Thermography ». Scientia
+Horticulturae 137 (avril): 49‑58. https://doi.org/10.1016/j.scienta.2012.01.022.
 """
-function compute_temperature(file, Tair, Rh)
+function compute_temperature(file, Tair, Rh, emmissivity = 0.98)
     image = load_FLIR(file) # NB: takes ~700ms for an image, compared to 1.8s in R
 
     vars =
     [
-        "Emissivity", # Measured emissivity - should be ~0.95 or 0.96
+        # "Emissivity", # Measured emissivity - should be ~0.95 or 0.96
         "DateTimeOriginal", # Date of the creation of the file
         "FileModificationDateTime", # date of last file modification
         # Planck constants for camera:
@@ -126,7 +238,7 @@ function compute_temperature(file, Tair, Rh)
         "AtmosphericTransX",     # Atmospheric Transmittance X
         "ObjectDistance", # object distance in metres
         "FocusDistance", # focus distance in metres
-        "ReflectedApparentTemperature",
+        # "ReflectedApparentTemperature",
         # "AtmosphericTemperature", # Atmospheric temperature, should be corrected by measurement
         "IRWindowTemperature",
         "IRWindowTransmission", # IR Window transparency
@@ -143,14 +255,17 @@ function compute_temperature(file, Tair, Rh)
     # -csv means return result in csv format
 
     temperature(
-        image, mdata.Emissivity[1],
+        image,
+        emmissivity, # López et al. (2012), see below for full ref
+        # mdata.Emissivity[1], # If you want to use the one from the camera
         mdata.ObjectDistance[1],
-        mdata.ReflectedApparentTemperature[1],
+        # mdata.ReflectedApparentTemperature[1], # This one we don't know so we take it at Tair
+        Tair,
         # mdata.AtmosphericTemperature[1],
         Tair,
         mdata.IRWindowTemperature[1],
         mdata.IRWindowTransmission[1],
-        # mdata.RelativeHumidity[1],
+        # mdata.RelativeHumidity[1] * 100,
         Rh,
         mdata.PlanckR1[1],
         mdata.PlanckB[1],
@@ -162,7 +277,7 @@ function compute_temperature(file, Tair, Rh)
         mdata.AtmosphericTransBeta1[1],
         mdata.AtmosphericTransBeta2[1],
         mdata.AtmosphericTransX[1]
-    )
+)
 end
 
 """
@@ -191,7 +306,7 @@ Determined by user.
 - `OD`: Object distance from thermal camera in metres
 - `RTemp`: Apparent reflected temperature (oC) of the enrivonment impinging on the object of
 interest - one value from FLIR file (oC), default 20C.
-- `ATemp`: Atmospheric temperature (oC) for infrared tranmission loss - one value from FLIR
+- `ATemp`: Atmospheric temperature (oC) for infrared transmission loss - one value from FLIR
 file (oC) - default value is set to be equal to the reflected temperature. Transmission loss
 is a function of absolute humidity in the air.
 - `IRWTemp`: Infrared Window Temperature (oC). Default is set to be equivalent to reflected
