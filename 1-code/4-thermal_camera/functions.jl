@@ -1,3 +1,4 @@
+using Core:println
 
 """
     parse_mask_name(mask_name)
@@ -32,6 +33,24 @@ function parse_mask_name(mask_name)
 end
 
 """
+    distrib_compute(n, mask_dir, img_dir, csv_dir)
+
+Apply `compute_all_images` over a range of images given by `n`.
+"""
+function distrib_compute(n, mask_dir, img_dir, csv_dir)
+
+    mask_files = readdir(mask_dir, join = true)
+    mask_files = filter(x -> occursin(r".csv$", x), mask_files)
+
+    image_files = readdir(img_dir, join = true)
+
+    image_files = image_files[n]
+
+    df_all = compute_all_images(image_files, mask_files, climate_mic3)
+    CSV.write(joinpath(csv_dir, "leaf_temperature_$(n[1])-$(n[end]).csv"), df_all)
+end
+
+"""
     extract_temperature(img_file, mask_file, climate_file)
 
 Return a summary of the temperature data of the mask(s) in `mask_file` for the `img_file` thermal image.
@@ -57,7 +76,21 @@ function extract_temperature(img_file, mask::T, mask_info, climate) where T <: D
     DateTime_img = DateTime(ZonedDateTime(CSV.File(`exiftool -FileModifyDate -n -csv $img_file`).FileModifyDate[1], DateFormat("yyyy:mm:dd HH:MM:SSzzzz")))
     DateTime_img -= Dates.Second(3512) # There was a delay of 58m32s in the camera clock
     DateTime_img = round(DateTime_img, Dates.Second(30)) # round at 30s as for the climate data
-    climate_img = filter(:DateTime => ==(DateTime_img), climate)  # Extract climate at that time
+     # Extract climate at that time, and if not found, extract climate at max one minute near it:
+    climate_img = filter(:DateTime => x -> x == DateTime_img || x <= DateTime_img + Minute(1) && x >= DateTime_img - Minute(1), climate)
+
+    if size(climate_img, 1) > 1
+        climate_img = climate_img[[findmin(abs.(climate_img.DateTime .- DateTime_img))[2]],:]
+    elseif size(climate_img, 1) == 0
+        # Not meteo time-step found near the image, return an empty DataFrame
+        df_temp =  DataFrame(:plant => Int[], :leaf => Int[], :DateTime => DateTime[],
+                        :Tl_mean => Float64[], :Tl_min => Float64[], :Tl_max => Float64[],
+                        :Tl_std => Float64[], :n_pixel => Int[], :mask =>  String[]
+                        )
+        println("No climate found near image $(basename(img_file)). Skipping this image.")
+        return df_temp
+    end
+
     climate_img = select(climate_img, [:Rh_measurement, :Ta_measurement]) # Extract Tair and Rh
 
     temp_mat = compute_temperature(img_file, climate_img.Ta_measurement[1], climate_img.Rh_measurement[1]) # 1.067s for each image
@@ -104,22 +137,26 @@ function compute_all_images(image_files, mask_files, climate)
                         :Tl_std => Float64[], :n_pixel => Int[], :mask =>  String[]
                         )
 
+    p = Progress(size(img_df, 1), 1)
     for i in 1:size(img_df, 1)
+        next!(p)
         img_date = img_df[i,:date]
         masks_img_i = filter([:date_first_image,:date_last_image] => (x, y) -> x <= img_date && y >= img_date, mask_df)
-        filter([:date_first_image,:date_last_image] => (x, y) -> x <= img_date && y >= img_date, mask_df)
 
         if size(masks_img_i, 1) > 0
             # We have at least one mask for this image
-            append!(
-                df_temp,
+            i_temp =
+            try
                 extract_temperature(
                     img_df[i,:path],
                     filter(x -> x.first in masks_img_i.path, masks), # use only the filters we need
                     masks_img_i,
                     climate
                 )
-            )
+            catch
+                println("Issue with image $(img_df[i,:path])")
+            end
+            append!(df_temp, i_temp)
         end
     end
     return df_temp
@@ -218,9 +255,9 @@ the Leaves of Nine Horticultural Crops by Means of Infrared Thermography ». Sc
 Horticulturae 137 (avril): 49‑58. https://doi.org/10.1016/j.scienta.2012.01.022.
 """
 function compute_temperature(file, Tair, Rh, emmissivity = 0.98)
-    image = load_FLIR(file) # NB: takes ~700ms for an image, compared to 1.8s in R
+            image = load_FLIR(file) # NB: takes ~700ms for an image, compared to 1.8s in R
 
-    vars =
+            vars =
     [
         # "Emissivity", # Measured emissivity - should be ~0.95 or 0.96
         "DateTimeOriginal", # Date of the creation of the file
@@ -248,13 +285,13 @@ function compute_temperature(file, Tair, Rh, emmissivity = 0.98)
     ]
     #  Original work: R package `Thermimage`.
 
-    parsed_vars = "-" .* vars
+            parsed_vars = "-" .* vars
     # Read the image metadata:
-    mdata = CSV.File(`exiftool $parsed_vars -n -csv $file`)
+            mdata = CSV.File(`exiftool $parsed_vars -n -csv $file`)
     # -n means no print conversion
     # -csv means return result in csv format
 
-    temperature(
+            temperature(
         image,
         emmissivity, # López et al. (2012), see below for full ref
         # mdata.Emissivity[1], # If you want to use the one from the camera
@@ -278,9 +315,9 @@ function compute_temperature(file, Tair, Rh, emmissivity = 0.98)
         mdata.AtmosphericTransBeta2[1],
         mdata.AtmosphericTransX[1]
 )
-end
+        end
 
-"""
+        """
     temperature(
         raw, E = 1, OD = 1, RTemp = 20, ATemp = RTemp, IRWTemp = RTemp, IRT = 1,
         RH = 50, PR1 = 21106.77, PB = 1501, PF = 1, PO = -7340, PR2 = 0.012545258,
@@ -344,7 +381,7 @@ Glenn J. Tattersall
 
 2. Minkina, W. and Dudzik, S. 2009. Infrared Thermography: Errors and Uncertainties. Wiley Press, 192 pp.
 """
-function temperature(
+        function temperature(
         raw,
         E = 1, OD = 1, RTemp = 20, ATemp = RTemp, IRWTemp = RTemp,
         IRT = 1, RH = 50, PR1 = 21106.77, PB = 1501, PF = 1, PO = -7340,
@@ -352,26 +389,26 @@ function temperature(
         ATB2 = -0.00667, ATX = 1.9
     )
 
-    emissivity_wind = 1 - IRT
+            emissivity_wind = 1 - IRT
     reflectivity_wind = 0
-    h2o = (RH / 100) * exp(1.5587 + 0.06939 * ATemp - 0.00027816 * ATemp^2 + 6.8455e-07 * ATemp^3)
-    tau1 = ATX * exp(-sqrt(OD / 2) * (ATA1 + ATB1 * sqrt(h2o))) +
+            h2o = (RH / 100) * exp(1.5587 + 0.06939 * ATemp - 0.00027816 * ATemp^2 + 6.8455e-07 * ATemp^3)
+            tau1 = ATX * exp(-sqrt(OD / 2) * (ATA1 + ATB1 * sqrt(h2o))) +
         (1 - ATX) * exp(-sqrt(OD / 2) * (ATA2 + ATB2 * sqrt(h2o)))
-    tau2 = ATX * exp(-sqrt(OD / 2) * (ATA1 + ATB1 * sqrt(h2o))) +
+            tau2 = ATX * exp(-sqrt(OD / 2) * (ATA1 + ATB1 * sqrt(h2o))) +
         (1 - ATX) * exp(-sqrt(OD / 2) * (ATA2 + ATB2 * sqrt(h2o)))
-    raw_refl1 = PR1 / (PR2 * (exp(PB / (RTemp + 273.15)) - PF)) - PO
-    raw_refl1_attn = (1 - E) / E * raw_refl1
-    raw_atm1 = PR1 / (PR2 * (exp(PB / (ATemp + 273.15)) - PF)) - PO
-    raw_atm1_attn = (1 - tau1) / E / tau1 * raw_atm1
-    raw_wind = PR1 / (PR2 * (exp(PB / (IRWTemp + 273.15)) - PF)) - PO
-    raw_wind_attn = emissivity_wind / E / tau1 / IRT * raw_wind
-    raw_refl2 = PR1 / (PR2 * (exp(PB / (RTemp + 273.15)) - PF)) - PO
-    raw_refl2_attn = reflectivity_wind / E / tau1 / IRT * raw_refl2
-    raw_atm2 = PR1 / (PR2 * (exp(PB / (ATemp + 273.15)) - PF)) - PO
-    raw_atm2_attn = (1 - tau2) / E / tau1 / IRT / tau2 * raw_atm2
-    raw_obj = (raw / E / tau1 / IRT / tau2 .- raw_atm1_attn .- raw_atm2_attn .-
+            raw_refl1 = PR1 / (PR2 * (exp(PB / (RTemp + 273.15)) - PF)) - PO
+            raw_refl1_attn = (1 - E) / E * raw_refl1
+            raw_atm1 = PR1 / (PR2 * (exp(PB / (ATemp + 273.15)) - PF)) - PO
+            raw_atm1_attn = (1 - tau1) / E / tau1 * raw_atm1
+            raw_wind = PR1 / (PR2 * (exp(PB / (IRWTemp + 273.15)) - PF)) - PO
+            raw_wind_attn = emissivity_wind / E / tau1 / IRT * raw_wind
+            raw_refl2 = PR1 / (PR2 * (exp(PB / (RTemp + 273.15)) - PF)) - PO
+            raw_refl2_attn = reflectivity_wind / E / tau1 / IRT * raw_refl2
+            raw_atm2 = PR1 / (PR2 * (exp(PB / (ATemp + 273.15)) - PF)) - PO
+            raw_atm2_attn = (1 - tau2) / E / tau1 / IRT / tau2 * raw_atm2
+            raw_obj = (raw / E / tau1 / IRT / tau2 .- raw_atm1_attn .- raw_atm2_attn .-
         raw_wind_attn .- raw_refl1_attn .- raw_refl2_attn)
-    temp_C = PB ./ log.(PR1 ./ (PR2 * (raw_obj .+ PO)) .+ PF) .- 273.15
+            temp_C = PB ./ log.(PR1 ./ (PR2 * (raw_obj .+ PO)) .+ PF) .- 273.15
 
-    return temp_C
-end
+            return temp_C
+        end
