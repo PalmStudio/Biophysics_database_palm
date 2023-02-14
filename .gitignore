@@ -36,3 +36,5 @@ vignettes/*.pdf
 rsconnect/
 
 0-data/
+
+.DS_Store
