@@ -20,12 +20,12 @@ using CSV, ArchGDAL, DataFrames, Dates, TimeZones, PolygonOps, Images, Statistic
 # addprocs(6)
 addprocs(exeflags = "--project")
 @everywhere using CSV, ArchGDAL, DataFrames, Dates, TimeZones, PolygonOps, Images, Statistics
-@everywhere include("1-code/4-thermal_camera/functions.jl")
+@everywhere include("1-code/4-thermal_camera/0-functions.jl")
 @everywhere climate_mic3 = CSV.read("0-data/1-climate/climate_mic3.csv", DataFrame, dateformat = "y-m-d H:M:S")
 @everywhere steps = floor(Int, 78289 / 12)
-@everywhere mask_dir = "D:/Cirad/PalmStudio - Manip EcoTron 2021/Ecotron2021/0-data/0-raw/thermal_camera_roi_coordinates"
+@everywhere mask_dir = abspath("0-data/0-raw/thermal_camera_roi_coordinates")
 @everywhere img_dir = "E:\\Backups Manip Ecotron\\thermal_camera\\images"
-@everywhere csv_dir = "D:/Cirad/PalmStudio - Manip EcoTron 2021/Ecotron2021/0-data/4-thermal_camera_measurements/"
+@everywhere csv_dir = abspath("0-data/4-thermal_camera_measurements/")
 
 @showprogress @distributed for i in 1:12
     current_step = (steps * (i - 1) + 1):(steps * i)
@@ -34,3 +34,6 @@ addprocs(exeflags = "--project")
     end
     distrib_compute(current_step, mask_dir, img_dir, csv_dir)
 end
+
+
+plot_mask("E:/Backups Manip Ecotron/thermal_camera/images/20210308_180009_R.jpg", "D:/Cirad/PalmStudio - Manip EcoTron 2021/Ecotron2021/0-data/4-thermal_camera_measurements/leaf_temperature_1-6524.csv")
