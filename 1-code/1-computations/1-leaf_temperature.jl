@@ -5,8 +5,11 @@
 # images (JPEG), which takes 60Go of disk space roughly. Please make this 
 # computation only if you have to because it takes time and disk space.
 
-using EcotronAnalysis, DataFrames, CSV, Distributed
-using CodecBzip2, Tar
+using EcotronAnalysis
+using DataFrames, CSV # For the climate data
+using Distributed     # For the parrallel computation
+using Dates           # For the delay in the camera clock
+using CodecBzip2, Tar # For the extraction of the images from the tar.bz2 file
 
 # Requirements: you need to install exiftool on your machine first, and add it to your PATH.
 # This is needed to read the metadata from the thermal images.
@@ -28,10 +31,13 @@ mask_dir = "0-data/0-raw/thermal_camera_roi_coordinates/coordinates"
 out_dir = "0-data/4-thermal_camera_measurements"
 climate = CSV.read("0-data/1-climate/climate_mic3.csv", DataFrame, dateformat="y-m-d H:M:S")
 
+# There was a delay of 58m32s in the camera clock (name of the file VS UTC):
+delay = Dates.Second(3512)
+
 # Running the computation in parrallel:
 addprocs(exeflags="--project")
 @everywhere using EcotronAnalysis
-compute_jpg_temperature_distributed(img_dir, mask_dir, out_dir, climate)
+@time compute_jpg_temperature_distributed(img_dir, mask_dir, out_dir, climate, delay=delay)
 rmprocs()
 
 # The results are saved in the out_dir folder, in CSV files named after the images index that were computed in this batch.
