@@ -2,19 +2,37 @@
 
 using CSV
 using DataFrames
-using Plots
+using CairoMakie
+using AlgebraOfGraphics
+using CodecBzip2
+using Colors
 
 # Read the leaf temperature data:
-tleaf_df = CSV.read("D:/Cirad/PalmStudio - Manip EcoTron 2021/stageRValentin/thermal_camera_photos/valentin/P1F3-S4-S5-S6-20210330_142758-20210331_103918.csv", DataFrame)
-
-# Read the climate:
-climate_mic3 = CSV.read("0-data/1-climate/climate_mic3.csv", DataFrame, dateformat = "y-m-d H:M:S")
-
-# Join the data together:
-full_df = leftjoin(tleaf_df, climate_mic3, on = :DateTime)
+tleaf_df = open(Bzip2DecompressorStream, "0-data/4-thermal_camera_measurements/backup/leaf_temperature.csv.bz2") do io
+    CSV.read(io, DataFrame)
+end
 
 # Plots:
-scatter(full_df.Ta_measurement, full_df.mean, label = "")
-Plots.abline!(1,0, label = "identity", line = :dash, legend = :bottomright)
-xlabel!("Air temperature (°C)")
-ylabel!("Leaf temperature (°C)")
+begin
+    f = Figure(resolution=(800, 600))
+    ax = Axis(f[1, 1], xlabel="Air temperature (°C)", ylabel="Leaf temperature (°C)")
+    ablines!(ax, 0, 1, label="identity", linestyle=:dash, color="grey")
+    scatter!(
+        ax, tleaf_df.Ta_measurement, tleaf_df.Tl_mean,
+        markersize=5, color=colorant"#F5505020",
+        strokecolor=colorant"#F5505040", strokewidth=0.5
+    )
+    f
+end
+
+begin
+    p =
+        data(tleaf_df) *
+        mapping(
+            :Ta_measurement => "Air temperature (°C)",
+            :Tl_mean => "Leaf temperature (°C)",
+            color=:leaf,
+            row=:plant
+        )
+    draw(p)
+end
