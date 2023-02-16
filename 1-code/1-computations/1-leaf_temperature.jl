@@ -41,3 +41,17 @@ addprocs(exeflags="--project")
 rmprocs()
 
 # The results are saved in the out_dir folder, in CSV files named after the images index that were computed in this batch.
+# Making a one-file output from this:
+out_dir = "0-data/4-thermal_camera_measurements/backup"
+
+# Get all csv files in the output directory, and read them:
+all_data = CSV.read(joinpath.(out_dir, filter(x -> occursin(r"\.csv$", x), readdir(out_dir))), DataFrame)
+
+# Join the data together (climate and leaf temperature):
+full_df = leftjoin(all_data, climate, on=:DateTime)
+
+# Saving the data in a compressed csv file:
+open(Bzip2CompressorStream, joinpath(out_dir, "leaf_temperature.csv.bz2"), "w") do stream
+    CSV.write(stream, full_df)
+end
+
