@@ -1,8 +1,8 @@
 # Ecotron 2021
 
-The Ecotron is a controlled environment facility for plants. We made an experiment 
-that consisted in investigating the behavior of oil palm (*Elaeis guineensis*) in response to 
-a different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day without rain, not too cold, not too hot. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapor pressure deficit. The height resulting conditions were the following:
+The Ecotron is a controlled environment facility for plants located in Montpellier, France. In this work, we made an experiment that consisted in investigating the behavior of oil palm (*Elaeis guineensis*) in response to different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day without rain, not too cold, not too hot. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapor pressure deficit. 
+
+The height resulting conditions were the following:
 
 - 400ppm: the base condition
 - 600ppm: 50% more CO2
@@ -19,9 +19,18 @@ Measurements included:
 
 - CO2 fluxes with a Picarro XXX, measuring the CO2 concentration in the chamber for 5 minutes, and input CO2 concentration for 5 minutes
 - H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was seeled with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/ARCHIMED-platform/Precision_scale-Raspberry_Pi)
-- Leaf temperature, measured with a thermal camera and a 3D scanner. The thermal camera was used to measure the temperature of the plants and the 3D scanner was used to measure the height of the plants. The thermal camera was a FLIR Vue™ Pro R. The code to control the camera is available [here](https://github.com/ARCHIMED-platform/FLIR_Vue_Pro-Raspberri_Pi)
+- Leaf temperature, measured with a thermal camera
 - LiDAR scans of the plants each week, using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
 - Biomass and surface measurements of all organs of the plants were also performed at the end of the experiment.
+
+
+## Leaf temperature
+
+Leaf temperature was measured with a a FLIR Vue™ Pro R thermal camera that took one image every second. The camera was placed on the farthest top left corner of the chamber, pointing to the center of the chamber to ensure the best visibility of the plant leaves. The camera was controlled by a Raspberry Pi, using the code available [here](https://github.com/ARCHIMED-platform/FLIR_Vue_Pro-Raspberri_Pi)
+
+In total, 78289 images were taken during the experiment. The images are named with the following convention: `YYYYMMDD_HHMMSS_R.jpg`. The date and time correspond to the time at which the image was taken, from the camera clock (which had a delay of 58m32s).
+This repository should contain the raw thermal images taken during the experiment, but the full data base is too large to be stored on Git (60Go). So only a test-set is available here in the `sample` archive. The raw images are available on a dedicated repository in Zenodo.
+
 
 ```
 This folder
