@@ -33,11 +33,11 @@ climate = CSV.read("0-data/1-climate/climate_mic3.csv", DataFrame, dateformat="y
 
 # There was a delay of 58m32s in the camera clock (name of the file VS UTC):
 delay = Dates.Second(3512)
-
+img_dateformat = DateFormat("yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")
 # Running the computation in parrallel:
 addprocs(exeflags="--project")
 @everywhere using EcotronAnalysis
-@time compute_jpg_temperature_distributed(img_dir, mask_dir, out_dir, climate, delay=delay)
+@time compute_jpg_temperature_distributed(img_dir, mask_dir, out_dir, climate, delay=delay, img_dateformat=img_dateformat)
 rmprocs()
 
 # The results are saved in the out_dir folder, in CSV files named after the images index that were computed in this batch.

@@ -1,20 +1,30 @@
 """
-    temperature_in_mask(img_file, mask_file, climate; delay::Dates.TimePeriod=Dates.Second(3512))
+    temperature_in_mask(img_file, mask_file, climate; delay::Dates.TimePeriod, img_dateformat)
     temperature_in_mask(img_file, mask::T, mask_info, climate; delay::Dates.TimePeriod=Dates.Second(3512)) where {T<:Dict{String,DataFrame}}
 
 Return a summary of the temperature data in the image within the mask(s) in `mask_file`. The computation of the temperature is corrected by the chamber air temperature and relative humidity
 measured at the same time.
 
-The `img_file` is a JPG file from a FLIR camera with the thermal image.
+# Arguments
 
-The first method takes a single mask file. The second method takes a dictionary of masks information `mask_info`, 
-and a DataFrame `mask` with the mask coordinates. The latter method finds the mask that corresponds to the image
+- `img_file`: the path to a JPG thermal image file from a FLIR camera 
+- `mask_file`: the path to the mask file (see below)
+- `mask`: a DataFrame `mask` with the mask coordinates
+- `mask_info`: a DataFrame with the following columns:
+    - plant: the plant number
+    - leaf: the leaf number
+    - date_first_image: the first date of the images for which the mask is valid
+    - date_last_image: the last date of the images for which the mask is valid
+    - path: the path to the mask file
+- `climate`: a DataFrame file with the following columns:
+    - DateTime: the date and time of the measurement
+    - Ta_measurement: the air temperature in °C
+    - Rh_measurement: the relative humidity in %
+- `delay=Dates.Second(3512)`: the delay in the camera clock (default: 3512 seconds as for our experiment).
+- `img_dateformat=DateFormat("yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")`: the date format of the image file name
+
+The first method takes a single mask file. The latter method finds the mask that corresponds to the image
 date and time automatically.
-
-The `climate` is a DataFrame file with the following columns:
-- DateTime: the date and time of the measurement
-- Ta_measurement: the air temperature in °C
-- Rh_measurement: the relative humidity in %
 
 The `mask_file` is a CSV file with the following columns:
 - plant: the plant number
@@ -34,9 +44,13 @@ climate = DataFrame(DateTime=DateTime("2023-02-15T13:07:30"), Ta_measurement=25.
 
 temperature_in_mask(img_file, mask, climate)
 """
-function temperature_in_mask(img_file, mask, climate; delay::Dates.TimePeriod=Dates.Second(3512))
+function temperature_in_mask(
+    img_file, mask, climate;
+    delay::Dates.TimePeriod=Dates.Second(3512),
+    img_dateformat=DateFormat("yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")
+)
     # Importing the chamber temperature and humidity:
-    DateTime_img = DateTime(basename(img_file), dateformat"yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")
+    DateTime_img = DateTime(basename(img_file), img_dateformat)
     DateTime_img -= delay
     DateTime_img = round(DateTime_img, Dates.Second(30)) # round at 30s as for the climate data
     climate_img = filter(:DateTime => ==(DateTime_img), climate)  # Extract climate at that time
@@ -47,9 +61,13 @@ function temperature_in_mask(img_file, mask, climate; delay::Dates.TimePeriod=Da
     return (; mask_temperature(temp_mat, mask)..., DateTime=DateTime_img)
 end
 
-function temperature_in_mask(img_file, mask::T, mask_info, climate; delay::Dates.TimePeriod=Dates.Second(3512)) where {T<:Dict{String,DataFrame}}
+function temperature_in_mask(
+    img_file, mask::T, mask_info, climate;
+    delay::Dates.TimePeriod=Dates.Second(3512),
+    img_dateformat=DateFormat("yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")
+) where {T<:Dict{String,DataFrame}}
     # Importing the chamber temperature and humidity:
-    DateTime_img = DateTime(ZonedDateTime(String(CSV.File(`exiftool -FileModifyDate -n -csv $img_file`).FileModifyDate[1]), DateFormat("yyyy:mm:dd HH:MM:SSzzzz")))
+    DateTime_img = DateTime(basename(img_file), img_dateformat)
     DateTime_img -= delay # There was a delay of 58m32s in the camera clock
     DateTime_img = round(DateTime_img, Dates.Second(30)) # round at 30s as for the climate data
     # Extract climate at that time, and if not found, extract climate at max one minute near it:

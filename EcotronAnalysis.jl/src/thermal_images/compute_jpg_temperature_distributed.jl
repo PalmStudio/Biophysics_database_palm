@@ -14,6 +14,7 @@ the air temperature and the relative humidity.
 - `csv_dir`: the directory where the results will be saved
 - `climate`: the DataFrame containing the climate data
 - `delay`: the delay in the camera clock (default: 3512 seconds as for our experiment)
+- `img_dateformat=DateFormat("yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")`: the date format from the images file name
 
 The `climate` DataFrame is used to correct the temperature measurements with the air temperature and relative humidity.
 It should have the following columns:
@@ -37,7 +38,11 @@ compute_jpg_temperature_distributed(img_dir, mask_dir, out_dir, climate)
 rmprocs()
 ```
 """
-function compute_jpg_temperature_distributed(img_dir, mask_dir, out_dir, climate; delay::Dates.TimePeriod=Dates.Second(3512))
+function compute_jpg_temperature_distributed(
+    img_dir, mask_dir, out_dir, climate;
+    delay::Dates.TimePeriod=Dates.Second(3512),
+    img_dateformat=DateFormat("yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")
+)
     nprocessors = Distributed.nprocs() # available processors
     if nprocessors == 1 && Sys.CPU_THREADS > 1
         error(
@@ -63,7 +68,7 @@ function compute_jpg_temperature_distributed(img_dir, mask_dir, out_dir, climate
     partitions = equal_partition(length(readdir(img_dir)), nprocessors)
 
     ProgressMeter.@showprogress @distributed for i in partitions
-        compute_jpg_temperature_batch(i, mask_dir, img_dir, out_dir, climate; delay=delay)
+        compute_jpg_temperature_batch(i, mask_dir, img_dir, out_dir, climate; delay=delay, img_dateformat=img_dateformat)
     end
 end
 

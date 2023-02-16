@@ -28,7 +28,7 @@ Measurements included:
 
 Leaf temperature was measured with a a FLIR Vue™ Pro R thermal camera that took one image every second. The camera was placed on the farthest top left corner of the chamber, pointing to the center of the chamber to ensure the best visibility of the plant leaves. The camera was controlled by a Raspberry Pi, using the code available [here](https://github.com/ARCHIMED-platform/FLIR_Vue_Pro-Raspberri_Pi)
 
-In total, 78289 images were taken during the experiment. The images are named with the following convention: `YYYYMMDD_HHMMSS_R.jpg`. The date and time correspond to the time at which the image was taken, from the camera clock (which had a delay of 58m32s).
+In total, 78289 images were taken during the experiment. The images are named with the following convention: `YYYYMMDD_HHMMSS_R.jpg`. The date and time correspond to the time at which the image was taken, from the camera clock (which had a delay of +58m32s compared to UTC).
 This repository should contain the raw thermal images taken during the experiment, but the full data base is too large to be stored on Git (60Go). So only a test-set is available here in the `sample` archive. The raw images are available on a dedicated repository in Zenodo.
 
 
