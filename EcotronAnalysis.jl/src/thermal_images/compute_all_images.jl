@@ -68,7 +68,9 @@ function compute_all_images(
         push!(masks, mask_df[i, :path] => CSV.read(mask_df[i, :path], DataFrame))
     end
 
-    image_dates = DateTime.(basename.(image_files), img_dateformat)
+    all_jpg_files = filter(x -> !startswith(x, ".") && endswith(x, ".jpg"), basename.(image_files))
+    image_dates = DateTime.(all_jpg_files, img_dateformat)
+
     img_df = DataFrame(path=image_files, date=image_dates)
 
     df_temp = DataFrame(:plant => Int[], :leaf => Int[], :DateTime => DateTime[],
