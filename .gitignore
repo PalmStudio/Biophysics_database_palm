@@ -46,3 +46,6 @@ rsconnect/
 ._images
 *.dat
 *.png
+
+# Data to keep:
+!0-data/3-transpiration/correspondance_scale_camera_time.csv
