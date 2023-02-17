@@ -8,9 +8,6 @@
 # Example code in package build process
 *-Ex.R
 
-# Output files from R CMD build
-/*.tar.gz
-
 # Output files from R CMD check
 /*.Rcheck/
 
@@ -35,6 +32,17 @@ vignettes/*.pdf
 # Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
 rsconnect/
 
-0-data/
-
 .DS_Store
+
+# data
+*.tar.gz
+*.bz2
+*.csv
+*.zip
+*xlsx
+*txt
+*.DS_Store
+*.jpg
+._images
+*.dat
+*.png
