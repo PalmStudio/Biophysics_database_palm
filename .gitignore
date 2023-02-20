@@ -48,4 +48,4 @@ rsconnect/
 *.png
 
 # Data to keep:
-!0-data/3-transpiration/correspondance_scale_camera_time.csv
+!0-data/2-time-synchronization/correspondance_scale_camera_time.csv
