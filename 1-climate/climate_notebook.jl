@@ -9,6 +9,8 @@ begin
 	using CSV
 	using DataFrames
 	using ZipFile
+	using Dates
+	using Statistics
 end
 
 # ╔═╡ 1a8b0e04-b1c7-11ed-2dba-758bc57db4b4
@@ -31,20 +33,297 @@ The aim of this notebook is to make one single file for each chamber.
 # ╔═╡ d12c1da3-ab15-46db-82c0-307a303f3a2f
 md"""
 ### Read the data
+
+Read the data from the zip archive, without uncompressing all files:
 """
 
-# ╔═╡ 3febedab-46f2-4983-96de-9a1f82891d6b
-r = ZipFile.Reader("0-data/example.zip");
-for f in r.files
-	  println("Filename: $(f.name)")
-	  write(stdout, read(f, String));
+# ╔═╡ b1ab6d25-6fa7-4d58-9515-c1910d999224
+begin
+	r = ZipFile.Reader("../0-data/climate/climate.zip");
+ 	mic4_files = []
+ 	mic3_files = []
+ 	for f in r.files
+		startswith(f.name, "Mic4") && push!(mic4_files, CSV.read(f, DataFrame))
+ 		startswith(f.name, "Mic3") && push!(mic3_files, CSV.read(f, DataFrame))
+ 	end
+	close(r)
+
+	mic3 = vcat(mic3_files...)
+	mic4 = vcat(mic4_files...)
+
+	select!(mic3, Not(:Column1))
+	select!(mic4, Not(:Column1))
+	nothing
 end
+
+# ╔═╡ 5774b396-cece-4252-b1f2-c969d80a8b04
+md"""
+## Data cleaning
+"""
+
+# ╔═╡ df4e3ebd-8355-4674-9546-51feace7cfb3
+md"""
+Some data is duplicated in the files (they are overlapping), so we need to make the rows unique in the dataframes. We also need to rename the variables into more sensible names, adapted to programming tasks, *i.e.* not using empty spaces, or unusal characters.
+"""
+
+# ╔═╡ 21fb221b-e3ef-4515-ac83-73daf9c6721d
+mic3_df = 
+	select(
+		unique(mic3),
+		"DateTime" => (x -> DateTime.(x, dateformat"yyy-mm-dd HH:MM:SS")) => "DateTime",
+		"consigne T\xb0C" => :Ta_instruction,
+		"mesure T\xb0C" => :Ta_measurement,
+		"consigne HR" => :Rh_instruction,
+		"mesure HR" => :Rh_measurement,
+		"consigne Rayo" => :R_instruction,
+		"mesure Rayo" => :R_measurement,
+		"mesures [CO2]" => :CO2_ppm,
+		"mesure debit CO2" => :CO2_flux,
+		"Mic"
+)
+
+# ╔═╡ c3a421e1-2edc-4974-83b5-652f40519735
+mic4_df = 
+	select(
+		unique(mic4),
+		"DateTime" => (x -> DateTime.(x, dateformat"yyy-mm-dd HH:MM:SS")) => "DateTime",
+		"consigne T\xb0C" => :Ta_instruction,
+		"mesure T\xb0C" => :Ta_measurement,
+		"consigne HR" => :Rh_instruction,
+		"mesure HR" => :Rh_measurement,
+		"consigne Rayo" => :R_instruction,
+		"mesure Rayo" => :R_measurement,
+		"mesures [CO2]" => :CO2_ppm,
+		"Mic"
+)
+
+# ╔═╡ 40a4a501-68fc-4d63-9b9c-93f6dd177020
+md"""
+## 5 minute time-step Mic3
+
+The climate files are at a 30s time-step, but the CO2 fluxes are measured
+for 5 minutes every 10 minutes (5min input / 5min output), so we need the 
+climate data integrated at 5min time-step when there is a measurement of CO2
+flux.
+
+First, we add a new column for the CO2 instructions in the chamber, which will be less noisy that the measurement (`CO2_ppm`), because it will be defined more as a factorial variable. To do so, we use the CO2 flux because it is more reliable than the CO2 concentration measurement.
+"""
+
+# ╔═╡ 50bfe460-7fd6-4374-9b9f-a7c6b05c3cb6
+md"""
+Second, we import the data of the CO2 fluxes measurements in the chamber, which gives us the start and end time of each measurement session. The input CO2 is measured for 5 minutes, and then the output is measured for 5 minutes. The input CO2 correspond to the instruction in input to get the chamber to a given CO2 concentration in the air, and the output CO2 is the air from the chamber, that is measured to compute the CO2 fluxes from the plant (*i.e.* respiration and photosynthesis).
+"""
+
+# ╔═╡ 5e72d148-855e-48b4-8e4f-921569aeee4c
+needed_period_df = 
+	let
+		df_ = CSV.read("../0-data/picarro_flux/data_mean_flux.csv", DataFrame)
+		 transform!(
+		 	df_,
+			:MPV1_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :DateTime_start,
+			 :MPV2_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :DateTime_end
+		)
+
+		df_
+	end
+
+# ╔═╡ 22bbbf62-96a3-4f58-9e97-ac7f066f1cff
+md"""
+Now that we have the time windows of measurement, we can use it to compute the average conditions inside these windows.
+
+We make two different tables, on that averages only the conditions inside a measurement session (just for the 5 min of CO2 output), and another that uses the 10 minute average, starting with the input CO2 and then the output CO2 for each 10 minute time-step.
+"""
+
+# ╔═╡ 890a6507-c87a-4cc3-afa5-80ce5723ab5c
+md"""
+## Saving
+
+Lastly, we write the new dataframes to disk:
+"""
+
+# ╔═╡ 0fafa057-4fba-488f-8d03-f8b238f825b8
+CSV.write("climate_mic3.csv", mic3_df)
+
+# ╔═╡ a5b99f51-75a3-4fc8-a98d-e156cc8b1c03
+CSV.write("climate_mic4.csv", mic4_df)
+
+# ╔═╡ 6355f700-2c6d-4537-9072-aa99918d7b73
+md"""
+# References
+"""
+
+# ╔═╡ b96fe1f5-32ff-4bd7-944d-d7a02d0b8c40
+"""
+	is_change(x)
+
+Looks when there is a change in the sequence of values. Returns a vector of string, with the value "no_change" if the current value is the same as the previous one, or "change" if it is different.
+
+# Examples
+
+```julia
+is_change([1,1,1,2,2,2])
+```
+"""
+function is_change(x)
+	change = fill("no_change", length(x))
+	for i in eachindex(change)
+		if i > 1 && x[i] != x[i-1]
+			change[i] = "change"
+		end
+	end
+	return change
+end
+
+# ╔═╡ 261b93fd-a903-40b2-a0fc-a5b745ed56c7
+mic3_2 = 
+	let 
+		df_ = transform(
+			mic3_df,
+			:CO2_flux => ByRow(x -> begin
+					if 30 <= x <= 45 
+						return 400.0
+					elseif 45 <= x <= 55
+						return 600.0
+					elseif x >= 55
+						return 800.0
+					else 
+						return 0.0
+					end
+				end
+			) => :CO2_instruction,
+		)
+		transform!(df_,
+			:CO2_instruction => is_change => :CO2_change,
+		)
+		
+		df_
+	end
+
+# ╔═╡ 8ea7c9cd-3755-4d48-a3e6-399fd0d932e1
+"""
+	propagate_around(x, val, before, after)
+
+Propagate the value `val` in the vector `x` around it to `before` values before the values equal to `val`, and `after` values after it.
+
+# Arguments
+
+- `x`: a vector of values
+- `val`: a value to find and propagate inside `x`
+- `before`: number of values to propagate before `x[x.==val]`
+- `after`: number of values to propagate after `x[x.==val]`
+
+# Examples
+
+```julia
+julia> propagate_around([1,1,1,0,1,1,1,1], 0, 1, 3)
+[1,1,0,0,0,0,0,1]
+```
+"""
+function propagate_around(x, val, before, after)
+		x2 = copy(x)
+	
+		# Find any value in x that matches val:
+		val_in_x = findall(x .== val)
+		length(val_in_x) == 0 && return
+	
+		 #For each index that matches `val`, set the value around it
+		# (`before` and `after`) to `val`:
+		for i in val_in_x
+			x2[max(1, i-before) : min(end, i+after)] .= val
+		end
+	
+		return x2
+end
+
+# ╔═╡ 60914f72-ee28-46f0-9ce0-1c608dd01193
+mic3_5min = let
+	mic3_ = copy(mic3_2)
+	mic3_.DateTime_start = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
+	mic3_.DateTime_end = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
+
+	for row in eachrow(needed_period_df)
+		timestamps_within = findall(row.DateTime_start .<= mic3_.DateTime .<= row.DateTime_end)
+		
+		if length(timestamps_within) > 0
+			mic3_.DateTime_start[timestamps_within] .= row.DateTime_start
+			mic3_.DateTime_end[timestamps_within] .= row.DateTime_end
+		end
+	end
+	filter!(x-> !ismissing(x.DateTime_start), mic3_)
+
+	mic3_c = combine(
+		groupby(mic3_, :DateTime_start),
+		:DateTime_end => unique => :DateTime_end,
+		names(mic3_, Number) .=> mean .=> names(mic3_, Number),
+		:CO2_change => (x -> any(x .== "change") ? "change" : "no_change") => :CO2_change
+	)
+
+	# Add "CO2_change_around" column that flags values at "change" for all values 
+	# around a change (1 before and 5 after a change):
+	transform!(
+		mic3_c,
+		:CO2_change => (x -> propagate_around(x, "change", 1, 5)) => :CO2_change_around
+	)
+
+	mic3_c
+end
+
+# ╔═╡ c4675a60-1951-4e7c-aa00-00d1efa1a430
+CSV.write("climate_mic3_5min.csv", mic3_5min)
+
+# ╔═╡ af847638-1dbf-4ae6-b88b-9f58bd5974f3
+mic3_10min = let
+	mic3_ = copy(mic3_2)
+	mic3_.DateTime_start = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
+	mic3_.DateTime_end = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
+
+	nrows_df = nrow(needed_period_df)
+
+	for i in 1:nrows_df
+		if i == nrows_df
+			continue
+		end
+		
+		this_row = needed_period_df[i,:]
+		next_row = needed_period_df[i+1,:]
+		
+		timestamps_within = findall(this_row.DateTime_start .<= mic3_.DateTime .< next_row.DateTime_start)
+		
+		if length(timestamps_within) > 0
+			mic3_.DateTime_start[timestamps_within] .= this_row.DateTime_start
+			mic3_.DateTime_end[timestamps_within] .= next_row.DateTime_start
+		end
+	end
+	
+	filter!(x-> !ismissing(x.DateTime_start), mic3_)
+
+	mic3_c = combine(
+		groupby(mic3_, :DateTime_start),
+		:DateTime_end => unique => :DateTime_end,
+		names(mic3_, Number) .=> mean .=> names(mic3_, Number),
+		:CO2_change => (x -> any(x .== "change") ? "change" : "no_change") => :CO2_change
+	)
+
+	# Add "CO2_change_around" column that flags values at "change" for all values 
+	# around a change (1 before and 5 after a change):
+	transform!(
+		mic3_c,
+		:CO2_change => (x -> propagate_around(x, "change", 1, 5)) => :CO2_change_around
+	)
+
+	mic3_c
+end
+
+# ╔═╡ 877f55bd-69dc-408f-9f5c-33ab345a1e01
+CSV.write("climate_mic3_10min.csv", mic3_10min)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
@@ -59,7 +338,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "cb1b3e975a106a12ac01692a88daff56ab88d68c"
+project_hash = "53ee8cb37d6b38a5faf4f63d6d77fd070a9cb99d"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -343,6 +622,25 @@ version = "5.1.1+0"
 # ╟─1a8b0e04-b1c7-11ed-2dba-758bc57db4b4
 # ╠═4b871515-5f38-4b6a-a9c1-00f40160041e
 # ╟─d12c1da3-ab15-46db-82c0-307a303f3a2f
-# ╠═3febedab-46f2-4983-96de-9a1f82891d6b
+# ╠═b1ab6d25-6fa7-4d58-9515-c1910d999224
+# ╟─5774b396-cece-4252-b1f2-c969d80a8b04
+# ╟─df4e3ebd-8355-4674-9546-51feace7cfb3
+# ╠═21fb221b-e3ef-4515-ac83-73daf9c6721d
+# ╠═c3a421e1-2edc-4974-83b5-652f40519735
+# ╟─40a4a501-68fc-4d63-9b9c-93f6dd177020
+# ╠═261b93fd-a903-40b2-a0fc-a5b745ed56c7
+# ╟─50bfe460-7fd6-4374-9b9f-a7c6b05c3cb6
+# ╠═5e72d148-855e-48b4-8e4f-921569aeee4c
+# ╟─22bbbf62-96a3-4f58-9e97-ac7f066f1cff
+# ╠═60914f72-ee28-46f0-9ce0-1c608dd01193
+# ╠═af847638-1dbf-4ae6-b88b-9f58bd5974f3
+# ╟─890a6507-c87a-4cc3-afa5-80ce5723ab5c
+# ╠═0fafa057-4fba-488f-8d03-f8b238f825b8
+# ╠═c4675a60-1951-4e7c-aa00-00d1efa1a430
+# ╠═877f55bd-69dc-408f-9f5c-33ab345a1e01
+# ╠═a5b99f51-75a3-4fc8-a98d-e156cc8b1c03
+# ╟─6355f700-2c6d-4537-9072-aa99918d7b73
+# ╟─b96fe1f5-32ff-4bd7-944d-d7a02d0b8c40
+# ╟─8ea7c9cd-3755-4d48-a3e6-399fd0d932e1
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
