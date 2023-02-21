@@ -61,7 +61,7 @@ The method presented above was applyied manually, and the resulting data was log
 
 # ╔═╡ c5ca4dca-bda0-462c-8a97-e6dfdff7079d
 df = let
-    data = CSV.read(download("https://raw.githubusercontent.com/PalmStudio/Biophysics_database_palm/main/0-data/2-time-synchronization/correspondance_scale_camera_time.csv?token=GHSAT0AAAAAAB2P4ATHRTNEZSAVBMI4T5BKY7TNCOQ"), DataFrame)
+    data = CSV.read("correspondance_scale_camera_time.csv", DataFrame)
 
     data.thermal_camera = DateTime.(data.thermal_camera, dateformat"yyyymmdd_HHMMSS_R")
     data.door_opening = [ismissing(i) ? missing : DateTime(i, dateformat"yyyy-mm-dd HH:MM:SS") for i in data.door_opening]
@@ -318,9 +318,9 @@ df_write = vcat(
         delay_scale,
         :phase => (x -> "scale") => :type,
         :phase,
-        :error_scale => :delay
+        :error_scale => ByRow(x -> Second(x).value) => :delay_seconds
     ),
-    DataFrame(type="thermal camera", phase="all", delay=delay_camera)
+    DataFrame(type="thermal camera", phase="all", delay_seconds=Second(delay_camera).value)
 )
 
 # ╔═╡ 74516f47-6df9-41fd-82ce-53a64a4fb8d3
@@ -349,7 +349,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "49edf187a4c4d9b83c48a50b9b489b3070db51dd"
+project_hash = "3cc6fc8cc0483dfb9ec7d6b579cc5a3cf1229227"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
