@@ -47,5 +47,9 @@ rsconnect/
 *.dat
 *.png
 
+
+1-code_old/
+
 # Data to keep:
 !0-data/2-time-synchronization/correspondance_scale_camera_time.csv
+
