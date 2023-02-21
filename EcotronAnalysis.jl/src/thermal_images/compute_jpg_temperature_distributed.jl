@@ -65,7 +65,8 @@ function compute_jpg_temperature_distributed(
         error("The output directory does not exist.")
     end
 
-    partitions = equal_partition(length(readdir(img_dir)), nprocessors)
+    image_files = filter(x -> !startswith(basename(x), ".") && endswith(basename(x), ".jpg"), readdir(img_dir))
+    partitions = equal_partition(length(image_files), nprocessors)
 
     ProgressMeter.@showprogress @distributed for i in partitions
         compute_jpg_temperature_batch(i, mask_dir, img_dir, out_dir, climate; delay=delay, img_dateformat=img_dateformat)

@@ -37,7 +37,12 @@ delay_df = CSV.read("2-time-synchronization/time_synchronization.csv", DataFrame
 delay = Second(filter(x -> x.type == "thermal camera", delay_df).delay_seconds[1])
 
 # Date format of the image file names:
-img_dateformat = DateFormat("yyyymmdd_HHMMSS_R.jpg")
+img_dateformat = DateFormat("yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")
+
+# img = readdir(img_dir)
+# img = filter(x -> !startswith(basename(x), ".") && endswith(basename(x), ".jpg"), img)
+# image_dates = DateTime.(basename.(img), img_dateformat)
+# img_df = DataFrame(path=img, date=image_dates)
 
 # Running the computation in parrallel:
 addprocs(exeflags="--project")

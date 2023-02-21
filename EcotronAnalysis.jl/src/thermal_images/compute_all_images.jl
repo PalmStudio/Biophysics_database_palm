@@ -24,11 +24,12 @@ function compute_jpg_temperature_batch(
     delay::Dates.TimePeriod=Dates.Second(3512),
     img_dateformat=DateFormat("yyyymmdd_HHMMSS\\_\\R\\.\\j\\p\\g")
 )
-    # n = partitions[7]
+    # n = partitions[1]
     mask_files = readdir(mask_dir, join=true)
     mask_files = filter(x -> occursin(r".csv$", x), mask_files)
 
     image_files = readdir(img_dir, join=true)
+    image_files = filter(x -> !startswith(basename(x), ".") && endswith(basename(x), ".jpg"), image_files)
 
     image_files = image_files[n]
 
@@ -68,8 +69,8 @@ function compute_all_images(
         push!(masks, mask_df[i, :path] => CSV.read(mask_df[i, :path], DataFrame))
     end
 
-    all_jpg_files = filter(x -> !startswith(x, ".") && endswith(x, ".jpg"), basename.(image_files))
-    image_dates = DateTime.(all_jpg_files, img_dateformat)
+    image_files = filter(x -> !startswith(basename(x), ".") && endswith(basename(x), ".jpg"), image_files)
+    image_dates = DateTime.(basename.(image_files), img_dateformat)
 
     img_df = DataFrame(path=image_files, date=image_dates)
 
