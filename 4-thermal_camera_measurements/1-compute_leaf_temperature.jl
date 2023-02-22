@@ -49,13 +49,22 @@ addprocs(exeflags="--project")
 @everywhere using EcotronAnalysis
 @time compute_jpg_temperature_distributed(img_dir, mask_dir, out_dir, climate, delay=delay, img_dateformat=img_dateformat)
 rmprocs()
-
 # The results are saved in the out_dir folder, in CSV files named after the images index that were computed in this batch.
+
+
 # Making a one-file output from this:
-out_dir = "0-data/4-thermal_camera_measurements/backup"
 
 # Get all csv files in the output directory, and read them:
 all_data = CSV.read(joinpath.(out_dir, filter(x -> occursin(r"\.csv$", x), readdir(out_dir))), DataFrame)
+length(filter(x -> occursin(r"^2021.*\.jpg$", x), readdir(img_dir))) - length(unique(all_data.DateTime))
+
+all_dates = DateTime.(filter(x -> occursin(r"^2021.*\.jpg$", x), readdir(img_dir)), img_dateformat) .+ delay
+all_dates_round_30s = round.(all_dates, Dates.Second(30))
+computed_dates = unique(all_data.DateTime)
+
+not_computed_timesteps = setdiff(all_dates_round_30s, computed_dates)
+not_computed_hours = unique(round.(not_computed_timesteps, Dates.Hour(1)))
+not_computed_days = Dates.Date.(unique(round.(not_computed_hours, Dates.Day(1))))
 
 # Join the data together (climate and leaf temperature):
 full_df = leftjoin(all_data, climate, on=:DateTime)
@@ -65,3 +74,8 @@ open(Bzip2CompressorStream, joinpath(out_dir, "leaf_temperature.csv.bz2"), "w") 
     CSV.write(stream, full_df)
 end
 
+# Cleaning up the output directory:
+rm.(filter(x -> occursin(r"\.csv$", basename(x)), readdir(out_dir, join=true)), force=true)
+
+# Cleaning up the input directory:
+rm(dirname(img_dir), force=true, recursive=true)
