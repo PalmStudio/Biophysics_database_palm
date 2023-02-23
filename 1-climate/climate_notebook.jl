@@ -199,42 +199,6 @@ mic3_2 =
 		df_
 	end
 
-# ╔═╡ 8ea7c9cd-3755-4d48-a3e6-399fd0d932e1
-"""
-	propagate_around(x, val, before, after)
-
-Propagate the value `val` in the vector `x` around it to `before` values before the values equal to `val`, and `after` values after it.
-
-# Arguments
-
-- `x`: a vector of values
-- `val`: a value to find and propagate inside `x`
-- `before`: number of values to propagate before `x[x.==val]`
-- `after`: number of values to propagate after `x[x.==val]`
-
-# Examples
-
-```julia
-julia> propagate_around([1,1,1,0,1,1,1,1], 0, 1, 3)
-[1,1,0,0,0,0,0,1]
-```
-"""
-function propagate_around(x, val, before, after)
-		x2 = copy(x)
-	
-		# Find any value in x that matches val:
-		val_in_x = findall(x .== val)
-		length(val_in_x) == 0 && return
-	
-		 #For each index that matches `val`, set the value around it
-		# (`before` and `after`) to `val`:
-		for i in val_in_x
-			x2[max(1, i-before) : min(end, i+after)] .= val
-		end
-	
-		return x2
-end
-
 # ╔═╡ 60914f72-ee28-46f0-9ce0-1c608dd01193
 mic3_5min = let
 	mic3_ = copy(mic3_2)
@@ -256,13 +220,6 @@ mic3_5min = let
 		:DateTime_end => unique => :DateTime_end,
 		names(mic3_, Number) .=> mean .=> names(mic3_, Number),
 		:CO2_change => (x -> any(x .== "change") ? "change" : "no_change") => :CO2_change
-	)
-
-	# Add "CO2_change_around" column that flags values at "change" for all values 
-	# around a change (1 before and 5 after a change):
-	transform!(
-		mic3_c,
-		:CO2_change => (x -> propagate_around(x, "change", 1, 5)) => :CO2_change_around
 	)
 
 	mic3_c
@@ -304,13 +261,6 @@ mic3_10min = let
 		:CO2_change => (x -> any(x .== "change") ? "change" : "no_change") => :CO2_change
 	)
 
-	# Add "CO2_change_around" column that flags values at "change" for all values 
-	# around a change (1 before and 5 after a change):
-	transform!(
-		mic3_c,
-		:CO2_change => (x -> propagate_around(x, "change", 1, 5)) => :CO2_change_around
-	)
-
 	mic3_c
 end
 
@@ -338,7 +288,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "53ee8cb37d6b38a5faf4f63d6d77fd070a9cb99d"
+project_hash = "3a51db55432161de8a1cc2f02cbe42ff9a7d9912"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -641,6 +591,5 @@ version = "5.1.1+0"
 # ╠═a5b99f51-75a3-4fc8-a98d-e156cc8b1c03
 # ╟─6355f700-2c6d-4537-9072-aa99918d7b73
 # ╟─b96fe1f5-32ff-4bd7-944d-d7a02d0b8c40
-# ╟─8ea7c9cd-3755-4d48-a3e6-399fd0d932e1
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
