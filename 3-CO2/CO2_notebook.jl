@@ -260,9 +260,34 @@ mapping(
 	color=:opening_around => string => "Around \ndoor opening",
 ) |> draw
 
+# ╔═╡ fa48d801-77eb-4e23-b655-5b1985649fb4
+let
+	df_ = transform(
+		df,
+		:CO2_dry_MPV1 => ByRow(
+			x -> begin
+				x < 400 || 430 <= x <= 595 || 650 <= x <= 770 || x > 850
+			end
+		) => :CO2_dry_MVP1_change,
+		:CO2_dry_MPV2 => ByRow(x -> 430 <= x <= 550 || 650 <= x <= 720) => :CO2_dry_MVP2_change
+	)
+
+	transform!(
+		df_,
+		[:CO2_dry_MVP1_change, :CO2_dry_MVP2_change] => ByRow((x,y) -> x || y) => :CO2_dry_MVP_change
+	)
+	
+	data(df_) *
+		mapping(
+			:DateTime => "Time",
+			:CO2_dry_MPV1 => "CO2 concentration (ppm)",
+			color=:CO2_dry_MVP_change => string => "In-between",
+		) |> draw
+end
+
 # ╔═╡ 58e65f2f-935e-421a-ab6e-be2a9a964de7
 df_filt = let
-	df_ = transform!(
+	df_ = transform(
 		df, 
 		:CO2_dry_MPV1 => ByRow(
 			x -> begin
@@ -299,14 +324,6 @@ We can use two different methods to alleviate this effect:
 - a [low-pass filter](https://en.wikipedia.org/wiki/Low-pass_filter) to recompute the instantaneous response;
 - an integration of the fluxes at a bigger time-scale
 """
-
-# ╔═╡ fa48d801-77eb-4e23-b655-5b1985649fb4
-data(df_filt) *
-mapping(
-	:DateTime => "Time",
-	:CO2_dry_MPV1 =>"CO2 concentration (ppm)",
-	color=:CO2_dry_MVP_change => string => "In-between",
-) |> draw
 
 # ╔═╡ 10693220-825f-4268-bd0c-670d52eecdf0
 data(df_filt) *
@@ -348,7 +365,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "993d118793eb68f033b9fa4f87cbd24477cc2c01"
+project_hash = "6dada507916393443d1a6d9d7c0beb1fcd54656b"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
