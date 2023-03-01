@@ -106,7 +106,7 @@ for 5 minutes every 10 minutes (5min input / 5min output), so we need the
 climate data integrated at 5min time-step when there is a measurement of CO2
 flux.
 
-First, we add a new column for the CO2 instructions in the chamber, which will be less noisy that the measurement (`CO2_ppm`), because it will be defined more as a factorial variable. To do so, we use the CO2 flux because it is more reliable than the CO2 concentration measurement.
+First, we add a new column for the CO2 instructions in the chamber, which will be less noisy than the measurement (`CO2_ppm`), because it will be defined more as a factorial variable. To do so, we use the CO2 flux because it is more reliable than the CO2 concentration measurement.
 """
 
 # ╔═╡ 50bfe460-7fd6-4374-9b9f-a7c6b05c3cb6
