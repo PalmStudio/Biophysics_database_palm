@@ -336,7 +336,7 @@ mapping(
 CSV.write(
 	"CO2_fluxes.csv", 
 	select(
-		df_filt, 
+		sort(df_filt, :DateTime), 
 		[:DateTime, :DateTime_end, :CO2_dry_MPV1, :CO2_dry_MPV2, :flux_umol_s]
 	)
 )
@@ -1793,7 +1793,7 @@ version = "3.5.0+0"
 # ╟─11342987-ca47-4130-b1f2-617401081365
 # ╟─6f3d1ce2-93b6-4056-9e1a-9ad431b409a4
 # ╟─457d485f-0bf0-421a-98fb-8850d97dae9b
-# ╠═5005c489-7123-4620-8a2a-83fc7bee0b1a
+# ╟─5005c489-7123-4620-8a2a-83fc7bee0b1a
 # ╟─ebd03dc9-16a4-4247-8b31-08bdad23dabb
 # ╟─9cd29ba6-11dd-42b5-a842-ae33385f5709
 # ╟─b997751e-0390-4715-8c13-e8bbbf26ece3
@@ -1801,7 +1801,7 @@ version = "3.5.0+0"
 # ╟─d2bedd0a-dce1-475f-bbd9-f9d859b997fa
 # ╟─22e45b4c-66f2-4771-a46c-53523a929a9e
 # ╟─5cb9bb37-6c9e-46e2-9747-9fbdc580b973
-# ╟─9dc34bbc-4a36-4fcc-be57-e9140f2e1f02
+# ╠═9dc34bbc-4a36-4fcc-be57-e9140f2e1f02
 # ╟─1cfab740-7ba4-46e5-becb-0e7e9d80224c
 # ╟─bf0e1fdc-543b-41bc-9fc4-916e0ae9cbf3
 # ╟─96328bb7-39bb-467c-a8bd-ab4826c56beb
