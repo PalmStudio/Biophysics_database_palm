@@ -46,7 +46,9 @@ Leaf temperature measured by the thermal camera, at one-minute time-scale, for e
 
 # ╔═╡ 3025bd11-bcbf-4fa5-b67a-73be7bb6db07
 leaf_temperature = open(Bzip2DecompressorStream, "../4-thermal_camera_measurements/leaf_temperature.csv.bz2") do io
-    CSV.read(io, DataFrame)
+    df_ = CSV.read(io, DataFrame)
+	select!(df_, Not(:mask))
+	df_
 end
 
 # ╔═╡ b67defe6-42cf-4bf6-b2ed-714d1b14f6ec
@@ -65,7 +67,10 @@ CO2 fluxes, measured every 10 minutes for 5 minutes. The other five minutes are 
 """
 
 # ╔═╡ 4158de69-29ff-4402-873b-7287e7e74b48
-CO2 = CSV.read("../3-CO2/CO2_fluxes.csv", DataFrame)
+CO2 = let
+	df_ = CSV.read("../3-CO2/CO2_fluxes.csv", DataFrame)
+	rename!(df_, :DateTime => :DateTime_start)
+end
 
 # ╔═╡ 6afe8250-5a8a-4253-b9d3-10d45423c600
 sequence = let 
@@ -92,84 +97,31 @@ md"""
 
 # ╔═╡ 58810c5f-a090-4896-a039-fe32e04c3b40
 md"""
-#### 5-minute time-scale
-
-We start by computing two new columns inside the one-minute time-scale dataframe: the datetime for every 5 minute, and the same for every 10-minute.
+We start by computing four new columns inside the one-minute time-scale dataframe: the start and end datetime for every 5 minute window where we have a measurement of the output for the CO2 flux, and the same for every 10-minute window (input and output).
 
 !!! note 
-	We add 1 minute to the DateTime before rounding, and remove it afterward to get the rounding startin at e.g. 00:01 instead of 00:00, to follow the timeframe of the CO2 database, *i.e.* measuring output from 00:01 until 00::06, and then input from 00:06 until 00:11).
-	
-	We also remove 30s from the DateTimes because we are off by 30s.
+	The time-windows are taken from the `CO2` dataframe.
 """
-
-# ╔═╡ 6ec60b04-3840-4092-8b40-25885a035e56
-leaf_temperature_5min = 
-	select(
-		leaf_temperature,
-		:plant,
-		:leaf,
-		:DateTime,
-		:DateTime => (x-> floor.(x .- Minute(1), Dates.Minute(5)) .+ Minute(1))=> :DateTime_5min,
-		:DateTime => (x-> floor.(x .- Minute(1), Dates.Minute(10)) .+ Minute(1))=> :DateTime_10min,
-		:Tl_mean, :Tl_min, :Tl_max, :Tl_std
-	)
 
 # ╔═╡ ee3738bb-afcc-4f22-86ed-6326b67acb9f
 md"""
-The second step consists in keeping only the first 5 minutes every 10 minutes. The trick is to keep only the rows where `DateTime_10min == DateTime_5min`, because only the first 5 minutes have the same DateTime that the 10-minute window. This method is more robust to missing data than taking the first five values, because sometimes we don't have 10 time-steps but only 2 or 3. This was the case when we had to retreive the data from the camera, and remove the SD card by doing so.
+#### 5-minute time-scale
 
-The last step is to average the measured temperatures for each leaf in the 5-minutes windows. The results are available in `leaf_temperature_first_5min`.
+Based on the previous dataframe, we can now keep only the first 5 minutes of every 10 minutes window, and average the values within those 5 minutes. The results are available in `leaf_temperature_first_5min`.
 """
-
-# ╔═╡ 6d54867d-3cad-4699-85cd-fc2af74d7753
-leaf_temperature_first_5min = let
-	df_ = filter(x -> x.DateTime_10min == x.DateTime_5min, leaf_temperature_5min)
-	df_ = combine(
-		groupby(df_, [:plant, :leaf, :DateTime_10min]),
-		:DateTime => (x -> first(x) - Dates.Second(30)) => :DateTime_start,
-		:DateTime => (x -> last(x) - Dates.Second(30)) => :DateTime_end,
-		names(df_, Float64) .=> mean,
-		#nrow;
-		renamecols = false
-	)
-
-	select!(
-		df_,
-		[:plant, :leaf, :DateTime_start, :DateTime_end, :Tl_mean, :Tl_min, :Tl_max, :Tl_std]
-	)
-	df_
-end
 
 # ╔═╡ 67086a6b-4629-4996-99ba-284ba2f6a783
 md"""
 #### 10-minute time-scale
 
-We perform a similar computation, but keeping all data in the 10-minute window for our average.
+We can also perform a similar computation, but keeping all data in the 10-minute window for our average.
 """
-
-# ╔═╡ ab3424f1-8999-411a-9816-0e4d30b9b376
-leaf_temperature_10min = let
-	df_ = combine(
-		groupby(leaf_temperature_5min, [:plant, :leaf, :DateTime_10min]),
-		:DateTime => (x -> first(x) - Dates.Second(30)) => :DateTime_start,
-		:DateTime => (x -> last(x) - Dates.Second(30)) => :DateTime_end,
-		names(leaf_temperature_5min, Float64) .=> mean,
-		nrow;
-		renamecols = false
-	)
-
-	select!(
-		df_,
-		[:plant, :leaf, :DateTime_start, :DateTime_end, :Tl_mean, :Tl_min, :Tl_max, :Tl_std]
-	)
-	df_
-end
 
 # ╔═╡ 524194a3-ba2c-47ed-a1bf-2eac7618b885
 md"""
 ### Transpiration
 
-Transpiration was measured ebery minute at the begining, and then every second. The data is noisy, so it is a good thing that we have to integrate the values over a larger time-period.
+Transpiration was measured every minute at the begining, and then every second. The data is noisy, but integrating the values over the 5 min or 10 min time-window of the CO2 fluxes measurements helps denoizing it.
 """
 
 # ╔═╡ 8f7b5aee-71ac-4d78-abd6-d9bf4ceffa70
@@ -180,10 +132,14 @@ md"""
 # ╔═╡ a3d9dbfb-16b0-46ce-a077-d7d193362638
 md"""
 To compute the transpiration of the first 5 minutes of each 10-minute window, we filter the data to take only the odd groups in `group_5min`.
+
+Then we compute the transpiration inside this 5-minute time window as the slope of the weight~duration relationship. We could also compute it as the difference in weight between the first and last value(s), but this method is less integrative of what really happens inside the timestep, and is more sensitive to measurement error.
 """
 
-# ╔═╡ 6d8b7530-5681-4bd6-aba0-19d643f74520
-#DateTime_start_trans, DateTime_end_trans = dates_between(transpiration.DateTime, CO2.DateTime, CO2.DateTime_end)
+# ╔═╡ c620c06f-06ec-4702-a85a-56a6270903fd
+md"""
+#### 10-min transpiration
+"""
 
 # ╔═╡ 326b71c6-00b2-4046-9ac2-962a42ceaa69
 md"""
@@ -197,16 +153,17 @@ md"""
 ### 5-minute database
 """
 
-# ╔═╡ 42bcf804-8ed0-4573-8201-1fd79bc0a140
-db_5min = outerjoin(climate_5min, leaf_temperature_first_5min, on = :DateTime_start, makeunique = true)
-
 # ╔═╡ 2547928f-9569-4a1f-a636-7e8ecda893de
 md"""
 ### 10-minute database
 """
 
-# ╔═╡ 415a440a-8aea-4f38-893f-d22d0114a16e
-db_10min = outerjoin(climate_10min, leaf_temperature_10min, on = :DateTime_start, makeunique = true)
+# ╔═╡ 4407340e-12f9-429a-ba76-c8479f5d9c4a
+md"""
+# Saving
+
+Saving both databases to disk:
+"""
 
 # ╔═╡ 7a00a634-6c9d-4f4c-95fc-489d0e77a2d1
 md"""
@@ -253,55 +210,6 @@ function group_timesteps(x, threshold = Minute(10))
 	return x_group
 end
 
-# ╔═╡ ef210c28-bf62-4c5c-8c97-18247875eb85
-transpi_5min = let
-	df_ = transform(
-		transpiration,
-		:DateTime => (x -> group_timesteps(x, Minute(10))) => :group_10min,
-		:DateTime => (x -> group_timesteps(x, Minute(5))) => :group_5min,
-		:DateTime => duration => :duration,
-	)
-	df_
-end
-
-# ╔═╡ 9691ccc9-6123-4320-8031-f0fc7a080f66
-transpi_first_5min = let
-
-	# Take only the first five minutes of the 10-minute window
-	df_ = filter(
-		x -> x.group_5min .% 2 .== 0,
-		transpi_5min
-	)
-
-	# Compute the cumulated duration over each 5-min window:
-	df_ = transform(
-		groupby(df_, :group_10min),
-		:duration => cumsum => :duration
-	)
-
-	# Compute the transpiration as the slope of the linear weight~duration relationship: 
-	df_ = combine(
-		groupby(df_, :group_10min),
-		:DateTime => first => :DateTime_start,
-		:DateTime => last => :DateTime_end,
-		[:weight, :duration] => ((x,y) -> (x'*x)\x'*[i.value for i in Second.(y)]) => :transpiration_g_s, # grammes s-1 ? 
-		[:weight, :duration] => ((x,y) -> (first(x) - last(x)) / Second(last(y)).value) => :transpiration_diff, # Should be in g s-1 too ???
-		:duration => (x -> canonicalize(maximum(x))) => :period_computation,
-		nrow
-	)
-
-	# Keep only the time-steps where we have 3 minutes of data to compute the transpiration:
-	filter!(
-		x -> x.period_computation > Dates.Minute(3),
-		df_
-	)
-
-	df_
-end
-
-# ╔═╡ c570378c-4030-4ecf-8755-3016d381a9d0
-transpi_5min[20000:end,:]
-
 # ╔═╡ 3e2d4f92-bb9b-4c45-9038-2d064ed58808
 """
 	dates_between(x, start_dates, end_dates)
@@ -326,6 +234,180 @@ function dates_between(x, start_dates, end_dates)
 	return (DateTime_start, DateTime_end)
 end
 
+# ╔═╡ 7d350e62-c035-49df-8827-66e044c562e3
+"""
+	add_timeperiod(x,y)
+
+Add DateTime_start_5min, DateTime_end_5min, DateTime_start_10min and DateTime_end_10min on a copy of dataframe `x` using the `DateTime_start` and `DateTime_end` periods on dataframe `y`, and matching with the `DateTime` column in `x`.
+"""
+function add_timeperiod(x,y)
+	df_ = copy(x)
+	df_.DateTime_start_5min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+	df_.DateTime_start_10min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+	df_.DateTime_end_5min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+	df_.DateTime_end_10min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+
+	y_nrows = nrow(y)
+	for (i, row) in enumerate(eachrow(y))
+
+		# 5-min time window:
+		ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
+		timestamps_within = findall(row.DateTime_start .<= df_.DateTime .<= row.DateTime_end)
+		
+		if length(timestamps_within) > 0
+			df_.DateTime_start_5min[timestamps_within] .= row.DateTime_start
+			df_.DateTime_end_5min[timestamps_within] .= row.DateTime_end
+		end
+
+		# 10-min time window:
+		i == y_nrows && continue
+		next_date = y.DateTime_start[i+1]
+		ismissing(next_date) && continue
+		timestamps_within = findall(row.DateTime_start .<= df_.DateTime .< next_date)
+		
+		if length(timestamps_within) > 0
+			df_.DateTime_start_10min[timestamps_within] .= row.DateTime_start
+			df_.DateTime_end_10min[timestamps_within] .= next_date
+		end
+		
+	end
+	return df_
+end
+
+# ╔═╡ efd26e33-9f6f-41b9-8f74-09f457028078
+leaf_temperature_df = let
+	df_ = add_timeperiod(leaf_temperature, CO2)
+	select!(
+		df_,
+		:plant,
+		:leaf,
+		:DateTime,
+		:DateTime_start_5min,
+		:DateTime_end_5min,
+		:DateTime_start_10min,
+		:DateTime_end_10min,
+		:Tl_mean, :Tl_min, :Tl_max, :Tl_std
+	)
+	df_
+end
+
+# ╔═╡ 6d54867d-3cad-4699-85cd-fc2af74d7753
+leaf_temperature_first_5min = let
+	df_ = filter!(x-> !ismissing(x.DateTime_start_5min), leaf_temperature_df)
+	df_ = combine(
+		groupby(df_, [:plant, :leaf, :DateTime_start_5min]),
+		:DateTime_end_5min => (x -> unique(x)) => :DateTime_end,
+		names(leaf_temperature_df, Float64) .=> mean,
+		#nrow;
+		renamecols = false
+	)
+	rename!(df_, :DateTime_start_5min => :DateTime_start)
+
+	select!(
+		df_,
+		[:plant, :leaf, :DateTime_start, :DateTime_end, :Tl_mean, :Tl_min, :Tl_max, :Tl_std]
+	)
+	df_
+end
+
+# ╔═╡ ab3424f1-8999-411a-9816-0e4d30b9b376
+leaf_temperature_10min = let
+	df_ = filter!(x-> !ismissing(x.DateTime_start_10min), leaf_temperature_df)
+	df_ = combine(
+		groupby(df_, [:plant, :leaf, :DateTime_start_10min]),
+		:DateTime_end_10min => (x -> unique(x)) => :DateTime_end,
+		names(leaf_temperature_df, Float64) .=> mean,
+		#nrow;
+		renamecols = false
+	)
+	rename!(df_, :DateTime_start_10min => :DateTime_start)
+
+	select!(
+		df_,
+		[:plant, :leaf, :DateTime_start, :DateTime_end, :Tl_mean, :Tl_min, :Tl_max, :Tl_std]
+	)
+	df_
+end
+
+# ╔═╡ b8c31856-6754-41d5-8688-242f532c455e
+transpiration_df = add_timeperiod(transpiration,CO2)
+
+# ╔═╡ 9691ccc9-6123-4320-8031-f0fc7a080f66
+transpi_first_5min = let
+	df_ = filter!(x-> !ismissing(x.DateTime_start_5min), transpiration_df)
+	# Compute the cumulated duration over each 5-min window:
+	df_ = transform(
+		groupby(df_, :DateTime_start_5min), 
+		:DateTime => (x-> cumsum(duration(x))) => :duration
+	)
+	# Compute transpiration as the slope of the linear weight~duration relationship: 
+	df_ = combine(
+		groupby(df_, :DateTime_start_5min),
+		:DateTime_end_5min => unique => :DateTime_end,
+		[:weight, :duration] => ((y,x) -> begin
+		x=[i.value for i in Second.(x)]
+		(x'*x)\x'*(y[1] .- y)
+		end
+		) => :transpiration_g_s, # grammes s-1
+		# To compute as the weight difference between first last time-step(s):
+		# [:weight, :duration] => ((x,y) -> (median(first(x, 1)) - median(last(x, 1))) / Second(last(y)).value) => :transpiration_diff,
+		:duration => (x -> canonicalize(maximum(x))) => :period_computation,
+		nrow
+	)
+	rename!(df_, :DateTime_start_5min => :DateTime_start)
+	# Keep only the time-steps where we have 3 minutes of data to compute Tr:
+	filter!(x -> x.nrow > 3, df_)
+	df_	
+end
+
+# ╔═╡ 42bcf804-8ed0-4573-8201-1fd79bc0a140
+db_5min = let
+	db_ = outerjoin(CO2, climate_5min, on = :DateTime_start, makeunique = true)
+	db_ = outerjoin(db_, transpi_first_5min, on = :DateTime_start, makeunique = true)
+	db_ = outerjoin(db_, leaf_temperature_first_5min, on = :DateTime_start, makeunique = true)
+	db_
+end
+
+# ╔═╡ eaed2c19-60a9-4fe2-8788-6143df1062d2
+CSV.write("database_5min.csv", db_5min)
+
+# ╔═╡ ac377725-f287-4f17-9373-fc3bfea6e5f2
+transpi_10min = let
+	df_ = filter!(x-> !ismissing(x.DateTime_start_10min), transpiration_df)
+	# Compute the cumulated duration over each 10-min window:
+	df_ = transform(
+		groupby(df_, :DateTime_start_10min), 
+		:DateTime => (x-> cumsum(duration(x))) => :duration
+	)
+	# Compute transpiration as the slope of the linear weight~duration relationship: 
+	df_ = combine(
+		groupby(df_, :DateTime_start_10min),
+		:DateTime_end_10min => unique => :DateTime_end,
+		[:weight, :duration] => ((y,x) -> begin
+		x=[i.value for i in Second.(x)]
+		(x'*x)\x'*(y[1] .- y)
+		end
+		) => :transpiration_g_s, # grammes s-1
+		:duration => (x -> canonicalize(maximum(x))) => :period_computation,
+		nrow
+	)
+	rename!(df_, :DateTime_start_10min => :DateTime_start)
+	# Keep only the time-steps where we have 3 minutes of data to compute Tr:
+	filter!(x -> x.nrow > 3, df_)
+	df_	
+end
+
+# ╔═╡ 415a440a-8aea-4f38-893f-d22d0114a16e
+db_10min = let
+	db_ = outerjoin(CO2, climate_10min, on = :DateTime_start, makeunique = true)
+	db_ = outerjoin(db_, transpi_10min, on = :DateTime_start, makeunique = true)
+	db_ = outerjoin(db_, leaf_temperature_10min, on = :DateTime_start, makeunique = true)
+	db_
+end
+
+# ╔═╡ 168c5c96-9252-4a5a-85d2-613b2246cd63
+CSV.write("database_10min.csv", db_10min)
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -348,7 +430,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "0af653ec30229ec24fcdfe8ab6e7f0d805e8f681"
+project_hash = "7f599990116ef5fa83746d6e3afd541cb84e715f"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -721,26 +803,30 @@ version = "17.4.0+0"
 # ╟─c9e24f32-ef5f-48d8-951e-0996f166f41f
 # ╟─635d16bd-86f1-45c6-af81-6d4566671068
 # ╟─58810c5f-a090-4896-a039-fe32e04c3b40
-# ╠═6ec60b04-3840-4092-8b40-25885a035e56
+# ╠═efd26e33-9f6f-41b9-8f74-09f457028078
 # ╟─ee3738bb-afcc-4f22-86ed-6326b67acb9f
 # ╠═6d54867d-3cad-4699-85cd-fc2af74d7753
 # ╟─67086a6b-4629-4996-99ba-284ba2f6a783
 # ╠═ab3424f1-8999-411a-9816-0e4d30b9b376
 # ╟─524194a3-ba2c-47ed-a1bf-2eac7618b885
+# ╠═b8c31856-6754-41d5-8688-242f532c455e
 # ╟─8f7b5aee-71ac-4d78-abd6-d9bf4ceffa70
-# ╠═ef210c28-bf62-4c5c-8c97-18247875eb85
-# ╠═a3d9dbfb-16b0-46ce-a077-d7d193362638
+# ╟─a3d9dbfb-16b0-46ce-a077-d7d193362638
 # ╠═9691ccc9-6123-4320-8031-f0fc7a080f66
-# ╠═6d8b7530-5681-4bd6-aba0-19d643f74520
-# ╠═c570378c-4030-4ecf-8755-3016d381a9d0
+# ╟─c620c06f-06ec-4702-a85a-56a6270903fd
+# ╠═ac377725-f287-4f17-9373-fc3bfea6e5f2
 # ╟─326b71c6-00b2-4046-9ac2-962a42ceaa69
 # ╟─e92c7421-c8e6-47ff-81ae-9e8e25818e99
 # ╠═42bcf804-8ed0-4573-8201-1fd79bc0a140
 # ╟─2547928f-9569-4a1f-a636-7e8ecda893de
 # ╠═415a440a-8aea-4f38-893f-d22d0114a16e
+# ╟─4407340e-12f9-429a-ba76-c8479f5d9c4a
+# ╠═168c5c96-9252-4a5a-85d2-613b2246cd63
+# ╠═eaed2c19-60a9-4fe2-8788-6143df1062d2
 # ╟─7a00a634-6c9d-4f4c-95fc-489d0e77a2d1
 # ╟─6d1223de-d6f3-4dab-a5c0-9d1289a7401e
 # ╟─4befe24a-fc2a-4ed1-99ef-ccda6c7eaeda
 # ╟─3e2d4f92-bb9b-4c45-9038-2d064ed58808
+# ╟─7d350e62-c035-49df-8827-66e044c562e3
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
