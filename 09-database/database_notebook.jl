@@ -365,11 +365,42 @@ db_5min = let
 	db_ = outerjoin(CO2, climate_5min, on = :DateTime_start, makeunique = true)
 	db_ = outerjoin(db_, transpi_first_5min, on = :DateTime_start, makeunique = true)
 	db_ = outerjoin(db_, leaf_temperature_first_5min, on = :DateTime_start, makeunique = true)
+
+	select!(
+		db_,
+		"plant",
+		"leaf",
+		:DateTime_start,
+		:DateTime_end_1 => :DateTime_end,
+		:DateTime_end => :DateTime_end_CO2_in,
+		#:DateTime_end_CO2_in,
+		:flux_umol_s => :CO2_outflux_umol_s,
+		:CO2_dry_MPV1,
+		:CO2_dry_MPV2,
+		"Ta_instruction",
+		"Ta_measurement",
+		"Rh_instruction",
+		"Rh_measurement",
+		"R_instruction",
+		"R_measurement",
+		"CO2_ppm",
+		"CO2_flux" => "CO2_influx",
+		"CO2_instruction",
+		"transpiration_g_s",
+		"Tl_mean",
+		"Tl_min",
+		"Tl_max",
+		"Tl_std",
+		"period_computation",
+		"nrow" => :n_datapoints,
+	)
 	db_
 end
 
 # ╔═╡ eaed2c19-60a9-4fe2-8788-6143df1062d2
-CSV.write("database_5min.csv", db_5min)
+open(Bzip2CompressorStream, "database_5min.csv.bz2", "w") do stream
+    CSV.write(stream, db_5min)
+end
 
 # ╔═╡ ac377725-f287-4f17-9373-fc3bfea6e5f2
 transpi_10min = let
@@ -402,11 +433,41 @@ db_10min = let
 	db_ = outerjoin(CO2, climate_10min, on = :DateTime_start, makeunique = true)
 	db_ = outerjoin(db_, transpi_10min, on = :DateTime_start, makeunique = true)
 	db_ = outerjoin(db_, leaf_temperature_10min, on = :DateTime_start, makeunique = true)
-	db_
+
+	select!(
+		db_,
+		"plant",
+		"leaf",
+		:DateTime_start,
+		:DateTime_end_1 => :DateTime_end,
+		:DateTime_end => :DateTime_end_CO2_in,
+		#:DateTime_end_CO2_in,
+		:flux_umol_s => :CO2_outflux_umol_s,
+		:CO2_dry_MPV1,
+		:CO2_dry_MPV2,
+		"Ta_instruction",
+		"Ta_measurement",
+		"Rh_instruction",
+		"Rh_measurement",
+		"R_instruction",
+		"R_measurement",
+		"CO2_ppm",
+		"CO2_flux" => "CO2_influx",
+		"CO2_instruction",
+		"transpiration_g_s",
+		"Tl_mean",
+		"Tl_min",
+		"Tl_max",
+		"Tl_std",
+		"period_computation",
+		"nrow" => :n_datapoints,
+	)
 end
 
 # ╔═╡ 168c5c96-9252-4a5a-85d2-613b2246cd63
-CSV.write("database_10min.csv", db_10min)
+open(Bzip2CompressorStream, "database_10min.csv.bz2", "w") do stream
+    CSV.write(stream, db_10min)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
