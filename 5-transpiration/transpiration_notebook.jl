@@ -48,7 +48,14 @@ time_correction = CSV.read(
 # ╔═╡ d631a6a0-4842-4d28-b6ad-f82093fe8581
 md"""
 ### Data
+
+#### Decompressing the archive
 """
+
+# ╔═╡ c8f60ef9-2caa-46de-ab51-11de279a678b
+open(Bzip2DecompressorStream, "../0-data/scale_weight/weights.tar.bz2") do io
+    Tar.extract(io, "../0-data/scale_weight/weight")
+end
 
 # ╔═╡ 39fbd542-3f1b-4327-b8fb-ab56f8af1682
 md"""
@@ -62,7 +69,7 @@ Reading phase 0 data. We know this one is at UTC+1 because it was connected to R
 
 # ╔═╡ c41298a7-108a-4a30-927c-359d4eb10b01
 df_phase_0 = let
-	df = CSV.read("../0-data/scale_weight/weights_1.txt", DataFrame, header=["DateTime", "weight"])
+	df = CSV.read("../0-data/scale_weight/weight/weights_1.txt", DataFrame, header=["DateTime", "weight"])
 	df.DateTime = df.DateTime - Dates.Hour(1)
 	df
 end
@@ -76,7 +83,7 @@ Starting from phase 1 until phase 4 measurements, we double-checked the delays b
 
 # ╔═╡ fe844dad-d2d5-4cb9-97be-6277c405ed86
 df_phase_1 = let
-	df = CSV.read("../0-data/scale_weight/weightsPhase1.txt", DataFrame, header=["DateTime", "weight"])
+	df = CSV.read("../0-data/scale_weight/weight/weightsPhase1.txt", DataFrame, header=["DateTime", "weight"])
 	# Phase 0 is at UTC+1, so we need to correct the time:
 	delay = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
 	df.DateTime .+= Dates.Second(delay)
@@ -90,7 +97,7 @@ md"""
 
 # ╔═╡ 6056cd3b-6277-4c88-9481-76a6b1efdb75
 df_phase_2 = let
-	df = CSV.read("../0-data/scale_weight/weightsPhase2.txt", DataFrame, header=["DateTime", "weight"])
+	df = CSV.read("../0-data/scale_weight/weight/weightsPhase2.txt", DataFrame, header=["DateTime", "weight"])
 	# Phase 0 is at UTC+1, so we need to correct the time:
 	delay = filter(x -> x.type == "scale" && x.phase == "phase2", time_correction).delay_seconds[1]
 	df.DateTime .+= Dates.Second(delay)
@@ -104,7 +111,7 @@ md"""
 
 # ╔═╡ e4ee7511-75c9-4a0e-9c75-f11516eaaafa
 df_phase_3 = let
-	df = CSV.read("../0-data/scale_weight/weightsPhase3.txt", DataFrame, header=["DateTime", "weight"])
+	df = CSV.read("../0-data/scale_weight/weight/weightsPhase3.txt", DataFrame, header=["DateTime", "weight"])
 	# Phase 0 is at UTC+1, so we need to correct the time:
 	delay = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
 	df.DateTime .+= Dates.Second(delay)
@@ -118,7 +125,7 @@ md"""
 
 # ╔═╡ d9bca3d6-6076-45c6-8f90-cf1d4fb9cb56
 df_phase_4 = let
-	df = CSV.read("../0-data/scale_weight/weightsPhase4.txt", DataFrame, header=["DateTime", "weight"])
+	df = CSV.read("../0-data/scale_weight/weight/weightsPhase4.txt", DataFrame, header=["DateTime", "weight"])
 	# Phase 0 is at UTC+1, so we need to correct the time:
 	delay = filter(x -> x.type == "scale" && x.phase == "phase4", time_correction).delay_seconds[1]
 	df.DateTime .+= Dates.Second(delay)
@@ -168,7 +175,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "511124c152ef771244b5d21fde020e2d47d59ab7"
+project_hash = "51c6d4e2e1d2b0ffff6ace64990942e120b30cb2"
 
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -530,6 +537,7 @@ version = "17.4.0+0"
 # ╟─a7b313b8-2f6f-43c1-a39b-ada77982a31e
 # ╠═7027478e-8ba6-4b17-9448-628114d73816
 # ╟─d631a6a0-4842-4d28-b6ad-f82093fe8581
+# ╠═c8f60ef9-2caa-46de-ab51-11de279a678b
 # ╟─39fbd542-3f1b-4327-b8fb-ab56f8af1682
 # ╟─3ff85909-c02b-471c-b649-fa51c2df7b12
 # ╠═c41298a7-108a-4a30-927c-359d4eb10b01
