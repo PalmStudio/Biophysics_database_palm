@@ -56,5 +56,7 @@ rsconnect/
 !0-data/door_opening/Mic3_door_opening.csv
 !0-data/2-time-synchronization/correspondance_scale_camera_time.csv
 !0-data/climate/climate.zip
+
+!4-thermal_camera_measurements/leaf_temperature.csv.bz2
 !09-database/database_5min.csv.bz2
 !09-database/database_10min.csv.bz2
