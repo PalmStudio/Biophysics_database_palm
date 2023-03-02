@@ -57,6 +57,8 @@ rsconnect/
 !0-data/2-time-synchronization/correspondance_scale_camera_time.csv
 !0-data/climate/climate.zip
 !0-data/scale_weight/weights.tar.bz2
+!0-data/scenario_sequence/SequencePlanteMicro3.csv
+!0-data/scenario_sequence/SequenceScenarioMicro3.csv
 
 !4-thermal_camera_measurements/leaf_temperature.csv.bz2
 !09-database/database_5min.csv.bz2
