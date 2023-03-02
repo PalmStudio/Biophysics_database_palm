@@ -53,3 +53,5 @@ rsconnect/
 # Data to keep:
 !0-data/2-time-synchronization/correspondance_scale_camera_time.csv
 !0-data/climate/climate.zip
+!09-database/database_5min.csv.bz2
+!09-database/database_10min.csv.bz2
