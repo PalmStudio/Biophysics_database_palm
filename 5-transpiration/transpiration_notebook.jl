@@ -168,7 +168,7 @@ Now that we imported the data and corrected the delays to match UTC, we can merg
 """
 
 # ╔═╡ 3fb32c18-bdd2-44bb-a635-ebb5682a5956
-weight_df = vcat(df_phase_0, df_phase_1, df_phase_2, df_phase_3, df_phase_4)
+weight_df = sort(vcat(df_phase_0, df_phase_1, df_phase_2, df_phase_3, df_phase_4), :DateTime)
 
 # ╔═╡ 4f002bbb-c3a6-4156-a523-c0bef7868eaa
 md"""
@@ -224,14 +224,34 @@ plant_sequence = let
 	delay_phase3 = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
 	df_.DateTime_start[df_.DateTime_start .>= phase3_dates[1] .&& df_.DateTime_start .<= phase3_dates[2]] .+= Dates.Second(delay_phase3)
 	df_.DateTime_end[df_.DateTime_end .>= phase3_dates[1] .&& df_.DateTime_end .<= phase3_dates[2]] .+= Dates.Second(delay_phase3)
+	
+	df_
+end
+
+# ╔═╡ 77da482d-11d5-48d6-a3a2-466029b63d0a
+# ╠═╡ disabled = true
+#=╠═╡
+
+	phase1_dates = [first(df_phase_1_delayed.DateTime),last(df_phase_1_delayed.DateTime)]
+	delay_phase1 = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
+	df_.DateTime_start[df_.DateTime_start .>= phase1_dates[1] .&& df_.DateTime_start .<= phase1_dates[2]] .+= Dates.Second(delay_phase1)
+	df_.DateTime_end[df_.DateTime_end .>= phase1_dates[1] .&& df_.DateTime_end .<= phase1_dates[2]] .+= Dates.Second(delay_phase1)
+
+	phase2_dates = [first(df_phase_2_delayed.DateTime),last(df_phase_2_delayed.DateTime)]
+	delay_phase2 = filter(x -> x.type == "scale" && x.phase == "phase2", time_correction).delay_seconds[1]
+	df_.DateTime_start[df_.DateTime_start .>= phase2_dates[1] .&& df_.DateTime_start .<= phase2_dates[2]] .+= Dates.Second(delay_phase2)
+	df_.DateTime_end[df_.DateTime_end .>= phase2_dates[1] .&& df_.DateTime_end .<= phase2_dates[2]] .+= Dates.Second(delay_phase2)
+	
+	phase3_dates = [first(df_phase_3_delayed.DateTime),last(df_phase_3_delayed.DateTime)]
+	delay_phase3 = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
+	df_.DateTime_start[df_.DateTime_start .>= phase3_dates[1] .&& df_.DateTime_start .<= phase3_dates[2]] .+= Dates.Second(delay_phase3)
+	df_.DateTime_end[df_.DateTime_end .>= phase3_dates[1] .&& df_.DateTime_end .<= phase3_dates[2]] .+= Dates.Second(delay_phase3)
 
 	phase4_dates = [first(df_phase_4_delayed.DateTime),last(df_phase_4_delayed.DateTime)]
 	delay_phase4 = filter(x -> x.type == "scale" && x.phase == "phase4", time_correction).delay_seconds[1]
 	df_.DateTime_start[df_.DateTime_start .>= phase4_dates[1] .&& df_.DateTime_start .<= phase4_dates[2]] .+= Dates.Second(delay_phase4)
 	df_.DateTime_end[df_.DateTime_end .>= phase4_dates[1] .&& df_.DateTime_end .<= phase4_dates[2]] .+= Dates.Second(delay_phase4)
-	
-	df_
-end
+  ╠═╡ =#
 
 # ╔═╡ f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8
 md"""
@@ -270,6 +290,8 @@ Plotting the plants weight along the whole experiment:
 """
 
 # ╔═╡ e54d904a-186e-471f-b19d-314e4e26e44e
+# ╠═╡ disabled = true
+#=╠═╡
 data(dropmissing(transpiration_df_seq, :sequence)) *
 	mapping(
 		:DateTime => "Date (UTC)", 
@@ -278,6 +300,7 @@ data(dropmissing(transpiration_df_seq, :sequence)) *
 	) * 
 	visual(Scatter) |>
 	draw	
+  ╠═╡ =#
 
 # ╔═╡ 7a0cea13-7b32-486d-bbc3-03924609280b
 md"""
@@ -351,7 +374,7 @@ Ploting the irrigation events in the scale weights:
 @bind timescale_plot_end PlutoUI.Slider(first(transpiration_df_irrig.DateTime):Day(1):last(transpiration_df_irrig.DateTime), default=last(transpiration_df_irrig.DateTime), show_value=true)
 
 # ╔═╡ 3aee3153-75f2-49fd-b3d6-3ca75daa9492
-data(filter(x -> timescale_plot_start <= x.DateTime <= timescale_plot_end , transpiration_df_irrig)) *
+data(transpiration_df_irrig) *
 	mapping(
 		:DateTime => "Date (UTC)", 
 		:weight_rel => "Relative scale weight (g)",
@@ -387,7 +410,7 @@ transpiration = let
 end
 
 # ╔═╡ c0f4f748-cadb-445d-b42d-85dda0b1bc82
-data(filter(x -> timescale_plot_start <= x.DateTime <= timescale_plot_end , transpiration)) *
+data(transpiration) *
 	mapping(
 		:DateTime => "Date (UTC)", 
 		:weight_no_irrig => "Weight without irrigation (g)",
@@ -397,20 +420,19 @@ data(filter(x -> timescale_plot_start <= x.DateTime <= timescale_plot_end , tran
 	draw	
 
 # ╔═╡ 80cb19c1-b506-4002-a636-c59c5f723c89
-data(filter(x -> timescale_plot_start <= x.DateTime <= timescale_plot_end , transpiration)) *
+data(transpiration) *
 	mapping(
 		:DateTime => "Date (UTC)", 
 		:transp => "Instantaneous transpiration (g)",
-		color = :irrigation_event
+		color = :sequence
 	) * 
 	visual(Scatter) |>
 	draw	
 
-# ╔═╡ c13ef402-a480-4bba-8df5-d05a68a971b6
-# ╠═╡ disabled = true
-#=╠═╡
-transpiration_df = add_timeperiod(transpiration_df_seq,CO2)
-  ╠═╡ =#
+# ╔═╡ 1bf9b96d-92a5-4c80-9be8-68a115114d1d
+md"""
+## Matching CO2 time-scale
+"""
 
 # ╔═╡ 5fc42118-7938-48ad-99fb-330cc44eaf58
 md"""
@@ -423,19 +445,6 @@ data(filter(x -> DateTime("2021-03-15T12:30:00") <= x.DateTime <= DateTime("2021
 	mapping(:DateTime => "Date (UTC)", :weight => "Scale weight (g)") * visual(Scatter, color=:grey) |>
 	draw	
   ╠═╡ =#
-
-# ╔═╡ c8db25b8-8e9a-4a6c-9bd9-c3fcb7fc9d41
-filter(x -> DateTime("2021-03-15T12:00:00") <= x.DateTime <= DateTime("2021-03-16T23:59:59"), transpiration_df_irrig)
-
-# ╔═╡ 79ac90c9-4dc2-4826-acb3-3856fa14b30b
-first(transpiration_df_irrig.DateTime)
-
-# ╔═╡ fe8fba00-f4a1-4f8e-9f32-5300841f33cb
-transpiration_df_irrig = 
-	transform(
-		transpiration_df,
-		:weight => (x -> )
-	)
 
 # ╔═╡ 21e399d0-6cfe-4421-ab56-cb36d8643034
 #=╠═╡
@@ -526,6 +535,9 @@ function add_timeperiod(x,y)
 	end
 	return df_
 end
+
+# ╔═╡ c13ef402-a480-4bba-8df5-d05a68a971b6
+transpiration_df = add_timeperiod(transpiration,CO2)
 
 # ╔═╡ 15b8e802-7656-4702-8638-c37b0ec3549f
 """
@@ -2028,6 +2040,7 @@ version = "3.5.0+0"
 # ╟─b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
 # ╟─48187906-42ac-45c7-8736-9d825cd23ce8
 # ╠═ac08d634-e1b3-4b8f-995e-6c24e2941095
+# ╠═77da482d-11d5-48d6-a3a2-466029b63d0a
 # ╟─f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8
 # ╠═cdc58362-6335-4349-8aaa-765e5fba6e34
 # ╟─ed2e2d47-3d4b-4c82-bfb9-0e75d400fa20
@@ -2041,18 +2054,16 @@ version = "3.5.0+0"
 # ╠═edf35aae-3562-427f-85c2-391c5e430835
 # ╟─11701cca-d05a-4c57-9e28-b209233cc859
 # ╟─a5afa94e-0e6c-4072-8b09-90c836074014
-# ╟─656941c2-1a76-4165-8a2b-5cad72fdeac9
+# ╠═656941c2-1a76-4165-8a2b-5cad72fdeac9
 # ╠═3aee3153-75f2-49fd-b3d6-3ca75daa9492
 # ╟─50aa244a-1afe-4968-b287-285ba5816235
 # ╠═6704619d-3610-4e94-baa7-f8fc40bb0bc3
 # ╠═c0f4f748-cadb-445d-b42d-85dda0b1bc82
 # ╠═80cb19c1-b506-4002-a636-c59c5f723c89
+# ╟─1bf9b96d-92a5-4c80-9be8-68a115114d1d
 # ╠═c13ef402-a480-4bba-8df5-d05a68a971b6
 # ╟─5fc42118-7938-48ad-99fb-330cc44eaf58
 # ╠═432416de-5697-4883-9535-2c821d523af1
-# ╠═c8db25b8-8e9a-4a6c-9bd9-c3fcb7fc9d41
-# ╠═79ac90c9-4dc2-4826-acb3-3856fa14b30b
-# ╠═fe8fba00-f4a1-4f8e-9f32-5300841f33cb
 # ╠═21e399d0-6cfe-4421-ab56-cb36d8643034
 # ╟─8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
 # ╠═9caab45e-f33b-4b54-a7de-7f7035144f0e
