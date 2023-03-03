@@ -240,10 +240,13 @@ Adding the sequence of measurement to the dataframe so we can group by plant seq
 
 # ╔═╡ cdc58362-6335-4349-8aaa-765e5fba6e34
 transpiration_df_seq = let
-df_ = copy(weight_df)
-	df_.DateTime_start_seq = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-	df_.DateTime_end_seq = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-
+	df_ = copy(weight_df)
+	df_.DateTime_start_seq = Vector{Union{DateTime,Missing}}(missing, nrow(df_))
+	df_.DateTime_end_seq = Vector{Union{DateTime,Missing}}(missing, nrow(df_))
+	df_.Plant = Vector{Union{String,Missing}}(missing, nrow(df_))
+	df_.sequence = Vector{Union{Int,Missing}}(missing, nrow(df_))
+	global gp = 1 # Sequence group
+	
 	for row in eachrow(plant_sequence)
 		# 5-min time window:
 		ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
@@ -252,8 +255,12 @@ df_ = copy(weight_df)
 		if length(timestamps_within) > 0
 			df_.DateTime_start_seq[timestamps_within] .= row.DateTime_start
 			df_.DateTime_end_seq[timestamps_within] .= row.DateTime_end
+			df_.Plant[timestamps_within] .= row.Plant
+			df_.sequence[timestamps_within] .= gp
+			gp += 1 # increment the sequence group whenever we found one
 		end
 	end
+	
 	df_
 end
 
@@ -263,12 +270,13 @@ Plotting the plants weight along the whole experiment:
 """
 
 # ╔═╡ e54d904a-186e-471f-b19d-314e4e26e44e
-data(transpiration_df_seq) *
+data(dropmissing(transpiration_df_seq, :sequence)) *
 	mapping(
 		:DateTime => "Date (UTC)", 
 		:weight => "Scale weight (g)",
+		color = :Plant
 	) * 
-	visual(Lines, color=:grey) |>
+	visual(Scatter) |>
 	draw	
 
 # ╔═╡ 7a0cea13-7b32-486d-bbc3-03924609280b
@@ -346,7 +354,7 @@ Ploting the irrigation events in the scale weights:
 data(filter(x -> timescale_plot_start <= x.DateTime <= timescale_plot_end , transpiration_df_irrig)) *
 	mapping(
 		:DateTime => "Date (UTC)", 
-		:weight => "Scale weight (g)",
+		:weight_rel => "Relative scale weight (g)",
 		color = :irrigation_event
 	) * 
 	visual(Scatter) |>
@@ -364,15 +372,17 @@ transpiration = let
 	df_ = copy(transpiration_df_irrig)
 	
 	df_ = transform(
-		groupby(df_, :DateTime_start_seq),
+		groupby(df_, :sequence),
 		:irrigation => cumsum => :irrigation_cum
 	)
 
 	df_ = transform(
-		groupby(df_, :DateTime_start_seq),
-		[:weight_rel, :irrigation_cum] => ((w,i) -> w .- i) => :weight_rel_no_irrig
+		groupby(df_, :sequence),
+		[:weight_rel, :irrigation_cum] => ((w,i) -> w .- i) => :weight_rel_no_irrig,
+		[:weight, :irrigation_cum] => ((w,i) -> w .- i) => :weight_no_irrig,
+		[:diff, :irrigation] => ((w,i) -> w .+ i) => :transp,
 	)
-	
+
 	df_
 end
 
@@ -380,7 +390,8 @@ end
 data(filter(x -> timescale_plot_start <= x.DateTime <= timescale_plot_end , transpiration)) *
 	mapping(
 		:DateTime => "Date (UTC)", 
-		:weight_rel_no_irrig => "Weight without irrigation (g)",
+		:weight_no_irrig => "Weight without irrigation (g)",
+		color = :Plant
 	) * 
 	visual(Scatter, color=:grey) |>
 	draw	
@@ -389,7 +400,7 @@ data(filter(x -> timescale_plot_start <= x.DateTime <= timescale_plot_end , tran
 data(filter(x -> timescale_plot_start <= x.DateTime <= timescale_plot_end , transpiration)) *
 	mapping(
 		:DateTime => "Date (UTC)", 
-		:irrigation_cum => "Scale weight (g)",
+		:transp => "Instantaneous transpiration (g)",
 		color = :irrigation_event
 	) * 
 	visual(Scatter) |>
@@ -2020,7 +2031,7 @@ version = "3.5.0+0"
 # ╟─f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8
 # ╠═cdc58362-6335-4349-8aaa-765e5fba6e34
 # ╟─ed2e2d47-3d4b-4c82-bfb9-0e75d400fa20
-# ╟─e54d904a-186e-471f-b19d-314e4e26e44e
+# ╠═e54d904a-186e-471f-b19d-314e4e26e44e
 # ╟─7a0cea13-7b32-486d-bbc3-03924609280b
 # ╟─fe51b8a7-047e-4bca-9e76-0a8f4af22898
 # ╟─67bac77f-d15c-4bac-a1e1-71a45749e968
@@ -2046,7 +2057,7 @@ version = "3.5.0+0"
 # ╟─8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
 # ╠═9caab45e-f33b-4b54-a7de-7f7035144f0e
 # ╟─f4d51d70-b378-44f0-ada2-8f470cd22b6b
-# ╠═1c431080-33c6-4ac4-8409-df1c487a1f54
+# ╟─1c431080-33c6-4ac4-8409-df1c487a1f54
 # ╟─15b8e802-7656-4702-8638-c37b0ec3549f
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
