@@ -17,7 +17,7 @@ end
 # ╔═╡ 6685ea8b-7a27-4e62-9ce8-82955a06fd58
 begin
 	using Dates
-	using CSV, DataFrames
+	using CSV, DataFrames, Statistics
 	using CodecBzip2, Tar # For the compression of the resulting CSV
 	using AlgebraOfGraphics, CairoMakie
 	using ShiftedArrays
@@ -41,7 +41,13 @@ The transpiration was measured in five phases due to changes in the measurement 
 To be sure to get the same time for all the data, we used the time of the thermal camera, which we know have a constant delay of 3512s compared to UTC. The method was to use the thermal images to see when there is a change of plant, because its weight goes down near 0.0 at this time, with a maximum error of 60s, because the images where taken each minute.
 
 We use the `time_synchronization.csv` file to synchronize correctly the timestamps.
+"""
 
+# ╔═╡ 20bf6c44-dabb-41c5-af4a-e766b04d37fc
+TableOfContents(title="📚 Table of Contents", indent=true, depth=4, aside=true)
+
+# ╔═╡ 0f079397-ef9e-4b2d-bedc-6f5c47e9918a
+md"""
 ## Imports
 
 ### Dependencies
@@ -85,9 +91,10 @@ df_phase_0_delayed = CSV.read("../0-data/scale_weight/weight/weights_1.txt", Dat
 
 # ╔═╡ b6766baa-73a3-446a-a531-e20cca27c27e
 df_phase_0 = let
-	df = copy(df_phase_0_delayed)
-	df.DateTime = df.DateTime - Dates.Hour(1)
-	df
+	df_ = copy(df_phase_0_delayed)
+	df_ = unique(df_, :DateTime)
+	df_.DateTime = df_.DateTime - Dates.Hour(1)
+	df_
 end
 
 # ╔═╡ 8ddc6990-6c42-4ba8-9363-9726dc695db0
@@ -102,11 +109,15 @@ df_phase_1_delayed = CSV.read("../0-data/scale_weight/weight/weightsPhase1.txt",
 
 # ╔═╡ d48b9b43-07e8-464d-949b-40fa6e145c65
 df_phase_1 = let
-	df = copy(df_phase_1_delayed)
+	df_ = copy(df_phase_1_delayed)
 	# Phase 0 is at UTC+1, so we need to correct the time:
 	delay = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
-	df.DateTime .+= Dates.Second(delay)
-	df
+	df_.DateTime .+= Dates.Second(delay)
+
+	# Some measurements are made twice per second, we only need once
+	df_ = unique(df_, :DateTime)
+
+	df_
 end
 
 # ╔═╡ 6b81d83c-e139-46b4-bc4f-2110cdaa42f0
@@ -119,11 +130,13 @@ df_phase_2_delayed = CSV.read("../0-data/scale_weight/weight/weightsPhase2.txt",
 
 # ╔═╡ c3c56b52-dc31-4528-a84d-e81b322dd3cf
 df_phase_2 = let
-	df =copy(df_phase_2_delayed)
+	df_ = copy(df_phase_2_delayed)
 	# Phase 0 is at UTC+1, so we need to correct the time:
 	delay = filter(x -> x.type == "scale" && x.phase == "phase2", time_correction).delay_seconds[1]
-	df.DateTime .+= Dates.Second(delay)
-	df
+	df_.DateTime .+= Dates.Second(delay)
+	df_ = unique(df_, :DateTime)
+
+	df_
 end
 
 # ╔═╡ a83879cd-1fd5-4306-9bf7-49074229f842
@@ -136,11 +149,13 @@ df_phase_3_delayed = CSV.read("../0-data/scale_weight/weight/weightsPhase3.txt",
 
 # ╔═╡ ffb69b11-816a-4e37-983d-fd18fdb86b08
 df_phase_3 = let
-	df = df_phase_3_delayed
+	df_ = df_phase_3_delayed
 	# Phase 0 is at UTC+1, so we need to correct the time:
 	delay = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
-	df.DateTime .+= Dates.Second(delay)
-	df
+	df_.DateTime .+= Dates.Second(delay)
+	df_ = unique(df_, :DateTime)
+
+	df_
 end
 
 # ╔═╡ 6f1549b9-4bf9-4d09-9ce9-b36aa92ac9f1
@@ -153,11 +168,13 @@ df_phase_4_delayed = CSV.read("../0-data/scale_weight/weight/weightsPhase4.txt",
 
 # ╔═╡ fd652e98-a33b-491a-b95d-b512165f037d
 df_phase_4 = let
-	df = copy(df_phase_4_delayed)
+	df_ = copy(df_phase_4_delayed)
 	# Phase 0 is at UTC+1, so we need to correct the time:
 	delay = filter(x -> x.type == "scale" && x.phase == "phase4", time_correction).delay_seconds[1]
-	df.DateTime .+= Dates.Second(delay)
-	df
+	df_.DateTime .+= Dates.Second(delay)
+	df_ = unique(df_, :DateTime)
+
+	df_
 end
 
 # ╔═╡ 3ec8ee51-c26f-4771-95ef-f24e1698ea5f
@@ -189,6 +206,7 @@ Transpiration was measured every minute at the begining, and then every second. 
 CO2 = let
 	df_ = CSV.read("../3-CO2/CO2_fluxes.csv", DataFrame)
 	rename!(df_, :DateTime => :DateTime_start)
+	sort(df_, :DateTime_start)
 end
 
 # ╔═╡ b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
@@ -227,31 +245,6 @@ plant_sequence = let
 	
 	df_
 end
-
-# ╔═╡ 77da482d-11d5-48d6-a3a2-466029b63d0a
-# ╠═╡ disabled = true
-#=╠═╡
-
-	phase1_dates = [first(df_phase_1_delayed.DateTime),last(df_phase_1_delayed.DateTime)]
-	delay_phase1 = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
-	df_.DateTime_start[df_.DateTime_start .>= phase1_dates[1] .&& df_.DateTime_start .<= phase1_dates[2]] .+= Dates.Second(delay_phase1)
-	df_.DateTime_end[df_.DateTime_end .>= phase1_dates[1] .&& df_.DateTime_end .<= phase1_dates[2]] .+= Dates.Second(delay_phase1)
-
-	phase2_dates = [first(df_phase_2_delayed.DateTime),last(df_phase_2_delayed.DateTime)]
-	delay_phase2 = filter(x -> x.type == "scale" && x.phase == "phase2", time_correction).delay_seconds[1]
-	df_.DateTime_start[df_.DateTime_start .>= phase2_dates[1] .&& df_.DateTime_start .<= phase2_dates[2]] .+= Dates.Second(delay_phase2)
-	df_.DateTime_end[df_.DateTime_end .>= phase2_dates[1] .&& df_.DateTime_end .<= phase2_dates[2]] .+= Dates.Second(delay_phase2)
-	
-	phase3_dates = [first(df_phase_3_delayed.DateTime),last(df_phase_3_delayed.DateTime)]
-	delay_phase3 = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
-	df_.DateTime_start[df_.DateTime_start .>= phase3_dates[1] .&& df_.DateTime_start .<= phase3_dates[2]] .+= Dates.Second(delay_phase3)
-	df_.DateTime_end[df_.DateTime_end .>= phase3_dates[1] .&& df_.DateTime_end .<= phase3_dates[2]] .+= Dates.Second(delay_phase3)
-
-	phase4_dates = [first(df_phase_4_delayed.DateTime),last(df_phase_4_delayed.DateTime)]
-	delay_phase4 = filter(x -> x.type == "scale" && x.phase == "phase4", time_correction).delay_seconds[1]
-	df_.DateTime_start[df_.DateTime_start .>= phase4_dates[1] .&& df_.DateTime_start .<= phase4_dates[2]] .+= Dates.Second(delay_phase4)
-	df_.DateTime_end[df_.DateTime_end .>= phase4_dates[1] .&& df_.DateTime_end .<= phase4_dates[2]] .+= Dates.Second(delay_phase4)
-  ╠═╡ =#
 
 # ╔═╡ f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8
 md"""
@@ -374,6 +367,8 @@ Ploting the irrigation events in the scale weights:
 @bind timescale_plot_end PlutoUI.Slider(first(transpiration_df_irrig.DateTime):Day(1):last(transpiration_df_irrig.DateTime), default=last(transpiration_df_irrig.DateTime), show_value=true)
 
 # ╔═╡ 3aee3153-75f2-49fd-b3d6-3ca75daa9492
+# ╠═╡ disabled = true
+#=╠═╡
 data(transpiration_df_irrig) *
 	mapping(
 		:DateTime => "Date (UTC)", 
@@ -382,6 +377,7 @@ data(transpiration_df_irrig) *
 	) * 
 	visual(Scatter) |>
 	draw	
+  ╠═╡ =#
 
 # ╔═╡ 50aa244a-1afe-4968-b287-285ba5816235
 md"""
@@ -403,13 +399,15 @@ transpiration = let
 		groupby(df_, :sequence),
 		[:weight_rel, :irrigation_cum] => ((w,i) -> w .- i) => :weight_rel_no_irrig,
 		[:weight, :irrigation_cum] => ((w,i) -> w .- i) => :weight_no_irrig,
-		[:diff, :irrigation] => ((w,i) -> w .+ i) => :transp,
+		[:diff, :irrigation] => ((w,i) -> w .+ i) => :diff_no_irrig,
 	)
-
+	
 	df_
 end
 
 # ╔═╡ c0f4f748-cadb-445d-b42d-85dda0b1bc82
+# ╠═╡ disabled = true
+#=╠═╡
 data(transpiration) *
 	mapping(
 		:DateTime => "Date (UTC)", 
@@ -418,12 +416,13 @@ data(transpiration) *
 	) * 
 	visual(Scatter, color=:grey) |>
 	draw	
+  ╠═╡ =#
 
 # ╔═╡ 80cb19c1-b506-4002-a636-c59c5f723c89
 data(transpiration) *
 	mapping(
 		:DateTime => "Date (UTC)", 
-		:transp => "Instantaneous transpiration (g)",
+		:diff_no_irrig => "Instantaneous transpiration (g)",
 		color = :sequence
 	) * 
 	visual(Scatter) |>
@@ -439,42 +438,10 @@ md"""
 ### 5 minute transpiration
 """
 
-# ╔═╡ 432416de-5697-4883-9535-2c821d523af1
-#=╠═╡
-data(filter(x -> DateTime("2021-03-15T12:30:00") <= x.DateTime <= DateTime("2021-03-16T23:59:59"), transpiration_df)) * 
-	mapping(:DateTime => "Date (UTC)", :weight => "Scale weight (g)") * visual(Scatter, color=:grey) |>
-	draw	
-  ╠═╡ =#
-
-# ╔═╡ 21e399d0-6cfe-4421-ab56-cb36d8643034
-#=╠═╡
-transpi_first_5min = let
-	df_ = filter!(x-> !ismissing(x.DateTime_start_5min), transpiration_df)
-	# Compute the cumulated duration over each 5-min window:
-	df_ = transform(
-		groupby(df_, :DateTime_start_5min), 
-		:DateTime => (x-> cumsum(duration(x))) => :duration
-	)
-	# Compute transpiration as the slope of the linear weight~duration relationship: 
-	df_ = combine(
-		groupby(df_, :DateTime_start_5min),
-		:DateTime_end_5min => unique => :DateTime_end,
-		[:weight, :duration] => ((y,x) -> begin
-		x=[i.value for i in Second.(x)]
-		(x'*x)\x'*(y[1] .- y)
-		end
-		) => :transpiration_g_s, # grammes s-1
-		# To compute as the weight difference between first last time-step(s):
-		# [:weight, :duration] => ((x,y) -> (median(first(x, 1)) - median(last(x, 1))) / Second(last(y)).value) => :transpiration_diff,
-		:duration => (x -> canonicalize(maximum(x))) => :period_computation,
-		nrow
-	)
-	rename!(df_, :DateTime_start_5min => :DateTime_start)
-	# Keep only the time-steps where we have 3 minutes of data to compute Tr:
-	filter!(x -> x.nrow > 3, df_)
-	df_	
-end
-  ╠═╡ =#
+# ╔═╡ 32447cbe-452a-426f-9a3e-146e27d863ca
+md"""
+Comparing the two methods of computing the transpiration
+"""
 
 # ╔═╡ 8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
 md"""
@@ -536,25 +503,121 @@ function add_timeperiod(x,y)
 	return df_
 end
 
+# ╔═╡ 58399089-2b2f-4681-aaec-23c3d6d17a60
+transpiration_time_C02_ = add_timeperiod(transpiration,CO2)
+
 # ╔═╡ c13ef402-a480-4bba-8df5-d05a68a971b6
-transpiration_df = add_timeperiod(transpiration,CO2)
+transpiration_df2 = let
+	df_ = sort(transpiration_time_C02_, :DateTime)
+	transform!(
+		df_,
+		:DateTime => (x -> x .- ShiftedArrays.lag(x)) => :duration
+	)
+	transform!(df_, [:diff_no_irrig, :duration] => ByRow((x,y) -> begin
+		dur_second = ismissing(y) ? missing : Second(y).value
+		x / dur_second
+	end) => :transpiration_g_s)
 
-# ╔═╡ 15b8e802-7656-4702-8638-c37b0ec3549f
-"""
-	duration(x)
-
-Computes the duration between each element starting from the first one to the second until the end. The last value has a duration of `zero(x[2] - x[1])`.
-"""
-function duration(x)
-	len = length(x)
-	d = fill(zero(x[2] - x[1]), len)
-	for i in eachindex(x)
-		i == len && continue
-		d[i] = x[i+1] - x[i] 
-	end
-
-	return d
+	df_
 end
+
+# ╔═╡ c20f228d-2418-4083-ad1f-06ed254a149e
+data(dropmissing(transpiration_df2, :diff)) *
+	mapping(
+		:DateTime => "Date (UTC)", 
+		:diff_no_irrig => "Instantaneous transpiration (g)",
+		#color = :sequence
+	) * 
+	visual(Scatter) |>
+	draw	
+
+# ╔═╡ aac9c5e1-575b-495c-8dde-05fd8dc3a072
+filter(x -> x.diff_no_irrig > 5, transpiration_df2)
+
+# ╔═╡ ddc368e7-5f7d-4999-9c47-957a95b96851
+findall(transpiration_df2.diff_no_irrig .> 5)
+
+# ╔═╡ 6b0acfef-d66a-4f10-871d-ff1ac8d78229
+transpiration_df2[1242:1243,:]
+
+# ╔═╡ 432416de-5697-4883-9535-2c821d523af1
+data(filter(x -> DateTime("2021-03-09T12:30:00") <= x.DateTime <= DateTime("2021-03-12T23:59:59"), dropmissing(transpiration_df2, :transpiration_g_s))) * 
+	mapping(:DateTime => "Date (UTC)", :transpiration_g_s => "Scale weight (g)") * visual(Scatter, color=:grey) |>
+	draw	
+
+# ╔═╡ 21e399d0-6cfe-4421-ab56-cb36d8643034
+transpi_first_5min = let
+	df_ = dropmissing(transpiration_df2, :DateTime_start_5min)
+	# Compute the cumulated duration over each 5-min window:
+	df_ = transform(
+		groupby(df_, :DateTime_start_5min), 
+		#:DateTime => (x -> cumsum(x .- ShiftedArrays.lag(x, default = zero(x[2] - x[1])))) => :duration_cum
+		:duration => cumsum => :duration_cum
+	)
+	
+	# Compute transpiration as the slope of the linear weight~duration relationship: 
+	df_ = combine(
+		groupby(df_, :DateTime_start_5min),
+		:DateTime_end_5min => unique => :DateTime_end,
+		[:weight_no_irrig, :duration_cum] => ((y,x) -> begin
+		x=[i.value for i in Second.(x)]
+		(x'*x)\x'*(y[1] .- y)
+		end
+		) => :transpiration_g_s, # grammes s-1
+		# To compute as the weight difference between first last time-step(s):
+		[:weight_no_irrig, :duration_cum] => ((x,y) -> (median(first(x, 1)) - median(last(x, 1))) / Second(last(y)).value) => :transpiration_diff_g_s,
+		#:duration_cum => (x -> canonicalize(maximum(x))) => :period_computation,
+		nrow
+	)
+	rename!(df_, :DateTime_start_5min => :DateTime_start)
+	# Keep only the time-steps where we have 3 minutes of data to compute Tr:
+	filter!(x -> x.nrow > 3, df_)
+	df_
+end
+
+# ╔═╡ 8efe7fd5-5232-4c12-b548-cf22f9fcf923
+data(filter(x -> DateTime("2021-04-09T12:30:00") <= x.DateTime_start <= DateTime("2021-04-12T23:59:59"), transpi_first_5min)) *
+	mapping(
+		:DateTime_start => "Date (UTC)", 
+		[:transpiration_diff_g_s,:transpiration_g_s] .=> "Instantaneous transpiration (g)",
+		color=dims(1) => renamer([:transpiration_diff_g_s,:transpiration_g_s])
+		#color = :sequence
+	) * 
+	visual(Scatter) |>
+	draw
+
+# ╔═╡ 224cd958-3bba-4270-863b-d85919772a87
+let
+p = data(transpi_first_5min) *
+	mapping(
+		:DateTime_start => "Date (UTC)", 
+		#:transpiration_g_s => "Instantaneous transpiration (g)",
+		[:transpiration_diff_g_s,:transpiration_g_s] .=> "Instantaneous transpiration (g)",
+		color=dims(1) => renamer([:transpiration_diff_g_s,:transpiration_g_s])
+	) * 
+	visual(Scatter)
+draw(p, legend=(position=:bottom,))	
+end
+
+# ╔═╡ dacae6d0-04c9-4b46-9b59-6fd7185745c1
+data(filter(x -> DateTime("2021-04-09T12:30:00") <= x.DateTime_start <= DateTime("2021-04-15T23:59:59"), transpi_first_5min)) *
+	mapping(
+		:DateTime_start => "Date (UTC)", 
+		[:transpiration_diff_g_s,:transpiration_g_s] .=> "Instantaneous transpiration (g)",
+		color=dims(1) => renamer([:transpiration_diff_g_s,:transpiration_g_s])
+		#color = :sequence
+	) * 
+	visual(Scatter) |>
+	draw
+
+# ╔═╡ 307abcd3-4009-4a47-9f7e-a367da754a2f
+scatter(transpi_first_5min.transpiration_diff_g_s, transpi_first_5min.transpiration_g_s)
+
+# ╔═╡ 378a80f0-12ba-418b-91af-84ba0424a375
+CO2
+
+# ╔═╡ a14f0870-0258-4c0d-ab1c-be4e707ac396
+transpiration_df2
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -567,6 +630,7 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 ShiftedArrays = "1277b4bf-5013-50f5-be3d-901d8477a67a"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 
 [compat]
@@ -585,7 +649,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "54366de6efe0b21f59b2e365386105aed4e1ca3d"
+project_hash = "149f607b9b615ac27fd1c015ee266adebf5b65f6"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -825,9 +889,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "fb372fc76a20edda014dfc2cdb33f23ef80feda6"
+git-tree-sha1 = "da9e1a9058f8d3eec3a8c9fe4faacfb89180066b"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.85"
+version = "0.25.86"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -877,9 +941,9 @@ version = "4.4.2+2"
 
 [[deps.FFTW]]
 deps = ["AbstractFFTs", "FFTW_jll", "LinearAlgebra", "MKL_jll", "Preferences", "Reexport"]
-git-tree-sha1 = "90630efff0894f8142308e334473eba54c433549"
+git-tree-sha1 = "f9818144ce7c8c41edf5c4c179c684d92aa4d9fe"
 uuid = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
-version = "1.5.0"
+version = "1.6.0"
 
 [[deps.FFTW_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1481,9 +1545,9 @@ version = "1.50.9+0"
 
 [[deps.Parsers]]
 deps = ["Dates", "SnoopPrecompile"]
-git-tree-sha1 = "6f4fbcd1ad45905a5dee3f4256fabb49aa2110c6"
+git-tree-sha1 = "478ac6c952fddd4399e71d4779797c538d0ff2bf"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.5.7"
+version = "2.5.8"
 
 [[deps.Pixman_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2011,6 +2075,8 @@ version = "3.5.0+0"
 
 # ╔═╡ Cell order:
 # ╟─6b8526e4-b297-11ed-1c66-470f26a581c7
+# ╟─20bf6c44-dabb-41c5-af4a-e766b04d37fc
+# ╟─0f079397-ef9e-4b2d-bedc-6f5c47e9918a
 # ╠═6685ea8b-7a27-4e62-9ce8-82955a06fd58
 # ╟─a7b313b8-2f6f-43c1-a39b-ada77982a31e
 # ╠═7027478e-8ba6-4b17-9448-628114d73816
@@ -2040,7 +2106,6 @@ version = "3.5.0+0"
 # ╟─b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
 # ╟─48187906-42ac-45c7-8736-9d825cd23ce8
 # ╠═ac08d634-e1b3-4b8f-995e-6c24e2941095
-# ╠═77da482d-11d5-48d6-a3a2-466029b63d0a
 # ╟─f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8
 # ╠═cdc58362-6335-4349-8aaa-765e5fba6e34
 # ╟─ed2e2d47-3d4b-4c82-bfb9-0e75d400fa20
@@ -2061,14 +2126,25 @@ version = "3.5.0+0"
 # ╠═c0f4f748-cadb-445d-b42d-85dda0b1bc82
 # ╠═80cb19c1-b506-4002-a636-c59c5f723c89
 # ╟─1bf9b96d-92a5-4c80-9be8-68a115114d1d
+# ╠═58399089-2b2f-4681-aaec-23c3d6d17a60
 # ╠═c13ef402-a480-4bba-8df5-d05a68a971b6
+# ╠═c20f228d-2418-4083-ad1f-06ed254a149e
+# ╠═aac9c5e1-575b-495c-8dde-05fd8dc3a072
+# ╠═ddc368e7-5f7d-4999-9c47-957a95b96851
+# ╠═6b0acfef-d66a-4f10-871d-ff1ac8d78229
 # ╟─5fc42118-7938-48ad-99fb-330cc44eaf58
 # ╠═432416de-5697-4883-9535-2c821d523af1
+# ╠═8efe7fd5-5232-4c12-b548-cf22f9fcf923
 # ╠═21e399d0-6cfe-4421-ab56-cb36d8643034
+# ╠═224cd958-3bba-4270-863b-d85919772a87
+# ╠═dacae6d0-04c9-4b46-9b59-6fd7185745c1
+# ╠═32447cbe-452a-426f-9a3e-146e27d863ca
+# ╠═307abcd3-4009-4a47-9f7e-a367da754a2f
 # ╟─8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
 # ╠═9caab45e-f33b-4b54-a7de-7f7035144f0e
 # ╟─f4d51d70-b378-44f0-ada2-8f470cd22b6b
-# ╟─1c431080-33c6-4ac4-8409-df1c487a1f54
-# ╟─15b8e802-7656-4702-8638-c37b0ec3549f
+# ╠═1c431080-33c6-4ac4-8409-df1c487a1f54
+# ╠═378a80f0-12ba-418b-91af-84ba0424a375
+# ╠═a14f0870-0258-4c0d-ab1c-be4e707ac396
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
