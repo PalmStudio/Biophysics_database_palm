@@ -61,8 +61,8 @@ rsconnect/
 !0-data/scenario_sequence/SequencePlanteMicro3.csv
 !0-data/scenario_sequence/SequenceScenarioMicro3.csv
 
-!4-thermal_camera_measurements/leaf_temperature.csv.bz2
-!5-transpiration/transpiration_first_5min.csv.bz2
-!5-transpiration/transpiration_10min.csv.bz2
-!09-database/database_5min.csv.bz2
-!09-database/database_10min.csv.bz2
+!5-thermal_camera_measurements/leaf_temperature.csv.bz2
+!6-transpiration/transpiration_first_5min.csv.bz2
+!6-transpiration/transpiration_10min.csv.bz2
+!8-database/database_5min.csv.bz2
+!8-database/database_10min.csv.bz2
