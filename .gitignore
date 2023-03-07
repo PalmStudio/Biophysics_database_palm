@@ -52,6 +52,7 @@ rsconnect/
 
 # Data to keep:
 !0-data/picarro_flux/data_mean_flux.csv
+!0-data/picarro_flux/outliers.csv
 !2-time-synchronization/correspondance_scale_camera_time.csv
 !0-data/door_opening/Mic3_door_opening.csv
 !0-data/2-time-synchronization/correspondance_scale_camera_time.csv
