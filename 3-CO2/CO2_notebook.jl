@@ -36,6 +36,11 @@ The chambers allows for finely controling the radiation in the visible spectrum 
 In this experiment, we used two microcosms, one for storage (`mic4`) and one for measuring (`mic3`) the plant response to climatic and radiative conditions scenarii.
 
 The CO2 flux of the plant in `mic3` was measured for each scenario by 10 minutes time-steps; measuring the input CO2 concentration to the chamber for 5 minutes, and then the output CO2 concentration for 5 minutes.
+
+The CO2 fluxes are noisy due to several factors: 
+
+- the conditions change rapidly and are not controled anymore when the door of the chamber is opened, and it can take a bit of time to recover the instruction in teh controled conditions
+- the conditions are not at equilibrium in the transition period between two CO2 scenarios, *e.g.* from 400 ppm to 600 ppm.
 """
 
 # ╔═╡ 2a9abfb3-598f-4ddb-8226-7addd9284d1e
@@ -45,7 +50,7 @@ md"""
 
 # ╔═╡ 67f798a8-e3fe-41fb-8301-401b9af41361
 md"""
-## Read the data
+## Data
 """
 
 # ╔═╡ ff2474f0-4b58-4993-8fe3-5b2e865ebf8a
@@ -77,19 +82,9 @@ climate_5min = let
 	df
 end
 
-# ╔═╡ ebd03dc9-16a4-4247-8b31-08bdad23dabb
-md"""
-## Cleaning the data
-
-The CO2 fluxes are noisy due to several factors: 
-
-- the conditions change rapidly and are not controled anymore when the door of the chamber is opened, and it can take a bit of time to recover the instruction in teh controled conditions
-- the conditions are not at equilibrium in the transition period between two CO2 scenarios, *e.g.* from 400 ppm to 600 ppm.
-"""
-
 # ╔═╡ 9cd29ba6-11dd-42b5-a842-ae33385f5709
 md"""
-### Importing the data about door opening and closing
+### Door opening and closing
 """
 
 # ╔═╡ b997751e-0390-4715-8c13-e8bbbf26ece3
@@ -99,7 +94,7 @@ The opening and closing of the chamber's door is monitored continuously and avai
 
 # ╔═╡ af4b9718-ec17-4737-9978-15e41981b56a
 door_df = let
-	df = CSV.read("../0-data/opening_door/Mic3_ouverture_porte.csv", DataFrame)
+	df = CSV.read("../0-data/door_opening/Mic3_door_opening.csv", DataFrame)
 	select!(
 		df,
 		:DateTime => (x -> Dates.DateTime.(x, "yyy-mm-dd HH:MM:SS")) => :DateTime,
@@ -113,6 +108,35 @@ door_df = let
 	)
 end
 
+# ╔═╡ d6b14c17-dd9b-4343-b9dc-3dcce86b6660
+md"""
+### Outliers
+
+Some outliers were manually identified. These outliers are the ones that are obvious, but not identified through the door opening or a scenario change data bases. It can still come from a door opening though (and it is most likely), because some door openings were not registered properly (we can see some using the thermal images).
+"""
+
+# ╔═╡ 90f88cb4-c718-424e-8d5b-a20e14cde703
+outliers = let
+	df_ = CSV.read("../0-data/picarro_flux/outliers.csv", DataFrame)
+	transform!(
+		df_, 
+		:Time => ByRow(x -> floor(DateTime(x[1:19], dateformat"yyy-mm-ddTHH:MM:SS.s"), Minute(1))) => :DateTime
+	)
+	select!(df_, :DateTime)
+	df_.outlier .= true
+	unique(df_, :DateTime)
+end
+
+# ╔═╡ ebd03dc9-16a4-4247-8b31-08bdad23dabb
+md"""
+## Cleaning the data
+"""
+
+# ╔═╡ fda9e0c5-fd51-472a-8679-65354f4e7d5b
+md"""
+### Door opening and scenario change
+"""
+
 # ╔═╡ d2bedd0a-dce1-475f-bbd9-f9d859b997fa
 md"""
 The CO2 fluxes where monitored at a 10 minute time-step resolution (5 min in, 5min out), so we only need to know if the door was opened or just closed in this 10min time-window. To do so, we rounded the `DateTime` column to 10min, and only kept the information about a "door event" in this window, *i.e.* the door was opened and/or closed in this 10min window.
@@ -120,7 +144,7 @@ The CO2 fluxes where monitored at a 10 minute time-step resolution (5 min in, 5m
 
 # ╔═╡ 22e45b4c-66f2-4771-a46c-53523a929a9e
 md"""
-## Joining
+#### Joining
 
 Joining the data into the same dataframe. The door data is merged at a 10min resolution because an event can happen just before or after the CO2 measurement window.
 """
@@ -143,7 +167,7 @@ md"""
 
 # ╔═╡ bf0e1fdc-543b-41bc-9fc4-916e0ae9cbf3
 md"""
-## Visualizing
+#### Visualizing
 """
 
 # ╔═╡ 63e0fe2f-d73f-4ac1-b420-8d5759242b47
@@ -163,7 +187,7 @@ md"""
 
 # ╔═╡ 415affc8-7890-44d6-af3d-d0ecdee32040
 md"""
-## Cleaning CO2 fluxes
+#### Cleaning
 """
 
 # ╔═╡ 56959cab-e592-4759-ac0e-85d2e8d78654
@@ -176,6 +200,35 @@ We then have to remove all points around these events.
 # ╔═╡ 3fb1bfd8-2358-4443-93b0-64b62b4ac925
 md"""
 *Figure 4. Cleaned CO2 fluxes in the chamber during the whole experiment (2 months).*
+"""
+
+# ╔═╡ ca9f2042-b489-4d6a-aba6-d11dd1946706
+md"""
+### Outliers
+
+Some outliers still remain in the data base. They most likely come from a door opening that was not registered. We can see some from the thermal images. We identified those clear outliers manually.
+"""
+
+# ╔═╡ b7c16463-e018-4b51-b847-0cc9a9a997a4
+md"""
+#### Joining
+"""
+
+# ╔═╡ 908d51b4-f87d-48eb-96f1-efb3201ebe89
+md"""
+Here is an example clear outlier happening just before 21:00 on the 1st of april:
+"""
+
+# ╔═╡ e46f1451-86e4-4407-b115-286ae9b8874f
+md"""
+All outliers identified by hand:
+"""
+
+# ╔═╡ aa89ecda-07cd-4fa8-85ca-55afaa4b5160
+md"""
+#### Filtering
+
+Now we can remove the points that were identified as outliers:
 """
 
 # ╔═╡ 608d55cb-fa9c-49a4-a082-8b1faea8deb7
@@ -332,14 +385,45 @@ mapping(
 	:flux_umol_s => "CO2 flux (μmol s⁻¹)",
 ) |> draw
 
+# ╔═╡ ec364a4b-1412-4d13-8fb6-5b5630390a62
+df_filt_outliers = leftjoin(df_filt, outliers, on = :DateTime)
+
+# ╔═╡ 1dc0aa87-f9f9-4d51-b50b-0d133280f396
+@bind day_ PlutoUI.Slider(Date(minimum(df_filt_outliers.DateTime)):Day(1):Date(maximum(df_filt_outliers.DateTime)), show_value = true, default = Date("2021-04-01"))
+
+# ╔═╡ 6cdfefec-2623-4fc2-b2c0-6b20d5efd273
+data(filter(x -> Date(x.DateTime) == day_, df_filt_outliers)) *
+	mapping(
+		:DateTime => "Time",
+		:flux_umol_s => "CO2 concentration (ppm)",
+		color=:outlier => (x -> ismissing(x) ? false : x) => "Outlier",
+	) |> draw
+
+# ╔═╡ 6a182b2b-3f12-4e8c-9f9e-e4b30c3d4965
+data(df_filt_outliers) *
+	mapping(
+		:DateTime => "Time",
+		:flux_umol_s => "CO2 concentration (ppm)",
+		color=:outlier => (x -> ismissing(x) ? false : x) => "Outlier",
+	) |> draw
+
+# ╔═╡ e098c42b-1b07-450d-ac26-dbdbfb5fb2a9
+df_filt_outliers_filt = let
+	df_ = filter(x -> ismissing(x.outlier), df_filt_outliers)
+	select!(df_, Not(:outlier))
+end
+
 # ╔═╡ 6dbb60e3-2dc2-4b7c-9e24-5a3c1c15ec5c
 CSV.write(
 	"CO2_fluxes.csv", 
 	select(
-		sort(df_filt, :DateTime), 
+		sort(df_filt_outliers_filt, :DateTime), 
 		[:DateTime, :DateTime_end, :CO2_dry_MPV1, :CO2_dry_MPV2, :flux_umol_s]
 	)
 )
+
+# ╔═╡ f5beb720-5a2d-4a4e-92ff-d6179f52d892
+TableOfContents(title="📚 Table of Contents", indent=true, depth=4, aside=true)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1794,10 +1878,13 @@ version = "3.5.0+0"
 # ╟─6f3d1ce2-93b6-4056-9e1a-9ad431b409a4
 # ╟─457d485f-0bf0-421a-98fb-8850d97dae9b
 # ╟─5005c489-7123-4620-8a2a-83fc7bee0b1a
-# ╟─ebd03dc9-16a4-4247-8b31-08bdad23dabb
 # ╟─9cd29ba6-11dd-42b5-a842-ae33385f5709
 # ╟─b997751e-0390-4715-8c13-e8bbbf26ece3
 # ╠═af4b9718-ec17-4737-9978-15e41981b56a
+# ╟─d6b14c17-dd9b-4343-b9dc-3dcce86b6660
+# ╠═90f88cb4-c718-424e-8d5b-a20e14cde703
+# ╟─ebd03dc9-16a4-4247-8b31-08bdad23dabb
+# ╟─fda9e0c5-fd51-472a-8679-65354f4e7d5b
 # ╟─d2bedd0a-dce1-475f-bbd9-f9d859b997fa
 # ╟─22e45b4c-66f2-4771-a46c-53523a929a9e
 # ╟─5cb9bb37-6c9e-46e2-9747-9fbdc580b973
@@ -1815,9 +1902,20 @@ version = "3.5.0+0"
 # ╟─58e65f2f-935e-421a-ab6e-be2a9a964de7
 # ╟─10693220-825f-4268-bd0c-670d52eecdf0
 # ╟─3fb1bfd8-2358-4443-93b0-64b62b4ac925
+# ╟─ca9f2042-b489-4d6a-aba6-d11dd1946706
+# ╟─b7c16463-e018-4b51-b847-0cc9a9a997a4
+# ╠═ec364a4b-1412-4d13-8fb6-5b5630390a62
+# ╟─908d51b4-f87d-48eb-96f1-efb3201ebe89
+# ╟─1dc0aa87-f9f9-4d51-b50b-0d133280f396
+# ╟─6cdfefec-2623-4fc2-b2c0-6b20d5efd273
+# ╟─e46f1451-86e4-4407-b115-286ae9b8874f
+# ╟─6a182b2b-3f12-4e8c-9f9e-e4b30c3d4965
+# ╟─aa89ecda-07cd-4fa8-85ca-55afaa4b5160
+# ╠═e098c42b-1b07-450d-ac26-dbdbfb5fb2a9
 # ╟─608d55cb-fa9c-49a4-a082-8b1faea8deb7
 # ╠═6dbb60e3-2dc2-4b7c-9e24-5a3c1c15ec5c
 # ╟─06e26ef4-52ef-421d-81ca-c44b7e16d4f7
 # ╟─959e98c6-c142-41a0-bc0c-ba92ddaebff9
+# ╠═f5beb720-5a2d-4a4e-92ff-d6179f52d892
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
