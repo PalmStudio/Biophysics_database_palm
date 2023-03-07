@@ -55,7 +55,11 @@ md"""
 
 # ╔═╡ a7b313b8-2f6f-43c1-a39b-ada77982a31e
 md"""
-Reading the time correction file.
+### Data
+
+#### Time correction
+
+Importing the file that tells us the correction to apply on the time measurement of the scale and the plant sequence.
 """
 
 # ╔═╡ 7027478e-8ba6-4b17-9448-628114d73816
@@ -66,8 +70,6 @@ time_correction = CSV.read(
 
 # ╔═╡ d631a6a0-4842-4d28-b6ad-f82093fe8581
 md"""
-### Data
-
 #### Decompressing the archive
 """
 
@@ -2120,6 +2122,6 @@ version = "3.5.0+0"
 # ╠═9caab45e-f33b-4b54-a7de-7f7035144f0e
 # ╠═fa15b07f-03b9-4abe-9a40-879d59d62131
 # ╟─f4d51d70-b378-44f0-ada2-8f470cd22b6b
-# ╟─1c431080-33c6-4ac4-8409-df1c487a1f54
+# ╠═1c431080-33c6-4ac4-8409-df1c487a1f54
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
