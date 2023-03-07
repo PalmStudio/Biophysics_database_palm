@@ -180,7 +180,7 @@ end
 md"""
 #### Importing CO2
 
-Transpiration was measured every minute at the begining, and then every second. The data is noisy, but we integrate the values over the 5 min or 10 min time-window of the CO2 fluxes measurements, which helps reduce the noize.
+Transpiration was measured every minute at the begining, and then every second. The data is noisy, but we integrate the values over the 5 min or 10 min time-window of the CO2 fluxes measurements, which helps reduce the noize (see below). To do that, we need to import the CO2 measurement file that gives us the precise timestamps for each measurement time window:
 """
 
 # ╔═╡ c26df749-aa82-4815-a27d-516a79efdabe
@@ -197,7 +197,9 @@ md"""
 
 # ╔═╡ 48187906-42ac-45c7-8736-9d825cd23ce8
 md"""
-Importing the plant sequence to know when a plant is added to the scale, and removed from it. We also correct the timestamps because they were noted using the timestamp from the scale, which is potentially delayed depending on the phase of measurement.
+We want to filter out the scale measurements when a plant is moved from the scale or replaced. To do so, we can import the file that reports the plant sequences, because we know the measurement of plant weight is continuous inside a measurement sequence.
+
+We also correct the timestamps of the dates in the file as they were reported using the timestamp from the scale, with a delay that depends on the phase of measurement.
 """
 
 # ╔═╡ ac08d634-e1b3-4b8f-995e-6c24e2941095
@@ -231,7 +233,7 @@ end
 md"""
 #### Merging the data
 
-Now that we imported the data and corrected the delays to match UTC, we can merge the data into one single dataframe.
+Now that we imported the data and corrected the delays to match UTC, we can merge the plant weight data into one single dataframe.
 """
 
 # ╔═╡ 3fb32c18-bdd2-44bb-a635-ebb5682a5956
@@ -266,6 +268,10 @@ transpiration_df_seq = let
 	end
 	
 	df_
+
+	transform!(df_, :Plant => ByRow(x -> ismissing(x) ? missing : parse(Int, x[2])) => :Plant_id)
+
+	df_
 end
 
 # ╔═╡ 4f002bbb-c3a6-4156-a523-c0bef7868eaa
@@ -283,14 +289,14 @@ data(dropmissing(transpiration_df_seq, :sequence)) *
 	mapping(
 		:DateTime => "Date (UTC)", 
 		:weight => "Scale weight (g)",
-		color = :Plant
+		color = :Plant_id
 	) * 
 	visual(Scatter) |>
 	draw	
 
 # ╔═╡ 7a0cea13-7b32-486d-bbc3-03924609280b
 md"""
-We can see there are some outliers in the values. These outliers come from three different things: 
+We can see some outliers in the values. These outliers come from three different things: 
 
 - We removed the plant from the scale to switch plants
 - The pot was irrigated
@@ -361,25 +367,17 @@ data(transpiration_df_irrig) *
 	visual(Scatter) |>
 	draw	
 
+# ╔═╡ a9798fa4-413c-4a68-960f-fc7306a6274b
+md"""
+And the plant weight corrected for irrigation:
+"""
+
 # ╔═╡ c0f4f748-cadb-445d-b42d-85dda0b1bc82
-# ╠═╡ disabled = true
-#=╠═╡
 data(transpiration_df_irrig) *
 	mapping(
 		:DateTime => "Date (UTC)", 
 		:weight_no_irrig => "Weight without irrigation (g)",
-		color = :Plant
-	) * 
-	visual(Scatter) |>
-	draw	
-  ╠═╡ =#
-
-# ╔═╡ 80cb19c1-b506-4002-a636-c59c5f723c89
-data(dropmissing(transpiration_df_irrig, :diff)) *
-	mapping(
-		:DateTime => "Date (UTC)", 
-		:diff_no_irrig => "Instantaneous transpiration (g)",
-		color = :sequence
+		color = :Plant_id => "Plant ID"
 	) * 
 	visual(Scatter) |>
 	draw	
@@ -389,10 +387,35 @@ md"""
 ## Matching CO2 time-scale
 """
 
+# ╔═╡ 9ee350a3-c669-46bf-a44b-415dd5fe3014
+md"""
+We compute the plant transpiration at the same time-scale than the measurement of the CO2 fluxes. These fluxes are measured for 5 minutes every 10 minutes. We make two dataframes, one only with the transpiration during those 5 minutes, and one with the transpiration over the full 10-min window.
+
+The transpiration is computed following two different methods:
+
+- weight difference: the transpiration is computed from the difference in weight between the beginning and the end of the measurement window
+- regression: the transpiration is computed using the slope of the linear regression of the weight against time for all measurement points inside the time window.
+"""
+
+# ╔═╡ aa5fe143-dc0f-4d84-b9f3-e90c1490479a
+md"""
+Note that the weight is highly variable, even in a 5-min time-window, because of the wind inside the chamber that made the leaves move, which in turn made the weight measurement change. For example, here is a measurement for 5-min:
+"""
+
 # ╔═╡ 5fc42118-7938-48ad-99fb-330cc44eaf58
 md"""
 ### 5 minute transpiration
 """
+
+# ╔═╡ ff960dcc-cdbf-4bd5-8619-613e3633d4bf
+md"""
+In the "difference method", we can use only the first and last points, or if enough data point in the 5 minutes, we can take the median of several first and last points instead. 
+
+We can choose the number of points used in this computation with the following slider:
+"""
+
+# ╔═╡ 88d95908-a13f-4408-b2a2-35943223e55b
+@bind points_mean PlutoUI.Slider(1:10, default = 10, show_value = true)
 
 # ╔═╡ 32447cbe-452a-426f-9a3e-146e27d863ca
 md"""
@@ -404,30 +427,12 @@ md"""
 ### 10 minute transpiration
 """
 
-# ╔═╡ f750e1fa-1c45-4c64-877b-79239ceff265
-data(filter(x -> Date("2021-04-13") == Date(x.DateTime), transpiration_df2))*
-	mapping(
-		:DateTime => "Date (UTC)", 
-		:diff => "Instantaneous transpiration (g)",
-		#color = :sequence
-	) * 
-	visual(Scatter) |>
-	draw
-
 # ╔═╡ 8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
 md"""
 ## Saving
 
 Save the data to disk, and compressing it to save disk space.
 """
-
-# ╔═╡ 9caab45e-f33b-4b54-a7de-7f7035144f0e
-# ╠═╡ disabled = true
-#=╠═╡
-open(Bzip2CompressorStream, "transpiration.csv.bz2", "w") do stream
-    CSV.write(stream, transpiration_df)
-end
-  ╠═╡ =#
 
 # ╔═╡ f4d51d70-b378-44f0-ada2-8f470cd22b6b
 md"""
@@ -453,8 +458,9 @@ function add_timeperiod(x,y)
 		# 5-min time window:
 		ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
 		timestamps_within = findall(row.DateTime_start .<= df_.DateTime .<= row.DateTime_end)
-		
-		if length(timestamps_within) > 0
+
+		# Don't compute time-steps that covers two sequences (we are changing plant here):		
+		if length(timestamps_within) > 0 && length(unique(df_.sequence[timestamps_within])) == 1
 			df_.DateTime_start_5min[timestamps_within] .= row.DateTime_start
 			df_.DateTime_end_5min[timestamps_within] .= row.DateTime_end
 		end
@@ -464,6 +470,9 @@ function add_timeperiod(x,y)
 		next_date = y.DateTime_start[i+1]
 		ismissing(next_date) && continue
 		timestamps_within = findall(row.DateTime_start .<= df_.DateTime .< next_date)
+
+		# Don't compute time-steps that covers two sequences (we are changing plant here):
+		length(unique(df_.sequence[timestamps_within])) > 1 && continue
 		
 		if length(timestamps_within) > 0
 			df_.DateTime_start_10min[timestamps_within] .= row.DateTime_start
@@ -475,44 +484,25 @@ function add_timeperiod(x,y)
 end
 
 # ╔═╡ 58399089-2b2f-4681-aaec-23c3d6d17a60
-transpiration_time_C02= add_timeperiod(sort(dropmissing(transpiration_df_irrig, :DateTime),:DateTime),CO2)
-
-# ╔═╡ c13ef402-a480-4bba-8df5-d05a68a971b6
-transpiration_df = let
-	df_ = sort(transpiration_time_C02, :DateTime)
+transpiration_df= let
+	df_ = add_timeperiod(sort(dropmissing(transpiration_df_irrig, :DateTime),:DateTime),CO2)
 	transform!(
 		df_,
 		:DateTime => (x -> x .- ShiftedArrays.lag(x)) => :duration
 	)
-	transform!(df_, [:diff_no_irrig, :duration] => ByRow((x,y) -> begin
-		dur_second = ismissing(y) ? missing : Second(y).value
-		x / dur_second
-	end) => :transpiration_g_s)
-
 	df_
 end
 
-# ╔═╡ c20f228d-2418-4083-ad1f-06ed254a149e
-data(dropmissing(transpiration_df, :diff)) *
-	mapping(
-		:DateTime => "Date (UTC)", 
-		:diff_no_irrig => "Instantaneous transpiration (g)",
-		#color = :sequence
-	) * 
-	visual(Scatter) |>
-	draw	
+# ╔═╡ 380e80a3-34ee-452d-9b37-21c7872e8d10
+data(groupby(dropmissing(transpiration_df, :DateTime_start_5min), :DateTime_start_5min)[end]) * mapping(:DateTime => "Time (UTC)", :weight_no_irrig => "Plant weight (g)") |> draw
 
 # ╔═╡ 21e399d0-6cfe-4421-ab56-cb36d8643034
-transpi_first_5min = let
+transpiration_first_5min = let
 	df_ = dropmissing(transpiration_df, :DateTime_start_5min)
 	# Compute the cumulated duration over each 5-min window:
 	gdf = groupby(df_, :DateTime_start_5min)
 	
-	transform!(
-		gdf, 
-		#:DateTime => (x -> cumsum(x .- ShiftedArrays.lag(x, default = zero(x[2] - x[1])))) => :duration_cum
-		:duration => cumsum => :duration_cum
-	)
+	transform!(gdf, :duration => cumsum => :duration_cum)
 	
 	# Compute transpiration as the slope of the linear weight~duration relationship: 
 	df_ = combine(
@@ -524,7 +514,14 @@ transpi_first_5min = let
 		end
 		) => :transpiration_g_s, # grammes s-1
 		# To compute as the weight difference between first last time-step(s):
-		[:weight_no_irrig, :duration_cum] => ((x,y) -> (median(first(x, 1)) - median(last(x, 1))) / Second(last(y)).value) => :transpiration_diff_g_s,
+		[:weight_no_irrig, :duration_cum] => ((x,y) -> begin
+			if length(x) < 20
+				return (median(first(x, 1)) - median(last(x, 1))) / Second(last(y)).value
+			else
+				# If enough data points, we take the median of the last 10 points (for the 1s time-step data with high variability)
+				return (median(first(x, points_mean)) - median(last(x, points_mean))) / Second(last(y)).value
+			end
+		end) => :transpiration_diff_g_s,
 		#:duration_cum => (x -> canonicalize(maximum(x))) => :period_computation,
 		nrow
 	)
@@ -534,14 +531,13 @@ transpi_first_5min = let
 	df_
 end
 
-# ╔═╡ dacae6d0-04c9-4b46-9b59-6fd7185745c1
+# ╔═╡ 23aee6b7-9256-435a-9378-d74baaaa4771
 let
-	p = data(filter(x -> DateTime("2021-04-09T12:30:00") <= x.DateTime_start <= DateTime("2021-04-15T23:59:59"), transpi_first_5min)) *
+	p = data(transpiration_first_5min) *
 		mapping(
 			:DateTime_start => "Date (UTC)", 
 			[:transpiration_diff_g_s,:transpiration_g_s] .=> "Instantaneous transpiration (g)",
 			color=dims(1) => renamer(["Difference", "Linear reg."])
-			#color = :sequence
 		) * 
 		visual(Scatter)
 	draw(p, legend = (position = :bottom,))
@@ -552,19 +548,21 @@ begin
 	f = Figure()
 	ax = Axis(f[1, 1], title = "Transpiration (g s⁻¹)", xlabel = "Difference between two consecutive points", ylabel = "Slope of the linear regression")
 	ablines!(ax, [0.0],[1.0], color = :grey, linestyle = :dot)
-	scatter!(ax, transpi_first_5min.transpiration_diff_g_s, transpi_first_5min.transpiration_g_s, color = (:grey, 0.5))
+	scatter!(ax, transpiration_first_5min.transpiration_diff_g_s, transpiration_first_5min.transpiration_g_s, color = (:grey, 0.5))
 	f
 end
 
+# ╔═╡ 9caab45e-f33b-4b54-a7de-7f7035144f0e
+open(Bzip2CompressorStream, "transpiration_first_5min.csv.bz2", "w") do stream
+    CSV.write(stream, transpiration_first_5min)
+end
+
 # ╔═╡ 6031c01c-ee91-45cc-a8e9-45d77dc1e7e3
-transpi_first_10min = let
+transpiration_10min = let
 	df_ = dropmissing(transpiration_df, [:DateTime_start_10min, :duration])
 	# Compute the cumulated duration over each 10-min window:
 	gdf = groupby(df_, :DateTime_start_10min)
-	transform!(
-		gdf, 
-		:duration => cumsum => :duration_cum
-	)
+	transform!(gdf, :duration => cumsum => :duration_cum)
 	
 	# Compute transpiration as the slope of the linear weight~duration relationship: 
 	df_ = combine(
@@ -590,38 +588,21 @@ transpi_first_10min = let
 end
 
 # ╔═╡ 1ff00740-b298-4df4-ab91-8b5bb7f2bd49
-data(filter(x -> DateTime("2021-04-09T12:30:00") <= x.DateTime_start <= DateTime("2021-04-15T23:59:59"), transpi_first_10min)) *
-	mapping(
-		:DateTime_start => "Date (UTC)", 
-		[:transpiration_diff_g_s,:transpiration_g_s] .=> "Instantaneous transpiration (g)",
-		color=dims(1) => renamer([:transpiration_diff_g_s,:transpiration_g_s])
-		#color = :sequence
-	) * 
-	visual(Scatter) |>
-	draw
+let
+	p = data(transpiration_10min) *
+		mapping(
+			:DateTime_start => "Date (UTC)", 
+			[:transpiration_diff_g_s,:transpiration_g_s] .=> "Instantaneous transpiration (g)",
+			color=dims(1) => renamer(["Difference", "Linear reg."])
+		) * 
+		visual(Scatter)
+	draw(p, legend = (position = :bottom,))
+end
 
-# ╔═╡ 3057be92-07a1-46ba-b669-b19851083a5a
-filter(x -> x.transpiration_g_s < -0.05, transpi_first_10min)
-
-# ╔═╡ 77680960-5268-4331-be33-7fbb5b50e021
-data(filter(x -> x.transpiration_g_s > -0.005, transpi_first_10min)) *
-	mapping(
-		:DateTime_start => "Date (UTC)", 
-		[:transpiration_diff_g_s,:transpiration_g_s] .=> "Instantaneous transpiration (g)",
-		color=dims(1) => renamer([:transpiration_diff_g_s,:transpiration_g_s])
-		#color = :sequence
-	) * 
-	visual(Scatter) |>
-	draw
-
-# ╔═╡ 4dd3650e-8e1b-43fd-8bfe-2a2a66fc656c
-findfirst(filter(x -> DateTime("2021-04-09T12:30:00") <= x.DateTime_start <= DateTime("2021-04-15T23:59:59"), transpi_first_10min).transpiration_diff_g_s .< -0.05)
-
-# ╔═╡ 83806cd5-5968-4520-a6ea-ec2eefee78eb
-filter(x -> DateTime("2021-04-09T12:30:00") <= x.DateTime_start <= DateTime("2021-04-15T23:59:59"), transpi_first_10min)[562,:]
-
-# ╔═╡ ad75b301-5676-473c-8258-f1d2436e8feb
-scatter(filter(x -> DateTime("2021-04-09T12:30:00") <= x.DateTime_start <= DateTime("2021-04-15T23:59:59"), transpi_first_10min)[562,:].weight_no_irrig)
+# ╔═╡ fa15b07f-03b9-4abe-9a40-879d59d62131
+open(Bzip2CompressorStream, "transpiration_10min.csv.bz2", "w") do stream
+    CSV.write(stream, transpiration_10min)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2118,28 +2099,26 @@ version = "3.5.0+0"
 # ╠═c4eaec39-48d2-4b78-989b-ee22344daa7e
 # ╟─11701cca-d05a-4c57-9e28-b209233cc859
 # ╠═3aee3153-75f2-49fd-b3d6-3ca75daa9492
+# ╟─a9798fa4-413c-4a68-960f-fc7306a6274b
 # ╠═c0f4f748-cadb-445d-b42d-85dda0b1bc82
-# ╠═80cb19c1-b506-4002-a636-c59c5f723c89
 # ╟─1bf9b96d-92a5-4c80-9be8-68a115114d1d
+# ╟─9ee350a3-c669-46bf-a44b-415dd5fe3014
 # ╠═58399089-2b2f-4681-aaec-23c3d6d17a60
-# ╠═c13ef402-a480-4bba-8df5-d05a68a971b6
-# ╠═c20f228d-2418-4083-ad1f-06ed254a149e
+# ╟─aa5fe143-dc0f-4d84-b9f3-e90c1490479a
+# ╟─380e80a3-34ee-452d-9b37-21c7872e8d10
 # ╟─5fc42118-7938-48ad-99fb-330cc44eaf58
 # ╠═21e399d0-6cfe-4421-ab56-cb36d8643034
-# ╟─dacae6d0-04c9-4b46-9b59-6fd7185745c1
+# ╟─ff960dcc-cdbf-4bd5-8619-613e3633d4bf
+# ╟─88d95908-a13f-4408-b2a2-35943223e55b
+# ╟─23aee6b7-9256-435a-9378-d74baaaa4771
 # ╟─32447cbe-452a-426f-9a3e-146e27d863ca
-# ╠═307abcd3-4009-4a47-9f7e-a367da754a2f
+# ╟─307abcd3-4009-4a47-9f7e-a367da754a2f
 # ╟─b5239d02-4898-479b-9078-be7d6365028c
 # ╠═6031c01c-ee91-45cc-a8e9-45d77dc1e7e3
-# ╠═1ff00740-b298-4df4-ab91-8b5bb7f2bd49
-# ╠═3057be92-07a1-46ba-b669-b19851083a5a
-# ╠═77680960-5268-4331-be33-7fbb5b50e021
-# ╠═4dd3650e-8e1b-43fd-8bfe-2a2a66fc656c
-# ╠═83806cd5-5968-4520-a6ea-ec2eefee78eb
-# ╠═ad75b301-5676-473c-8258-f1d2436e8feb
-# ╠═f750e1fa-1c45-4c64-877b-79239ceff265
+# ╟─1ff00740-b298-4df4-ab91-8b5bb7f2bd49
 # ╟─8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
 # ╠═9caab45e-f33b-4b54-a7de-7f7035144f0e
+# ╠═fa15b07f-03b9-4abe-9a40-879d59d62131
 # ╟─f4d51d70-b378-44f0-ada2-8f470cd22b6b
 # ╟─1c431080-33c6-4ac4-8409-df1c487a1f54
 # ╟─00000000-0000-0000-0000-000000000001
