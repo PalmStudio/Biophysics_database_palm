@@ -436,9 +436,12 @@ md"""
 Save the data to disk, and compressing it to save disk space.
 """
 
+# ╔═╡ 47b34ad6-aaa4-481e-b199-47b57c8b230f
+CSV.write("PlantSequence_delayed_corrected.csv", plant_sequence)
+
 # ╔═╡ f4d51d70-b378-44f0-ada2-8f470cd22b6b
 md"""
-# References
+## References
 """
 
 # ╔═╡ 1c431080-33c6-4ac4-8409-df1c487a1f54
@@ -2121,6 +2124,7 @@ version = "3.5.0+0"
 # ╟─8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
 # ╠═9caab45e-f33b-4b54-a7de-7f7035144f0e
 # ╠═fa15b07f-03b9-4abe-9a40-879d59d62131
+# ╠═47b34ad6-aaa4-481e-b199-47b57c8b230f
 # ╟─f4d51d70-b378-44f0-ada2-8f470cd22b6b
 # ╠═1c431080-33c6-4ac4-8409-df1c487a1f54
 # ╟─00000000-0000-0000-0000-000000000001
