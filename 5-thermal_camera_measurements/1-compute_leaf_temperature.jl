@@ -25,6 +25,11 @@ open(Bzip2DecompressorStream, "0-data/thermal_camera_images/images.tar.bz2") do 
     Tar.extract(io, "0-data/thermal_camera_images/images")
 end
 
+# Extract the masks from the tar.bz2 file:
+open(Bzip2DecompressorStream, "0-data/thermal_camera_images/coordinates.tar.bz2") do io
+    Tar.extract(io, "0-data/thermal_camera_images/coordinates")
+end
+
 # Setting up the paths and climate data:
 img_dir = "0-data/thermal_camera_images/images/images"
 mask_dir = "0-data/thermal_camera_roi_coordinates/coordinates"

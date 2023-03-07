@@ -2,7 +2,7 @@
 
 The thermal camera was positioned on the top corner of the left far side of the chamber, facing the center of the chamber. The aim of the camera is to measure leaves temperatures of the plants. The camera is not able to detect the leaves alone, so we need to define a region of interest (ROI) to focus on the leaves of the plants. The ROI is defined by a mask, that was defined using ImageJ (Fidji). The masks were defined for all leaves of a plant when it was first positioned for a measurement session, and used for all images of the plant during the measurement session. The masks were defined for each leaf so that the ROI is as big as possible, but always in the leaf of interest for all the session as to reduce the noise in the measurement when the leaf moves because of the wind. The masks were saved in the archive `0-data/0-raw/thermal_camera_roi_coordinates/ROI.zip`.
 
-Then, masks point coordinates were extracted and saved in the folder `0-data/0-raw/thermal_camera_roi_coordinates/coordinates` as CSV files with two columns for the X and Y coordinates of the points. Each CSV file is named following one of the following naming convention:
+Then, masks point coordinates were extracted and saved in the tar `0-data/0-raw/thermal_camera_roi_coordinates/coordinates.tar.bz2` as CSV files with two columns for the X and Y coordinates of the points. Each CSV file is named following one of the following naming convention:
 
 - P<plant ID>F<leaf ID>-<start time>-<end time>_XY_Coordinates_V<revision version>.csv
 - P<plant ID>F<leaf ID>-S<session ID>-<start time>-<end time>_XY_Coordinates_V<revision version>.csv

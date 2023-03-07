@@ -53,13 +53,13 @@ rsconnect/
 # Data to keep:
 !0-data/picarro_flux/data_mean_flux.csv
 !0-data/picarro_flux/outliers.csv
-!2-time-synchronization/correspondance_scale_camera_time.csv
+!3-time-synchronization/correspondance_scale_camera_time.csv
 !0-data/door_opening/Mic3_door_opening.csv
-!0-data/2-time-synchronization/correspondance_scale_camera_time.csv
 !0-data/climate/climate.zip
 !0-data/scale_weight/weights.tar.bz2
 !0-data/scenario_sequence/SequencePlanteMicro3.csv
 !0-data/scenario_sequence/SequenceScenarioMicro3.csv
+!0-data/thermal_camera_roi_coordinates/coordinates.tar.bz2
 
 !5-thermal_camera_measurements/leaf_temperature.csv.bz2
 !6-transpiration/transpiration_first_5min.csv.bz2
