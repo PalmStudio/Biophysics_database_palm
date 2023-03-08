@@ -21,6 +21,7 @@ It consists of the set of CSV files with the following naming convention: `P<Pla
 Two other folders are also present in the archive:
 
 - `issues`: contains the files that present issues (only `P3F50329.csv`) and were not used in the analysis.
+- `programs`: the programs used to run the Walz. They are described in the next section.
 - `scenarii`: contains the files that were used in the scenarii experiments at the end of the Ecotron experiment. It contains three folders that correspond to the three different scenarii used in the experiment:
   - `closed`: Walz measurements with the chamber closed (as in the typical measurement), with constant conditions, and the plant in `mic3` with changing conditions.
   - `opened`: Walz measurements with the chamber opened (no head on top of the measuring head), with constant conditions, and the plant in `mic3` with changing conditions.
@@ -29,6 +30,7 @@ Two other folders are also present in the archive:
 ## Pre-experiment 
 
 Each plant was studied for a week. The plant was taken out of CIRAD's greenhouse at 8:40AM in the morning and placed in the lab room, at 150m walking distance. In the lab, the plant only received natural light, and light from the lamps. The program was named R-C-L-RH, with the following conditions:
+
 - Flow : 750
 - Impeller : 7
 - Light PAR top : 1500
@@ -47,8 +49,8 @@ At the end of the experiment, we made a different set of curves on the higher ra
 
 We also tested the temperature curve in combination with CO2/light/RH curves. These measurements are found in "P1F60426.csv" and "P1F60503.csv". 
 
-R-C-L-RH, or R-CO2-L-RH, is available in the `R-CO2-L-RH.prg` file.
-The temperature program, or R-Temp, is available at `R-Temp2.prg`
+R-CO2-L-RH, is available in the `R-CO2-L-RH.prg` file.
+The temperature program, or R-Temp, is available at `R-Temp2.prg`, and in `R-CO2-L-Temp.prg` for the full program.
 Opened and Closed programs are available at `OpenedWalz.prg` and `ClosedWalz.prg` respectively.
 
 ## Output files 
