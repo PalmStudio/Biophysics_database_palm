@@ -1,14 +1,30 @@
 # Walz measurements
 
-This folder contains leaf-level response data acquired using a Walz GFS-3000 portable gas exchange system. The data is compressed into a `tar.bz2` archive that consists on a set of CSV files with the following naming convention: `P<Plant ID>F<Leaf ID><month (double digit)><day (double digit)>.csv`. So a file named `P1F20129.csv` correspond to the data acquired on the 29th of January 2021 for the second leaf of the first plant.
-
-Two different experiments were conducted, with a different purpose:
+This folder contains leaf-level response data acquired using a Walz GFS-3000 portable gas exchange system. Two different experiments were conducted, with a different purpose:
 
 1. half of the leaves of the plants were measured at the lab during a pre-experiment, coupled with SPAD measurements. The objective of these measurements was to get the effect of leaf nitrogen content on the photosynthetic parameters of the leaf, with the hypothesis that very young leaves have low photosynthetic capacity, more mature leaves have high photosynthetic capacity, and decreasing again with age dur to remobilization. We use this dataset to fit a relationship between the SPAD and the effect on the photosynthesis parameters.
 
 1. one leaf per plant was measured before putting the plant under different a climatic sequence in the microcosm 3. The objective is to measure the plant photosynthetic capacity just before a sequence to parameterize our models as close to reality as possible, and eventually control for the effect of plant age and any other factor. It also can be used to investigate weither systematic measurements are necessary for the simulation of a plant, or if there is an effect of the scenario on the photosynthetic capacity of the plant, *e.g.* is the hot and dry scenarion hard on the plant.
 
 All leaves of the plants were regularly measured for their SPAD, so we can use the pre-experiment to recompute the photosynthetic capacity of each leaf on the plant based on the reference leaf.
+
+## Data
+
+The data is stored in a `tar.bz2` archive, which was compressed using the following command:
+
+```bash
+tar -cjvf walz.tar.bz2 -C ./walz .
+```
+
+It consists of the set of CSV files with the following naming convention: `P<Plant ID>F<Leaf ID><month (double digit)><day (double digit)>.csv`. So a file named `P1F20129.csv` correspond to the data acquired on the 29th of January 2021 for the second leaf of the first plant.
+
+Two other folders are also present in the archive:
+
+- `issues`: contains the files that present issues (only `P3F50329.csv`) and were not used in the analysis.
+- `scenarii`: contains the files that were used in the scenarii experiments at the end of the Ecotron experiment. It contains three folders that correspond to the three different scenarii used in the experiment:
+  - `closed`: Walz measurements with the chamber closed (as in the typical measurement), with constant conditions, and the plant in `mic3` with changing conditions.
+  - `opened`: Walz measurements with the chamber opened (no head on top of the measuring head), with constant conditions, and the plant in `mic3` with changing conditions.
+  - `temperature`: experiment with changing temperatures
 
 ## Pre-experiment 
 
