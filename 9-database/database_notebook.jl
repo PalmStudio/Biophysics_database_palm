@@ -45,11 +45,16 @@ climate_10min = CSV.read("../2-climate/climate_mic3_10min.csv", DataFrame)
 md"""
 ### Scenario sequence
 
-Each plant was monitored in the microcosm 3 for a sequence of one or more scenario. We have a database of all sequences during the two-months experiment:
+Each plant was monitored in the microcosm 3 for a sequence of one or more scenario. We have a database of all sequences during the two-months experiment that helps remembering which plant is being measured for a time-step:
 """
 
 # ╔═╡ 69f60c67-575d-4e05-8dd0-f75ac5055be3
-df_sequence = CSV.read("../6-transpiration/plant_sequence_delayed_corrected.csv", DataFrame)
+df_sequence = let
+	df_ = CSV.read("../6-transpiration/plant_sequence_delayed_corrected.csv", DataFrame)
+	transform!(df_, :Plant => ByRow(x -> parse(Int, x[2])) => :Plant)
+	df_.sequence .= 1:nrow(df_)
+	df_
+end
 
 # ╔═╡ b67defe6-42cf-4bf6-b2ed-714d1b14f6ec
 md"""
@@ -122,7 +127,37 @@ These measurements are used to compute the photosynthetic and stomatal conductan
 """
 
 # ╔═╡ ec8b2c6b-2535-4d12-ac78-46d8940c150c
-df_parameters = CSV.read("../7-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
+df_parameters = let
+	df_ = CSV.read("../7-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
+	sort!(df_, [:Date, :Plant, :Leaf])
+end
+
+# ╔═╡ 0e03ad86-22f0-4a4a-bfd0-c283f11df029
+md"""
+Joining the parameters with the plant sequence:
+"""
+
+# ╔═╡ 1c19481d-58c8-4caf-ad42-205cde510a86
+df_sequence_params = let
+	last_params = []
+	for row in eachrow(df_sequence)
+		last_parameters_plant = filter(
+				x -> x.Plant == row.Plant && x.Date <= Date(row.DateTime_start),
+				df_parameters
+		)[[end],:]
+		rename!(last_parameters_plant, :Date => :Date_walz, :Leaf => :Leaf_walz)
+		last_parameters_plant.DateTime_start .= row.DateTime_start
+		
+		push!(last_params, last_parameters_plant)
+	end
+	leftjoin(df_sequence, vcat(last_params...), on = [:DateTime_start, :Plant], makeunique=true)
+end
+
+# ╔═╡ fa7b6167-fc2d-4ae1-9287-9ecf9bbcba97
+md"""
+!!! note
+	The parameters associated to a plant sequence are the ones measured on the date that is closest to the start of the sequence (*i.e.* just before).
+"""
 
 # ╔═╡ 326b71c6-00b2-4046-9ac2-962a42ceaa69
 md"""
@@ -135,6 +170,9 @@ Joining the databases into one single database.
 md"""
 ### 5-minute database
 """
+
+# ╔═╡ ed22bca2-aa41-43e0-9314-22e5ce9f9750
+df_sequence_params
 
 # ╔═╡ 2547928f-9569-4a1f-a636-7e8ecda893de
 md"""
@@ -307,38 +345,30 @@ db_5min = let
     db_ = leftjoin(CO2, climate_5min, on=:DateTime_start, makeunique=true)
     db_ = leftjoin(db_, transpiration_5min, on=:DateTime_start, makeunique=true)
     db_ = leftjoin(db_, leaf_temperature_5min, on=:DateTime_start, makeunique=true)
-
 	# Adding the plant sequence: 
-    y_nrows = nrow(df_sequence)
+    y_nrows = nrow(df_sequence_params)
 	db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
 	db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
-	db_.Plant = Vector{Union{Int,Missing}}(undef, nrow(db_))
-	db_.sequence = Vector{Union{Int,Missing}}(missing, nrow(db_))
-
-	gp = 1 # Sequence group
 	
-    for (i, row) in enumerate(eachrow(df_sequence))
+    for (i, row) in enumerate(eachrow(df_sequence_params))
         ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
         timestamps_within = findall(row.DateTime_start .<= db_.DateTime_start .<= row.DateTime_end)
         # Don't compute time-steps that covers two sequences (we are changing plant here):
         if length(timestamps_within) > 0
             db_.DateTime_start_sequence[timestamps_within] .= row.DateTime_start
             db_.DateTime_end_sequence[timestamps_within] .= row.DateTime_end
-			db_.Plant[timestamps_within] .= parse(Int, row.Plant[2])
-			db_.sequence[timestamps_within] .= gp
-            gp += 1 # increment the sequence group whenever we found one
         end
 	end
 	# End of plant sequence computation
 	
     select!(
         db_,
-		:Plant,
-		:sequence,
         :leaf,
         :DateTime_start,
         :DateTime_end_1 => :DateTime_end,
         :DateTime_end => :DateTime_end_CO2_in,
+		:DateTime_start_sequence,
+		:DateTime_end_sequence,
         #:DateTime_end_CO2_in,
         :flux_umol_s => :CO2_outflux_umol_s,
         :CO2_dry_MPV1,
@@ -360,11 +390,26 @@ db_5min = let
         :Tl_std,
     )
 
+	# Adding the biophysical parameters now that we have the Plant properly set:
+	db_ = leftjoin(
+		db_, 
+		select(df_sequence_params, Not([:DateTime_end, :Event])), 
+		on = [:DateTime_start_sequence => :DateTime_start], 
+		#makeunique=true, 
+		matchmissing = :notequal
+	)
+
+	select!(
+		db_,
+		:DateTime_start,
+		:DateTime_end,
+		:Plant,
+		:leaf,
+		:sequence,
+		:
+	)
     db_
 end
-
-# ╔═╡ 908c1a9c-b0d7-4d7f-9d69-893f0bea444b
-data(db_5min) * mapping(:DateTime_start, [:Plant, :plant] .=> string, color=dims(1) => renamer(["Plant", "plant"]) ) |> draw
 
 # ╔═╡ 329cd584-2ca0-4bc0-90db-e1f170c6c5b5
 let
@@ -421,7 +466,7 @@ db_10min = let
         if length(timestamps_within) > 0
             db_.DateTime_start_sequence[timestamps_within] .= row.DateTime_start
             db_.DateTime_end_sequence[timestamps_within] .= row.DateTime_end
-			db_.Plant[timestamps_within] .= parse(Int, row.Plant[2])
+			db_.Plant[timestamps_within] .= row.Plant
 			db_.sequence[timestamps_within] .= gp
             gp += 1 # increment the sequence group whenever we found one
         end		
@@ -1942,10 +1987,13 @@ version = "3.5.0+0"
 # ╠═ab3424f1-8999-411a-9816-0e4d30b9b376
 # ╟─07091f22-9c91-49bd-99b6-13638cc9bd32
 # ╠═ec8b2c6b-2535-4d12-ac78-46d8940c150c
+# ╟─0e03ad86-22f0-4a4a-bfd0-c283f11df029
+# ╠═1c19481d-58c8-4caf-ad42-205cde510a86
+# ╟─fa7b6167-fc2d-4ae1-9287-9ecf9bbcba97
 # ╟─326b71c6-00b2-4046-9ac2-962a42ceaa69
 # ╟─e92c7421-c8e6-47ff-81ae-9e8e25818e99
 # ╠═42bcf804-8ed0-4573-8201-1fd79bc0a140
-# ╠═908c1a9c-b0d7-4d7f-9d69-893f0bea444b
+# ╠═ed22bca2-aa41-43e0-9314-22e5ce9f9750
 # ╟─2547928f-9569-4a1f-a636-7e8ecda893de
 # ╠═415a440a-8aea-4f38-893f-d22d0114a16e
 # ╟─0d542ed4-71c3-40df-a90c-feb491f055d4
