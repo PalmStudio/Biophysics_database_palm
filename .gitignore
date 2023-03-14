@@ -65,5 +65,6 @@ rsconnect/
 !5-thermal_camera_measurements/leaf_temperature.csv.bz2
 !6-transpiration/transpiration_first_5min.csv.bz2
 !6-transpiration/transpiration_10min.csv.bz2
+!7-walz/photosynthetic_and_stomatal_parameters.csv
 !8-database/database_5min.csv.bz2
 !8-database/database_10min.csv.bz2
