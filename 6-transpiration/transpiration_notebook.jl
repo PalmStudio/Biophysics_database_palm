@@ -7,11 +7,7 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try
-            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-        catch
-            b -> missing
-        end
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -517,6 +513,8 @@ transpiration_first_5min = let
     df_ = combine(
         gdf,
         :DateTime_end_5min => unique => :DateTime_end,
+		:sequence => unique => :sequence,
+		:Plant_id => unique => :Plant,
         [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
             x = [i.value for i in Second.(x)]
             (x' * x) \ x' * (y[1] .- y)
@@ -577,6 +575,8 @@ transpiration_10min = let
     df_ = combine(
         gdf,
         :DateTime_end_10min => unique => :DateTime_end,
+		:sequence => unique => :sequence,
+		:Plant_id => unique => :Plant,
         [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
             x = [i.value for i in Second.(x)]
             (x' * x) \ x' * (y[1] .- y)
