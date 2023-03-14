@@ -441,7 +441,7 @@ Save the data to disk, and compressing it to save disk space.
 """
 
 # ╔═╡ 47b34ad6-aaa4-481e-b199-47b57c8b230f
-CSV.write("PlantSequence_delayed_corrected.csv", plant_sequence)
+CSV.write("plant_sequence_delayed_corrected.csv", plant_sequence)
 
 # ╔═╡ f4d51d70-b378-44f0-ada2-8f470cd22b6b
 md"""
