@@ -101,6 +101,15 @@ md"""
 We can also perform a similar computation, but keeping all data in the 10-minute window for our average.
 """
 
+# ╔═╡ 07091f22-9c91-49bd-99b6-13638cc9bd32
+md"""
+### Biophysical parameters
+
+Leaf-scale measurements where performed on a reference leaf before each scenario sequence with a portable gas exchange analyser (Walz GFS-3000). 
+
+These measurements are used to compute the photosynthetic and stomatal conductance parameters for the model of Farquhar et al. (1980) and Medlyn et al. (2011) respectively.
+"""
+
 # ╔═╡ 326b71c6-00b2-4046-9ac2-962a42ceaa69
 md"""
 ## Join
@@ -117,6 +126,9 @@ md"""
 md"""
 ### 10-minute database
 """
+
+# ╔═╡ 0d542ed4-71c3-40df-a90c-feb491f055d4
+
 
 # ╔═╡ 4407340e-12f9-429a-ba76-c8479f5d9c4a
 md"""
@@ -840,11 +852,13 @@ version = "17.4.0+0"
 # ╠═6d54867d-3cad-4699-85cd-fc2af74d7753
 # ╟─67086a6b-4629-4996-99ba-284ba2f6a783
 # ╠═ab3424f1-8999-411a-9816-0e4d30b9b376
+# ╠═07091f22-9c91-49bd-99b6-13638cc9bd32
 # ╟─326b71c6-00b2-4046-9ac2-962a42ceaa69
 # ╟─e92c7421-c8e6-47ff-81ae-9e8e25818e99
 # ╠═42bcf804-8ed0-4573-8201-1fd79bc0a140
 # ╟─2547928f-9569-4a1f-a636-7e8ecda893de
 # ╠═415a440a-8aea-4f38-893f-d22d0114a16e
+# ╠═0d542ed4-71c3-40df-a90c-feb491f055d4
 # ╟─4407340e-12f9-429a-ba76-c8479f5d9c4a
 # ╠═168c5c96-9252-4a5a-85d2-613b2246cd63
 # ╠═eaed2c19-60a9-4fe2-8788-6143df1062d2
