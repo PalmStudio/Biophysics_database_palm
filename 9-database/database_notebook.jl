@@ -4,6 +4,16 @@
 using Markdown
 using InteractiveUtils
 
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
 # ╔═╡ 947be178-0b89-46b6-aa74-383e38bf903e
 begin
     using CSV, DataFrames
@@ -45,7 +55,20 @@ climate_10min = CSV.read("../2-climate/climate_mic3_10min.csv", DataFrame)
 md"""
 ### Scenario sequence
 
-Each plant was monitored in the microcosm 3 for a sequence of one or more scenario. We have a database of all sequences during the two-months experiment that helps remembering which plant is being measured for a time-step:
+Each plant was monitored in the microcosm 3 for a sequence of one or more scenario. We have a database of all sequences during the two-months experiment that helps remembering which plant is being measured for a time-step, and which scenario is being done on that day.
+
+"""
+
+# ╔═╡ 331f94ef-9b9a-44d4-abc5-7f9336a79415
+df_scenario = let
+	df_ = CSV.read("../0-data/scenario_sequence/SequenceScenarioMicro3.csv", DataFrame)
+	transform!(df_, :Date => (x -> Date.(x, dateformat"dd/mm/yyyy")) => :Date)
+	df_
+end
+
+# ╔═╡ a7fe0d48-2155-4bb1-8948-d8c0a91b0ea6
+md"""
+- The sequence is available from this file:
 """
 
 # ╔═╡ 69f60c67-575d-4e05-8dd0-f75ac5055be3
@@ -179,9 +202,19 @@ md"""
 ### 10-minute database
 """
 
-# ╔═╡ 0d542ed4-71c3-40df-a90c-feb491f055d4
+# ╔═╡ 7d58aeb1-83fd-42e1-89a8-6a822bdbae26
 md"""
-## Visualize
+### CO2 flux
+"""
+
+# ╔═╡ 248ebaab-c078-4c63-8247-57db235f3401
+md"""
+### H2O flux
+"""
+
+# ╔═╡ 1b91d8e4-d5aa-48c8-adeb-6ed5a9965ec1
+md"""
+### Leaf temperature
 """
 
 # ╔═╡ 4407340e-12f9-429a-ba76-c8479f5d9c4a
@@ -345,6 +378,8 @@ db_5min = let
     db_ = leftjoin(CO2, climate_5min, on=:DateTime_start, makeunique=true)
     db_ = leftjoin(db_, transpiration_5min, on=:DateTime_start, makeunique=true)
     db_ = leftjoin(db_, leaf_temperature_5min, on=:DateTime_start, makeunique=true)
+	transform!(db_, :DateTime_start => (x -> Date.(x)) => :Date)
+	db_ = leftjoin(db_, df_scenario, on = :Date)
 	# Adding the plant sequence: 
     y_nrows = nrow(df_sequence_params)
 	db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
@@ -363,7 +398,8 @@ db_5min = let
 	
     select!(
         db_,
-        :leaf,
+		:Scenario,
+        :leaf => :Leaf,
         :DateTime_start,
         :DateTime_end_1 => :DateTime_end,
         :DateTime_end => :DateTime_end_CO2_in,
@@ -404,20 +440,58 @@ db_5min = let
 		:DateTime_start,
 		:DateTime_end,
 		:Plant,
-		:leaf,
-		:sequence,
+		:Leaf,
+		:Scenario,
+		:sequence => :Sequence,
 		:
 	)
     db_
 end
 
+# ╔═╡ 0d542ed4-71c3-40df-a90c-feb491f055d4
+md"""
+## Visualize
+
+Let's first and last date to plot between $(min_date = minimum(Date.(db_5min.DateTime_start));) and $(max_date = maximum(Date.(db_5min.DateTime_start));):
+
+"""
+
+# ╔═╡ ba1cf5f2-7459-48c5-9016-d7f998634814
+md"""
+$(@bind first_date PlutoUI.Slider(min_date:Day(1):max_date, default = min_date, show_value = true))
+$(@bind last_date PlutoUI.Slider(min_date:Day(1):max_date, default = max_date, show_value = true))
+"""
+
 # ╔═╡ 329cd584-2ca0-4bc0-90db-e1f170c6c5b5
 let
-	df_ = dropmissing(db_5min, :CO2_outflux_umol_s)
+	df_ = dropmissing(db_5min, [:DateTime_end, :CO2_outflux_umol_s,])
+	filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
 	p = data(df_) *
-		mapping(:DateTime_start, :CO2_outflux_umol_s, layout = (:sequence, :Plant) => ((x,y) -> string(x, ", Plant ", y))) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+		mapping(:DateTime_start, :CO2_outflux_umol_s, color = :Scenario => string) *
+		visual(Scatter) 	
+	draw(p)
+end
+
+# ╔═╡ 4088884b-f1de-40e3-82e6-95118def79b7
+let 
+	df_ = dropmissing(db_5min, [:DateTime_end, :transpiration_linear_g_s,])
+	filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
+	p = data(df_) *
+		mapping(:DateTime_start, :transpiration_linear_g_s, color = :Scenario => string) *
+		visual(Scatter)
+
+	draw(p)
+end
+
+# ╔═╡ d6ba6743-3ba0-4e04-b2bf-431a524ce6e5
+let 
+	df_ = dropmissing(db_5min, [:DateTime_end, :Tl_mean,])
+	filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
+	p = data(df_) *
+		mapping(:DateTime_start, :Tl_mean, color = :Scenario => string) *
+		visual(Scatter)
+
+	draw(p)
 end
 
 # ╔═╡ eaed2c19-60a9-4fe2-8788-6143df1062d2
@@ -449,15 +523,13 @@ db_10min = let
     db_ = leftjoin(CO2, climate_10min, on=:DateTime_start, makeunique=true)
     db_ = leftjoin(db_, transpiration_10min, on=:DateTime_start, makeunique=true)
     db_ = leftjoin(db_, leaf_temperature_10min, on=:DateTime_start, makeunique=true)
-
+	transform!(db_, :DateTime_start => (x -> Date.(x)) => :Date)
+	db_ = leftjoin(db_, df_scenario, on = :Date)
+	
 	# Adding the plant sequence: 
-	y_nrows = nrow(df_sequence)
+	y_nrows = nrow(df_sequence_params)
 	db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
 	db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
-	db_.Plant = Vector{Union{Int,Missing}}(undef, nrow(db_))
-	db_.sequence = Vector{Union{Int,Missing}}(missing, nrow(db_))
-
-	gp = 1 # Sequence group
 	
     for (i, row) in enumerate(eachrow(df_sequence))
         ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
@@ -466,27 +538,24 @@ db_10min = let
         if length(timestamps_within) > 0
             db_.DateTime_start_sequence[timestamps_within] .= row.DateTime_start
             db_.DateTime_end_sequence[timestamps_within] .= row.DateTime_end
-			db_.Plant[timestamps_within] .= row.Plant
-			db_.sequence[timestamps_within] .= gp
-            gp += 1 # increment the sequence group whenever we found one
         end		
 	end
 	# End of plant sequence computation
-
 	
     select!(
         db_,
-		:Plant,
-		:sequence,
-        :leaf,
+		:Scenario,
+        :leaf => :Leaf,
         :DateTime_start,
         :DateTime_end_1 => :DateTime_end,
         :DateTime_end => :DateTime_end_CO2_in,
+		:DateTime_start_sequence,
+		:DateTime_end_sequence,
         #:DateTime_end_CO2_in,
         :flux_umol_s => :CO2_outflux_umol_s,
         :CO2_dry_MPV1,
         :CO2_dry_MPV2,
-		:Ta_instruction,
+        :Ta_instruction,
         :Ta_measurement,
         :Rh_instruction,
         :Rh_measurement,
@@ -502,6 +571,27 @@ db_10min = let
         :Tl_max,
         :Tl_std,
     )
+
+
+	# Adding the biophysical parameters now that we have the Plant properly set:
+	db_ = leftjoin(
+		db_, 
+		select(df_sequence_params, Not([:DateTime_end, :Event])), 
+		on = [:DateTime_start_sequence => :DateTime_start], 
+		matchmissing = :notequal
+	)
+
+	select!(
+		db_,
+		:DateTime_start,
+		:DateTime_end,
+		:Plant,
+		:Leaf,
+		:Scenario,
+		:sequence => :Sequence,
+		:
+	)
+    db_
 end
 
 # ╔═╡ 168c5c96-9252-4a5a-85d2-613b2246cd63
@@ -1972,6 +2062,8 @@ version = "3.5.0+0"
 # ╠═86632c33-1ad9-428e-a5a2-8da77166f515
 # ╠═9311888e-7235-4149-9265-809337086f23
 # ╟─b873be15-d214-4a3b-b20b-98868bf0909f
+# ╠═331f94ef-9b9a-44d4-abc5-7f9336a79415
+# ╟─a7fe0d48-2155-4bb1-8948-d8c0a91b0ea6
 # ╠═69f60c67-575d-4e05-8dd0-f75ac5055be3
 # ╟─b67defe6-42cf-4bf6-b2ed-714d1b14f6ec
 # ╠═aa63bf29-146c-4363-85a1-d692848cd540
@@ -1997,7 +2089,13 @@ version = "3.5.0+0"
 # ╟─2547928f-9569-4a1f-a636-7e8ecda893de
 # ╠═415a440a-8aea-4f38-893f-d22d0114a16e
 # ╟─0d542ed4-71c3-40df-a90c-feb491f055d4
+# ╟─ba1cf5f2-7459-48c5-9016-d7f998634814
+# ╟─7d58aeb1-83fd-42e1-89a8-6a822bdbae26
 # ╠═329cd584-2ca0-4bc0-90db-e1f170c6c5b5
+# ╟─248ebaab-c078-4c63-8247-57db235f3401
+# ╠═4088884b-f1de-40e3-82e6-95118def79b7
+# ╟─1b91d8e4-d5aa-48c8-adeb-6ed5a9965ec1
+# ╠═d6ba6743-3ba0-4e04-b2bf-431a524ce6e5
 # ╟─4407340e-12f9-429a-ba76-c8479f5d9c4a
 # ╠═168c5c96-9252-4a5a-85d2-613b2246cd63
 # ╠═eaed2c19-60a9-4fe2-8788-6143df1062d2
