@@ -66,6 +66,7 @@ rsconnect/
 
 !2-climate/climate_mic3_5min.csv
 !2-climate/climate_mic3_10min.csv
+!3-time-synchronization/time_synchronization.csv
 !5-thermal_camera_measurements/leaf_temperature.csv.bz2
 !6-transpiration/transpiration_first_5min.csv.bz2
 !6-transpiration/transpiration_10min.csv.bz2
