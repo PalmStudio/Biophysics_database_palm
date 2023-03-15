@@ -74,5 +74,5 @@ rsconnect/
 !6-transpiration/plant_sequence_delayed_corrected.csv
 !7-walz/photosynthetic_and_stomatal_parameters.csv
 !8-spad/SPAD_models.csv
-!10-database/database_5min.csv.bz2
-!10-database/database_10min.csv.bz2
+!9-database/database_5min.csv.bz2
+!9-database/database_10min.csv.bz2
