@@ -100,13 +100,12 @@ end
 md"""
 ### CO2 fluxes
 
-CO2 fluxes, measured every 10 minutes for 5 minutes. The other five minutes are used for measuring the input flux.
+CO2 fluxes, measured every 10 minutes for 5 minutes. The first five minutes are used for measuring the input flux, the second 5 minutes for the output fluxes, *i.e.* the ones of interest.
 """
 
 # ╔═╡ 4158de69-29ff-4402-873b-7287e7e74b48
 CO2 = let
     df_ = CSV.read("../4-CO2/CO2_fluxes.csv", DataFrame)
-    rename!(df_, :DateTime => :DateTime_start)
 end
 
 # ╔═╡ 3013d612-b8ff-45be-b159-aaadc19fa86f
@@ -193,6 +192,9 @@ Joining the databases into one single database.
 md"""
 ### 5-minute database
 """
+
+# ╔═╡ b7022d9b-aed0-4eae-a116-13d8b4e67665
+df_sequence_params
 
 # ╔═╡ 2547928f-9569-4a1f-a636-7e8ecda893de
 md"""
@@ -294,39 +296,39 @@ end
 """
 	add_timeperiod(x,y)
 
-Add DateTime_start_5min, DateTime_end_5min, DateTime_start_10min and DateTime_end_10min on a copy of dataframe `x` using the `DateTime_start` and `DateTime_end` periods on dataframe `y`, and matching with the `DateTime` column in `x`.
+Add DateTime_start_input, DateTime_end_input, DateTime_start_output and DateTime_end_output on a copy of dataframe `x`.
 """
 function add_timeperiod(x, y)
     df_ = copy(x)
-    df_.DateTime_start_5min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-    df_.DateTime_start_10min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-    df_.DateTime_end_5min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-    df_.DateTime_end_10min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_start_output = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_start_input = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_end_input = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_end_output = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
 
     y_nrows = nrow(y)
     for (i, row) in enumerate(eachrow(y))
-
         # 5-min time window:
-        ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
-        timestamps_within = findall(row.DateTime_start .<= df_.DateTime .<= row.DateTime_end)
+        ismissing(row.DateTime_start_output) || ismissing(row.DateTime_end_output) && continue
+        timestamps_within = findall(row.DateTime_start_output .<= df_.DateTime .< row.DateTime_end_output)
 
+        # Don't compute time-steps that covers two sequences (we are changing plant here):		
         if length(timestamps_within) > 0
-            df_.DateTime_start_5min[timestamps_within] .= row.DateTime_start
-            df_.DateTime_end_5min[timestamps_within] .= row.DateTime_end
+            df_.DateTime_start_output[timestamps_within] .= row.DateTime_start_output
+            df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
         end
 
         # 10-min time window:
-        i == y_nrows && continue
-        next_date = y.DateTime_start[i+1]
-        ismissing(next_date) && continue
-        timestamps_within = findall(row.DateTime_start .<= df_.DateTime .< next_date)
+        timestamps_within = findall(row.DateTime_start_input .<= df_.DateTime .< row.DateTime_end_output)
 
         if length(timestamps_within) > 0
-            df_.DateTime_start_10min[timestamps_within] .= row.DateTime_start
-            df_.DateTime_end_10min[timestamps_within] .= next_date
+            df_.DateTime_start_input[timestamps_within] .= row.DateTime_start_input
+			df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
+			#NB: we add DateTime_end_output here for the time-steps that are within the input, because we still want to know when the measurement ends
         end
-
     end
+
+	df_.DateTime_end_input = df_.DateTime_start_output
+
     return df_
 end
 
@@ -341,10 +343,10 @@ leaf_temperature = open(Bzip2DecompressorStream, "../5-thermal_camera_measuremen
         :plant,
         :leaf,
         :DateTime,
-        :DateTime_start_5min,
-        :DateTime_end_5min,
-        :DateTime_start_10min,
-        :DateTime_end_10min,
+		:DateTime_start_input,
+        :DateTime_end_input,
+        :DateTime_start_output,
+        :DateTime_end_output,
         :Tl_mean, :Tl_min, :Tl_max, :Tl_std
     )
 
@@ -353,15 +355,16 @@ end
 
 # ╔═╡ 6d54867d-3cad-4699-85cd-fc2af74d7753
 leaf_temperature_5min = let
-    df_ = filter(x -> !ismissing(x.DateTime_start_5min), leaf_temperature)
+    df_ = filter(x -> !ismissing(x.DateTime_start_output), leaf_temperature)
     df_ = combine(
-        groupby(df_, [:plant, :leaf, :DateTime_start_5min]),
-        :DateTime_end_5min => (x -> unique(x)) => :DateTime_end,
+        groupby(df_, [:plant, :leaf, :DateTime_start_output]),
+        :DateTime_end_output => (x -> unique(x)) => :DateTime_end,
         names(leaf_temperature, Float64) .=> mean,
         #nrow;
         renamecols=false
     )
-    rename!(df_, :DateTime_start_5min => :DateTime_start)
+	
+    rename!(df_, :DateTime_start_output => :DateTime_start)
 
     select!(
         df_,
@@ -372,10 +375,11 @@ end
 
 # ╔═╡ 42bcf804-8ed0-4573-8201-1fd79bc0a140
 db_5min = let
-    db_ = leftjoin(CO2, climate_5min, on=:DateTime_start, makeunique=true)
-    db_ = leftjoin(db_, transpiration_5min, on=:DateTime_start, makeunique=true)
-    db_ = leftjoin(db_, leaf_temperature_5min, on=:DateTime_start, makeunique=true)
-	transform!(db_, :DateTime_start => (x -> Date.(x)) => :Date)
+    db_ = leftjoin(CO2, climate_5min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
+    db_ = leftjoin(db_, transpiration_5min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
+    db_ = leftjoin(db_, leaf_temperature_5min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
+	
+	transform!(db_, :DateTime_start_output => (x -> Date.(x)) => :Date)
 	db_ = leftjoin(db_, df_scenario, on = :Date)
 	# Adding the plant sequence: 
     y_nrows = nrow(df_sequence_params)
@@ -384,7 +388,7 @@ db_5min = let
 	
     for (i, row) in enumerate(eachrow(df_sequence_params))
         ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
-        timestamps_within = findall(row.DateTime_start .<= db_.DateTime_start .<= row.DateTime_end)
+        timestamps_within = findall(row.DateTime_start .<= db_.DateTime_start_output .<= row.DateTime_end)
         # Don't compute time-steps that covers two sequences (we are changing plant here):
         if length(timestamps_within) > 0
             db_.DateTime_start_sequence[timestamps_within] .= row.DateTime_start
@@ -397,15 +401,15 @@ db_5min = let
         db_,
 		:Scenario,
         :leaf => :Leaf,
-        :DateTime_start,
-        :DateTime_end_1 => :DateTime_end,
+        :DateTime_start_output,
+        :DateTime_end_output => :DateTime_end,
         :DateTime_end => :DateTime_end_CO2_in,
 		:DateTime_start_sequence,
 		:DateTime_end_sequence,
         #:DateTime_end_CO2_in,
-        :flux_umol_s => :CO2_outflux_umol_s,
-        :CO2_dry_MPV1,
-        :CO2_dry_MPV2,
+        :CO2_flux_umol_s => :CO2_outflux_umol_s,
+        :CO2_dry_input,
+        :CO2_dry_output,
         :Ta_instruction,
         :Ta_measurement,
         :Rh_instruction,
@@ -433,6 +437,7 @@ db_5min = let
 	)
 
 	rename!(db_, 
+		:DateTime_start_output => :DateTime_start,
 		:sequence => :Sequence,
 		:Tᵣ => :Tr,
 		:Tᵣ_mean_leaf => :Tr_mean_leaf,
@@ -507,15 +512,15 @@ end
 
 # ╔═╡ ab3424f1-8999-411a-9816-0e4d30b9b376
 leaf_temperature_10min = let
-    df_ = filter(x -> !ismissing(x.DateTime_start_10min), leaf_temperature)
+    df_ = filter(x -> !ismissing(x.DateTime_start_input), leaf_temperature)
     df_ = combine(
-        groupby(df_, [:plant, :leaf, :DateTime_start_10min]),
-        :DateTime_end_10min => (x -> unique(x)) => :DateTime_end,
+        groupby(df_, [:plant, :leaf, :DateTime_start_input]),
+        :DateTime_end_output => (x -> unique(x)) => :DateTime_end,
         names(leaf_temperature, Float64) .=> mean,
         #nrow;
         renamecols=false
     )
-    rename!(df_, :DateTime_start_10min => :DateTime_start)
+    rename!(df_, :DateTime_start_input => :DateTime_start)
 
     select!(
         df_,
@@ -526,10 +531,10 @@ end
 
 # ╔═╡ 415a440a-8aea-4f38-893f-d22d0114a16e
 db_10min = let
-    db_ = leftjoin(CO2, climate_10min, on=:DateTime_start, makeunique=true)
-    db_ = leftjoin(db_, transpiration_10min, on=:DateTime_start, makeunique=true)
-    db_ = leftjoin(db_, leaf_temperature_10min, on=:DateTime_start, makeunique=true)
-	transform!(db_, :DateTime_start => (x -> Date.(x)) => :Date)
+    db_ = leftjoin(CO2, climate_10min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
+    db_ = leftjoin(db_, transpiration_10min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
+    db_ = leftjoin(db_, leaf_temperature_10min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
+	transform!(db_, :DateTime_start_output => (x -> Date.(x)) => :Date)
 	db_ = leftjoin(db_, df_scenario, on = :Date)
 	
 	# Adding the plant sequence: 
@@ -539,7 +544,7 @@ db_10min = let
 	
     for (i, row) in enumerate(eachrow(df_sequence))
         ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
-        timestamps_within = findall(row.DateTime_start .<= db_.DateTime_start .<= row.DateTime_end)
+        timestamps_within = findall(row.DateTime_start .<= db_.DateTime_start_output .<= row.DateTime_end)
         # Don't compute time-steps that covers two sequences (we are changing plant here):
         if length(timestamps_within) > 0
             db_.DateTime_start_sequence[timestamps_within] .= row.DateTime_start
@@ -552,15 +557,15 @@ db_10min = let
         db_,
 		:Scenario,
         :leaf => :Leaf,
-        :DateTime_start,
-        :DateTime_end_1 => :DateTime_end,
+        :DateTime_start_output => :DateTime_start,
+        :DateTime_end_output => :DateTime_end,
         :DateTime_end => :DateTime_end_CO2_in,
 		:DateTime_start_sequence,
 		:DateTime_end_sequence,
         #:DateTime_end_CO2_in,
-        :flux_umol_s => :CO2_outflux_umol_s,
-        :CO2_dry_MPV1,
-        :CO2_dry_MPV2,
+        :CO2_flux_umol_s => :CO2_outflux_umol_s,
+        :CO2_dry_input,
+        :CO2_dry_output,
         :Ta_instruction,
         :Ta_measurement,
         :Rh_instruction,
@@ -2100,6 +2105,7 @@ version = "3.5.0+0"
 # ╟─fa7b6167-fc2d-4ae1-9287-9ecf9bbcba97
 # ╟─326b71c6-00b2-4046-9ac2-962a42ceaa69
 # ╟─e92c7421-c8e6-47ff-81ae-9e8e25818e99
+# ╠═b7022d9b-aed0-4eae-a116-13d8b4e67665
 # ╠═42bcf804-8ed0-4573-8201-1fd79bc0a140
 # ╟─2547928f-9569-4a1f-a636-7e8ecda893de
 # ╠═415a440a-8aea-4f38-893f-d22d0114a16e

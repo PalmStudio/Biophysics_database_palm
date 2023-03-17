@@ -7,11 +7,7 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try
-            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-        catch
-            b -> missing
-        end
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -65,13 +61,38 @@ md"""
 # ╔═╡ 256aa6ab-9655-4929-b43f-a491e7f758e8
 CO2_flux =
     let
-        df = CSV.read("../0-data/picarro_flux/data_mean_flux.csv", DataFrame)
-        transform!(
-            df,
-            :MPV1_time => (x -> Dates.DateTime.(x, "dd/mm/yyy HH:MM")) => :MPV1_time,
-            :MPV1_time => (x -> round.(Dates.DateTime.(x, "dd/mm/yyy HH:MM"), Dates.Minute(10))) => :DateTime_10min,
-        )
-        rename!(df, :MPV1_time => :DateTime)
+        df_ = CSV.read("../0-data/picarro_flux/data_mean_flux.csv", DataFrame)
+
+		# Some measurements are repeated:
+		unique!(df_, :MPV1_time)
+		
+		transform!(
+		 	df_,
+			:MPV1_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV1_time,
+			:MPV2_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV2_time
+		)
+		
+		 transform!(
+		 	df_,
+			:MPV1_time => (x -> x .- Second(150)) => :DateTime_start_input,
+		 	:MPV1_time => (x -> x .+ Second(150)) => :DateTime_end_input,
+		 	:MPV2_time => (x -> x .- Second(150)) => :DateTime_start_output,
+		 	:MPV2_time => (x -> x .+ Second(150)) => :DateTime_end_output
+		)
+		
+		# Some 10-min measurements are not 10-min...
+		for row in 1:nrow(df_)-1
+			if df_[row,:DateTime_end_output] > df_[row+1,:DateTime_start_input]
+				df_[row,:DateTime_end_output] = df_[row+1,:DateTime_start_input]
+			end
+		end
+		
+		transform!(
+		 	df_,
+			:DateTime_start_input => (x -> round.(x, Dates.Minute(10))) => :DateTime_start_input_10min,
+		)
+		
+        rename!(df_, :MPV1_time => :DateTime)
     end
 
 # ╔═╡ 457d485f-0bf0-421a-98fb-8850d97dae9b
@@ -82,7 +103,10 @@ md"""
 # ╔═╡ 5005c489-7123-4620-8a2a-83fc7bee0b1a
 climate_5min = let
     df = CSV.read("../2-climate/climate_mic3_5min.csv", DataFrame)
-    rename!(df, :DateTime_start => :DateTime)
+    rename!(df, 
+		:DateTime_start => :DateTime_start_output,
+		:DateTime_end => :DateTime_end_output
+	)
     df
 end
 
@@ -124,11 +148,11 @@ outliers = let
     df_ = CSV.read("../0-data/picarro_flux/outliers.csv", DataFrame)
     transform!(
         df_,
-        :Time => ByRow(x -> floor(DateTime(x[1:19], dateformat"yyy-mm-ddTHH:MM:SS.s"), Minute(1))) => :DateTime
+        :Time => ByRow(x -> floor(DateTime(x[1:19], dateformat"yyy-mm-ddTHH:MM:SS.s") .- Second(150), Minute(1))) => :DateTime_start_input
     )
-    select!(df_, :DateTime)
+    select!(df_, :DateTime_start_input)
     df_.outlier .= true
-    unique(df_, :DateTime)
+    unique(df_, :DateTime_start_input)
 end
 
 # ╔═╡ ebd03dc9-16a4-4247-8b31-08bdad23dabb
@@ -162,6 +186,9 @@ Here we define the number of values that will be removed before a door event or 
 |Door|$(@bind flag_before_opening PlutoUI.Slider(1:20, default=1, show_value=true))|$(@bind flag_after_opening PlutoUI.Slider(1:20, default=5, show_value=true))|
 |Scenario|$(@bind flag_before_scenario PlutoUI.Slider(1:20, default=1, show_value=true))|$(@bind flag_after_scenario PlutoUI.Slider(1:20, default=9, show_value=true))|
 """
+
+# ╔═╡ a8abcc05-c12c-4d69-ada3-d2aa1f488722
+CO2_flux, climate_5min
 
 # ╔═╡ 1cfab740-7ba4-46e5-becb-0e7e9d80224c
 md"""
@@ -285,8 +312,8 @@ end
 
 # ╔═╡ 9dc34bbc-4a36-4fcc-be57-e9140f2e1f02
 df = let
-    df_ = leftjoin(CO2_flux, climate_5min, on="DateTime")
-    leftjoin!(df_, door_df, on="DateTime_10min", makeunique=true)
+    df_ = leftjoin(CO2_flux, select(climate_5min, Not(:DateTime_end_output)), on=:DateTime_start_output)
+    leftjoin!(df_, door_df, on=[:DateTime_start_input_10min => :DateTime_10min], makeunique=true)
     transform!(df_,
         :door_event => ByRow(x -> ismissing(x) ? false : x) => :door_event,
         :CO2_change => ByRow(x -> (!ismissing(x) && x == "change") ? true : false) => :CO2_change,
@@ -372,9 +399,11 @@ max_system_response_time = Dates.Minute(round(unique(df_filt.flow_m3_h)[1] / 1.5
 
 # ╔═╡ 11342987-ca47-4130-b1f2-617401081365
 md"""
-`DateTime` is the timestamp at the start of measurement for the fluxes from the chamber. The valve is opened during 5 minutes, but the two first minutes are thrown away for purging the pipe from the previous measurement. We then use the three remaining minutes to compute the fluxes. We consider the measurement instantaneous within these three minutes, as the air is well mixed and the transport of the flux to the analyzer is fast.
+`DateTime` (`MPV1_time` in the file) is the timestamp that marks the middle of the period of the measurement of the input fluxes of the chamber. The valve is opened during 5 minutes (2.5 min before, 2.5 min after), but the two first minutes are thrown away for purging the pipe from the previous measurement. `MPV2_time` is the middle of the period of the measurement of the output fluxes of the chamber (what is interesting to us). The measurement duration is the same, 5 minutes around this time. Again, the two first minutes are not used for the computation of the fluxes as they considered as a purge.
 
-Of course this assumption is just an assumption, as the response time depends on the volume of the chamber, which can delay the response. We can compute it using the chamber volume divided by the air flow (m3 h-1) though, which gives a maximum response time of $max_system_response_time, but without considering air flow inside the chamber, which is well mixed. The measurement of the fluxes are delayed by the response time of the system. For example, if we shut down the light abruptly in the chamber, the response of the plant would be close to immediate (the photosynthesis would go down to zero), but we would still measure photosynthesis for a bit of time in the analyzer because of the time response of the system, as the volume of air in the chamber is big compared to the fluxes.
+The response time of the measurement depends on the volume of the chamber, which can delay the response. For example, if we shut down the light abruptly in the chamber, the response of the plant would be close to immediate (the photosynthesis would go down to zero), but we would still measure photosynthesis for a bit of time in the analyzer because of the time response of the system, as the volume of air in the chamber is big compared to the fluxes.
+
+We can compute the maximum delay (without proper mixing) using the chamber volume divided by the air flow (m3 h-1), which gives a maximum response time of $max_system_response_time. This is **without considering air flow** inside the chamber, which is well mixed.
 
 We can use two different methods to alleviate this effect:
 
@@ -390,7 +419,7 @@ mapping(
 ) |> draw
 
 # ╔═╡ ec364a4b-1412-4d13-8fb6-5b5630390a62
-df_filt_outliers = leftjoin(df_filt, outliers, on=:DateTime)
+df_filt_outliers = leftjoin(df_filt, outliers, on=:DateTime_start_input)
 
 # ╔═╡ 1dc0aa87-f9f9-4d51-b50b-0d133280f396
 @bind day_ PlutoUI.Slider(Date(minimum(df_filt_outliers.DateTime)):Day(1):Date(maximum(df_filt_outliers.DateTime)), show_value=true, default=Date("2021-04-01"))
@@ -421,8 +450,14 @@ end
 CSV.write(
     "CO2_fluxes.csv",
     select(
-        sort(df_filt_outliers_filt, :DateTime),
-        [:DateTime, :DateTime_end, :CO2_dry_MPV1, :CO2_dry_MPV2, :flux_umol_s]
+        sort(df_filt_outliers_filt, :DateTime_start_input),
+        :DateTime_start_input,
+		:DateTime_end_input,
+		:DateTime_start_output, 
+		:DateTime_end_output,
+		:CO2_dry_MPV1 => :CO2_dry_input, 
+		:CO2_dry_MPV2 => :CO2_dry_output, 
+		:flux_umol_s => :CO2_flux_umol_s
     )
 )
 
@@ -1881,7 +1916,7 @@ version = "3.5.0+0"
 # ╟─11342987-ca47-4130-b1f2-617401081365
 # ╟─6f3d1ce2-93b6-4056-9e1a-9ad431b409a4
 # ╟─457d485f-0bf0-421a-98fb-8850d97dae9b
-# ╟─5005c489-7123-4620-8a2a-83fc7bee0b1a
+# ╠═5005c489-7123-4620-8a2a-83fc7bee0b1a
 # ╟─9cd29ba6-11dd-42b5-a842-ae33385f5709
 # ╟─b997751e-0390-4715-8c13-e8bbbf26ece3
 # ╠═af4b9718-ec17-4737-9978-15e41981b56a
@@ -1892,6 +1927,7 @@ version = "3.5.0+0"
 # ╟─d2bedd0a-dce1-475f-bbd9-f9d859b997fa
 # ╟─22e45b4c-66f2-4771-a46c-53523a929a9e
 # ╟─5cb9bb37-6c9e-46e2-9747-9fbdc580b973
+# ╠═a8abcc05-c12c-4d69-ada3-d2aa1f488722
 # ╠═9dc34bbc-4a36-4fcc-be57-e9140f2e1f02
 # ╟─1cfab740-7ba4-46e5-becb-0e7e9d80224c
 # ╟─bf0e1fdc-543b-41bc-9fc4-916e0ae9cbf3
@@ -1903,7 +1939,7 @@ version = "3.5.0+0"
 # ╟─86163cb6-d200-454a-8daf-d8d5e4ea47d7
 # ╟─415affc8-7890-44d6-af3d-d0ecdee32040
 # ╟─56959cab-e592-4759-ac0e-85d2e8d78654
-# ╟─58e65f2f-935e-421a-ab6e-be2a9a964de7
+# ╠═58e65f2f-935e-421a-ab6e-be2a9a964de7
 # ╟─10693220-825f-4268-bd0c-670d52eecdf0
 # ╟─3fb1bfd8-2358-4443-93b0-64b62b4ac925
 # ╟─ca9f2042-b489-4d6a-aba6-d11dd1946706

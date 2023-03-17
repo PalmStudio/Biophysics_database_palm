@@ -188,8 +188,15 @@ Transpiration was measured every minute at the begining, and then every second. 
 # ╔═╡ c26df749-aa82-4815-a27d-516a79efdabe
 CO2 = let
     df_ = CSV.read("../4-CO2/CO2_fluxes.csv", DataFrame)
-    rename!(df_, :DateTime => :DateTime_start)
-    sort(df_, :DateTime_start)
+	select!(df_,
+		:DateTime_start_input,
+		:DateTime_end_input,
+		:DateTime_start_output,
+		:DateTime_end_output,
+		:
+	)
+	
+	df_
 end
 
 # ╔═╡ b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
@@ -448,43 +455,39 @@ md"""
 """
 	add_timeperiod(x,y)
 
-Add DateTime_start_5min, DateTime_end_5min, DateTime_start_10min and DateTime_end_10min on a copy of dataframe `x` using the `DateTime_start` and `DateTime_end` periods on dataframe `y`, and matching with the `DateTime` column in `x`.
+Add DateTime_start_input, DateTime_end_input, DateTime_start_output and DateTime_end_output on a copy of dataframe `x`.
 """
 function add_timeperiod(x, y)
     df_ = copy(x)
-    df_.DateTime_start_5min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-    df_.DateTime_start_10min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-    df_.DateTime_end_5min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-    df_.DateTime_end_10min = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_start_output = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_start_input = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_end_input = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_end_output = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
 
     y_nrows = nrow(y)
     for (i, row) in enumerate(eachrow(y))
-
         # 5-min time window:
-        ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
-        timestamps_within = findall(row.DateTime_start .<= df_.DateTime .<= row.DateTime_end)
+        ismissing(row.DateTime_start_output) || ismissing(row.DateTime_end_output) && continue
+        timestamps_within = findall(row.DateTime_start_output .<= df_.DateTime .< row.DateTime_end_output)
 
         # Don't compute time-steps that covers two sequences (we are changing plant here):		
         if length(timestamps_within) > 0 && length(unique(df_.sequence[timestamps_within])) == 1
-            df_.DateTime_start_5min[timestamps_within] .= row.DateTime_start
-            df_.DateTime_end_5min[timestamps_within] .= row.DateTime_end
+            df_.DateTime_start_output[timestamps_within] .= row.DateTime_start_output
+            df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
         end
 
         # 10-min time window:
-        i == y_nrows && continue
-        next_date = y.DateTime_start[i+1]
-        ismissing(next_date) && continue
-        timestamps_within = findall(row.DateTime_start .<= df_.DateTime .< next_date)
+        timestamps_within = findall(row.DateTime_start_input .<= df_.DateTime .< row.DateTime_end_output)
 
-        # Don't compute time-steps that covers two sequences (we are changing plant here):
-        length(unique(df_.sequence[timestamps_within])) > 1 && continue
-
-        if length(timestamps_within) > 0
-            df_.DateTime_start_10min[timestamps_within] .= row.DateTime_start
-            df_.DateTime_end_10min[timestamps_within] .= next_date
+        if length(timestamps_within) > 0 && length(unique(df_.sequence[timestamps_within])) == 1
+            df_.DateTime_start_input[timestamps_within] .= row.DateTime_start_input
+			df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
+			#NB: we add DateTime_end_output here for the time-steps that are within the input, because we still want to know when the measurement ends
         end
-
     end
+
+	df_.DateTime_end_input = df_.DateTime_start_output
+
     return df_
 end
 
@@ -499,20 +502,20 @@ transpiration_df = let
 end
 
 # ╔═╡ 380e80a3-34ee-452d-9b37-21c7872e8d10
-data(groupby(dropmissing(transpiration_df, :DateTime_start_5min), :DateTime_start_5min)[end]) * mapping(:DateTime => "Time (UTC)", :weight_no_irrig => "Plant weight (g)") |> draw
+data(groupby(dropmissing(transpiration_df, :DateTime_start_output), :DateTime_start_output)[end]) * mapping(:DateTime => "Time (UTC)", :weight_no_irrig => "Plant weight (g)") |> draw
 
 # ╔═╡ 21e399d0-6cfe-4421-ab56-cb36d8643034
 transpiration_first_5min = let
-    df_ = dropmissing(transpiration_df, :DateTime_start_5min)
+    df_ = dropmissing(transpiration_df, :DateTime_start_output)
     # Compute the cumulated duration over each 5-min window:
-    gdf = groupby(df_, :DateTime_start_5min)
+    gdf = groupby(df_, :DateTime_start_output)
 
     transform!(gdf, :duration => cumsum => :duration_cum)
 
     # Compute transpiration as the slope of the linear weight~duration relationship: 
     df_ = combine(
         gdf,
-        :DateTime_end_5min => unique => :DateTime_end,
+        :DateTime_end_output => unique => :DateTime_end,
 		:sequence => unique => :sequence,
 		:Plant_id => unique => :Plant,
         [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
@@ -532,9 +535,11 @@ transpiration_first_5min = let
         #:duration_cum => (x -> canonicalize(maximum(x))) => :period_computation,
         nrow
     )
-    rename!(df_, :DateTime_start_5min => :DateTime_start)
+    rename!(df_, :DateTime_start_output => :DateTime_start)
     # Keep only the time-steps where we have 3 minutes of data to compute Tr:
     filter!(x -> x.nrow > 3, df_)
+
+	filter!(x -> x.transpiration_g_s > -0.005, df_)
     df_
 end
 
@@ -566,15 +571,15 @@ end
 
 # ╔═╡ 6031c01c-ee91-45cc-a8e9-45d77dc1e7e3
 transpiration_10min = let
-    df_ = dropmissing(transpiration_df, [:DateTime_start_10min, :duration])
+    df_ = dropmissing(transpiration_df, [:DateTime_start_input, :duration])
     # Compute the cumulated duration over each 10-min window:
-    gdf = groupby(df_, :DateTime_start_10min)
+    gdf = groupby(df_, :DateTime_start_input)
     transform!(gdf, :duration => cumsum => :duration_cum)
 
     # Compute transpiration as the slope of the linear weight~duration relationship: 
     df_ = combine(
         gdf,
-        :DateTime_end_10min => unique => :DateTime_end,
+        :DateTime_end_output => unique => :DateTime_end,
 		:sequence => unique => :sequence,
 		:Plant_id => unique => :Plant,
         [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
@@ -590,9 +595,12 @@ transpiration_10min = let
         :irrigation => sum,
         :weight_no_irrig => (x -> [x]) => :weight_no_irrig
     )
-    rename!(df_, :DateTime_start_10min => :DateTime_start)
+    rename!(df_, :DateTime_start_input => :DateTime_start)
     # Keep only the time-steps where we have 3 minutes of data to compute Tr:
     filter!(x -> x.nrow > 3, df_)
+
+	filter!(x -> x.transpiration_g_s > -0.005, df_)
+	
     df_
 end
 
@@ -2130,6 +2138,6 @@ version = "3.5.0+0"
 # ╠═fa15b07f-03b9-4abe-9a40-879d59d62131
 # ╠═47b34ad6-aaa4-481e-b199-47b57c8b230f
 # ╟─f4d51d70-b378-44f0-ada2-8f470cd22b6b
-# ╠═1c431080-33c6-4ac4-8409-df1c487a1f54
+# ╟─1c431080-33c6-4ac4-8409-df1c487a1f54
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
