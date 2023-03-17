@@ -194,9 +194,6 @@ md"""
 ### 5-minute database
 """
 
-# ╔═╡ ed22bca2-aa41-43e0-9314-22e5ce9f9750
-df_sequence_params
-
 # ╔═╡ 2547928f-9569-4a1f-a636-7e8ecda893de
 md"""
 ### 10-minute database
@@ -435,6 +432,14 @@ db_5min = let
 		matchmissing = :notequal
 	)
 
+	rename!(db_, 
+		:sequence => :Sequence,
+		:Tᵣ => :Tr,
+		:Tᵣ_mean_leaf => :Tr_mean_leaf,
+		:Tᵣ_mean_plant => :Tr_mean_plant	
+	)
+	
+	# Re-order columns:
 	select!(
 		db_,
 		:DateTime_start,
@@ -442,9 +447,10 @@ db_5min = let
 		:Plant,
 		:Leaf,
 		:Scenario,
-		:sequence => :Sequence,
+		:Sequence,
 		:
 	)
+
     db_
 end
 
@@ -581,6 +587,15 @@ db_10min = let
 		matchmissing = :notequal
 	)
 
+	rename!(db_, 
+		:sequence => :Sequence,
+		:Tᵣ => :Tr,
+		:Tᵣ_mean_leaf => :Tr_mean_leaf,
+		:Tᵣ_mean_plant => :Tr_mean_plant	
+	
+	)
+
+	# Re-order columns:
 	select!(
 		db_,
 		:DateTime_start,
@@ -588,9 +603,10 @@ db_10min = let
 		:Plant,
 		:Leaf,
 		:Scenario,
-		:sequence => :Sequence,
+		:Sequence,
 		:
 	)
+
     db_
 end
 
@@ -630,7 +646,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "90f8f25d765f6b24123bd7058c22c1e8a584416e"
+project_hash = "3d1f6640ad7b45a5777c0ef161ebc8f513387300"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -2085,7 +2101,6 @@ version = "3.5.0+0"
 # ╟─326b71c6-00b2-4046-9ac2-962a42ceaa69
 # ╟─e92c7421-c8e6-47ff-81ae-9e8e25818e99
 # ╠═42bcf804-8ed0-4573-8201-1fd79bc0a140
-# ╠═ed22bca2-aa41-43e0-9314-22e5ce9f9750
 # ╟─2547928f-9569-4a1f-a636-7e8ecda893de
 # ╠═415a440a-8aea-4f38-893f-d22d0114a16e
 # ╟─0d542ed4-71c3-40df-a90c-feb491f055d4
