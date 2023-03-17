@@ -52,47 +52,6 @@ end
 # ╔═╡ b6a20bdf-4e24-45a7-b778-7465954d6ba8
  walz_files = filter(x -> occursin(r"^P.*\.csv$", basename(x)), readdir("../0-data/walz/walz", join = true))
 
-# ╔═╡ 23275604-41c4-4eff-9a94-c827dad049ab
-# ╠═╡ disabled = true
-#=╠═╡
-walz_df = let
-	df_ = CSV.read(walz_files, DataFrame, header = 1, skipto = 3, source = :source) 
-	transform!(
-		df_, 
-		:source => ByRow(x -> begin
-				file_name = basename(string(x))
-				[parse(Int,file_name[2]), parse(Int, file_name[4]), Date(string(file_name[5:8], "2021"), dateformat"mmddyyyy")]
-		end) => [:Plant, :Leaf, :Date_file_name],
-		:Comment => Impute.locf => :curve, # Last observation carried forward
-		:VPD => (x -> x ./ 10.0) => :Dₗ, # VPD (hPa) is in fact Dₗ (kPa)
-		:GH2O => (x -> gsw_to_gsc.(x) ./ 1000.0) => :Gₛ,
-		:rh =>  (x -> x ./ 100.0) => :Rh,
-	)
-		
-	rename!(
-        df_,
-        :ca => :Cₐ, :Tcuv => :T, :Pamb => :P,
-        :PARtop => :PPFD, :ci => :Cᵢ, :Tleaf => :Tₗ
-    )
-
-	transform!(
-		df_,
-		[:Rh, :T] => ((Rh,T) -> PlantMeteo.vpd.(Rh, T)) => :VPD
-	)
-
-	select!(
-		df_, 
-		[
-			:Date, :Time, :Plant, :Leaf, :Date_file_name, :curve, :Code, 
-			:Object, :Area, :VPD, :Gₛ, :Tₗ, :T, :PPFD, :P,
-			:PARbot, :Rh, :E, :A, :Cᵢ, :Cₐ, :Dₗ
-		]
-	)
-
-	dropmissing(df_, :Dₗ)
-end
-  ╠═╡ =#
-
 # ╔═╡ ab0a1dbd-825c-4b69-8f6a-78bc4dc96c68
 walz_df = let
 	df_ = read_walz(walz_files)
@@ -425,7 +384,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "8acadf1df52d4daa0ae6adcf1a52e533ddf0e147"
+project_hash = "169dc6071e4bd0dd817fed9589c57e3100e677d8"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
