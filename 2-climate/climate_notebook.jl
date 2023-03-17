@@ -11,6 +11,7 @@ begin
 	using ZipFile
 	using Dates
 	using Statistics
+	using PlutoUI
 end
 
 # ╔═╡ 1a8b0e04-b1c7-11ed-2dba-758bc57db4b4
@@ -118,14 +119,28 @@ Second, we import the data of the CO2 fluxes measurements in the chamber, which 
 needed_period_df = 
 	let
 		df_ = CSV.read("../0-data/picarro_flux/data_mean_flux.csv", DataFrame)
+		transform!(
+		 	df_,
+			:MPV1_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV1_time,
+			:MPV2_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV2_time
+		)
+		
 		 transform!(
 		 	df_,
-			:MPV1_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :DateTime_start,
-			 :MPV2_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :DateTime_end
+			:MPV1_time => (x -> x .- Second(150)) => :DateTime_start_input,
+		 	:MPV1_time => (x -> x .+ Second(150)) => :DateTime_end_input,
+		 	:MPV2_time => (x -> x .- Second(150)) => :DateTime_start_output,
+		 	:MPV2_time => (x -> x .+ Second(150)) => :DateTime_end_output
 		)
 
 		df_
 	end
+
+# ╔═╡ fc40172d-2c75-4376-9b8a-94b24a9597a6
+md"""
+!!! note
+	We remove/add 150 seconds to the DateTime because it is given as the average time between a valve opening and closing, and we want the time of valve opening and closing.
+"""
 
 # ╔═╡ 22bbbf62-96a3-4f58-9e97-ac7f066f1cff
 md"""
@@ -206,11 +221,11 @@ mic3_5min = let
 	mic3_.DateTime_end = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
 
 	for row in eachrow(needed_period_df)
-		timestamps_within = findall(row.DateTime_start .<= mic3_.DateTime .<= row.DateTime_end)
+		timestamps_within = findall(row.DateTime_start_output .<= mic3_.DateTime .<= row.DateTime_end_output)
 		
 		if length(timestamps_within) > 0
-			mic3_.DateTime_start[timestamps_within] .= row.DateTime_start
-			mic3_.DateTime_end[timestamps_within] .= row.DateTime_end
+			mic3_.DateTime_start[timestamps_within] .= row.DateTime_start_output
+			mic3_.DateTime_end[timestamps_within] .= row.DateTime_end_output
 		end
 	end
 	filter!(x-> !ismissing(x.DateTime_start), mic3_)
@@ -236,19 +251,12 @@ mic3_10min = let
 
 	nrows_df = nrow(needed_period_df)
 
-	for i in 1:nrows_df
-		if i == nrows_df
-			continue
-		end
-		
-		this_row = needed_period_df[i,:]
-		next_row = needed_period_df[i+1,:]
-		
-		timestamps_within = findall(this_row.DateTime_start .<= mic3_.DateTime .< next_row.DateTime_start)
+	for row in eachrow(needed_period_df)		
+		timestamps_within = findall(row.DateTime_start_input .<= mic3_.DateTime .< row.DateTime_end_output)
 		
 		if length(timestamps_within) > 0
-			mic3_.DateTime_start[timestamps_within] .= this_row.DateTime_start
-			mic3_.DateTime_end[timestamps_within] .= next_row.DateTime_start
+			mic3_.DateTime_start[timestamps_within] .= row.DateTime_start_input
+			mic3_.DateTime_end[timestamps_within] .= row.DateTime_end_output
 		end
 	end
 	
@@ -267,18 +275,23 @@ end
 # ╔═╡ 877f55bd-69dc-408f-9f5c-33ab345a1e01
 CSV.write("climate_mic3_10min.csv", mic3_10min)
 
+# ╔═╡ 131d19dc-7bba-48ca-94ae-f63c167d3747
+TableOfContents(title="📚 Table of Contents", indent=true, depth=4, aside=true)
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
 CSV = "~0.10.9"
 DataFrames = "~1.5.0"
+PlutoUI = "~0.7.50"
 ZipFile = "~0.10.1"
 """
 
@@ -288,7 +301,17 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "3a51db55432161de8a1cc2f02cbe42ff9a7d9912"
+project_hash = "799125bb5aceeb92d58519e7ef5573b2427f7967"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "8eaf9f1b4921132a4cff3f36a1d9ba923b14a481"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.1.4"
+
+[[deps.ArgTools]]
+uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
+version = "1.1.1"
 
 [[deps.Artifacts]]
 uuid = "56f22d72-fd6d-98f1-02f0-08ddc0907c33"
@@ -307,6 +330,12 @@ deps = ["TranscodingStreams", "Zlib_jll"]
 git-tree-sha1 = "9c209fb7536406834aa938fb149964b985de6c83"
 uuid = "944b1d66-785c-5afd-91f1-9de20f533193"
 version = "0.7.1"
+
+[[deps.ColorTypes]]
+deps = ["FixedPointNumbers", "Random"]
+git-tree-sha1 = "eb7f0f8307f71fac7c606984ea5fb2817275d6e4"
+uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
+version = "0.11.4"
 
 [[deps.Compat]]
 deps = ["Dates", "LinearAlgebra", "UUIDs"]
@@ -350,11 +379,25 @@ version = "1.0.0"
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
 
+[[deps.Downloads]]
+deps = ["ArgTools", "FileWatching", "LibCURL", "NetworkOptions"]
+uuid = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+version = "1.6.0"
+
 [[deps.FilePathsBase]]
 deps = ["Compat", "Dates", "Mmap", "Printf", "Test", "UUIDs"]
 git-tree-sha1 = "e27c4ebe80e8699540f2d6c805cc12203b614f12"
 uuid = "48062228-2e41-5def-b9a4-89aafe57970f"
 version = "0.9.20"
+
+[[deps.FileWatching]]
+uuid = "7b1f6079-737a-58dc-b8bc-7a2ca5c1b5ee"
+
+[[deps.FixedPointNumbers]]
+deps = ["Statistics"]
+git-tree-sha1 = "335bfdceacc84c5cdf16aadc768aa5ddfc5383cc"
+uuid = "53c48c17-4a7d-5ca2-90c5-79b7896eea93"
+version = "0.8.4"
 
 [[deps.Formatting]]
 deps = ["Printf"]
@@ -365,6 +408,24 @@ version = "0.4.2"
 [[deps.Future]]
 deps = ["Random"]
 uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
+
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "8d511d5b81240fc8e6802386302675bdf47737b9"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.4"
+
+[[deps.HypertextLiteral]]
+deps = ["Tricks"]
+git-tree-sha1 = "c47c5fa4c5308f27ccaac35504858d8914e102f9"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.4"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "f7be53659ab06ddc986428d3a9dcc95f6fa6705a"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.2"
 
 [[deps.InlineStrings]]
 deps = ["Parsers"]
@@ -386,10 +447,35 @@ git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
 version = "1.0.0"
 
+[[deps.JSON]]
+deps = ["Dates", "Mmap", "Parsers", "Unicode"]
+git-tree-sha1 = "3c837543ddb02250ef42f4738347454f95079d4e"
+uuid = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+version = "0.21.3"
+
 [[deps.LaTeXStrings]]
 git-tree-sha1 = "f2355693d6778a178ade15952b7ac47a4ff97996"
 uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 version = "1.3.0"
+
+[[deps.LibCURL]]
+deps = ["LibCURL_jll", "MozillaCACerts_jll"]
+uuid = "b27032c2-a3e7-50c8-80cd-2d36dbcbfd21"
+version = "0.6.3"
+
+[[deps.LibCURL_jll]]
+deps = ["Artifacts", "LibSSH2_jll", "Libdl", "MbedTLS_jll", "Zlib_jll", "nghttp2_jll"]
+uuid = "deac9b47-8bc7-5906-a0fe-35ac56dc84c0"
+version = "7.84.0+0"
+
+[[deps.LibGit2]]
+deps = ["Base64", "NetworkOptions", "Printf", "SHA"]
+uuid = "76f85450-5226-5b5a-8eaa-529ad045b433"
+
+[[deps.LibSSH2_jll]]
+deps = ["Artifacts", "Libdl", "MbedTLS_jll"]
+uuid = "29816b5a-b9ab-546f-933c-edad1886dfa8"
+version = "1.10.2+0"
 
 [[deps.Libdl]]
 uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
@@ -401,9 +487,19 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
+[[deps.MIMEs]]
+git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
+uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
+version = "0.1.4"
+
 [[deps.Markdown]]
 deps = ["Base64"]
 uuid = "d6f4376e-aef5-505a-96c1-9c027394607a"
+
+[[deps.MbedTLS_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
+version = "2.28.0+0"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -413,6 +509,14 @@ version = "1.1.0"
 
 [[deps.Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
+
+[[deps.MozillaCACerts_jll]]
+uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
+version = "2022.2.1"
+
+[[deps.NetworkOptions]]
+uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
+version = "1.2.0"
 
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
@@ -429,6 +533,17 @@ deps = ["Dates", "SnoopPrecompile"]
 git-tree-sha1 = "6f4fbcd1ad45905a5dee3f4256fabb49aa2110c6"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
 version = "2.5.7"
+
+[[deps.Pkg]]
+deps = ["Artifacts", "Dates", "Downloads", "LibGit2", "Libdl", "Logging", "Markdown", "Printf", "REPL", "Random", "SHA", "Serialization", "TOML", "Tar", "UUIDs", "p7zip_jll"]
+uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
+version = "1.8.0"
+
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
+git-tree-sha1 = "5bb5129fdd62a2bbbe17c2756932259acf467386"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.50"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -523,6 +638,11 @@ git-tree-sha1 = "c79322d36826aa2f4fd8ecfa96ddb47b174ac78d"
 uuid = "bd369af6-aec1-5ad0-b16a-f7cc5008161c"
 version = "1.10.0"
 
+[[deps.Tar]]
+deps = ["ArgTools", "SHA"]
+uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
+version = "1.10.1"
+
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
@@ -532,6 +652,16 @@ deps = ["Random", "Test"]
 git-tree-sha1 = "94f38103c984f89cf77c402f2a68dbd870f8165f"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.9.11"
+
+[[deps.Tricks]]
+git-tree-sha1 = "6bac775f2d42a611cdfcd1fb217ee719630c4175"
+uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
+version = "0.1.6"
+
+[[deps.URIs]]
+git-tree-sha1 = "074f993b0ca030848b897beff716d93aca60f06a"
+uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+version = "1.4.2"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -566,6 +696,16 @@ version = "1.2.12+3"
 deps = ["Artifacts", "Libdl", "OpenBLAS_jll"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
 version = "5.1.1+0"
+
+[[deps.nghttp2_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "8e850ede-7688-5339-a07c-302acd2aaf8d"
+version = "1.48.0+0"
+
+[[deps.p7zip_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "3f19e933-33d8-53b3-aaab-bd5110c3b7a0"
+version = "17.4.0+0"
 """
 
 # ╔═╡ Cell order:
@@ -581,6 +721,7 @@ version = "5.1.1+0"
 # ╠═261b93fd-a903-40b2-a0fc-a5b745ed56c7
 # ╟─50bfe460-7fd6-4374-9b9f-a7c6b05c3cb6
 # ╠═5e72d148-855e-48b4-8e4f-921569aeee4c
+# ╟─fc40172d-2c75-4376-9b8a-94b24a9597a6
 # ╟─22bbbf62-96a3-4f58-9e97-ac7f066f1cff
 # ╠═60914f72-ee28-46f0-9ce0-1c608dd01193
 # ╠═af847638-1dbf-4ae6-b88b-9f58bd5974f3
@@ -591,5 +732,6 @@ version = "5.1.1+0"
 # ╠═a5b99f51-75a3-4fc8-a98d-e156cc8b1c03
 # ╟─6355f700-2c6d-4537-9072-aa99918d7b73
 # ╟─b96fe1f5-32ff-4bd7-944d-d7a02d0b8c40
+# ╠═131d19dc-7bba-48ca-94ae-f63c167d3747
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
