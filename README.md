@@ -129,6 +129,81 @@ This folder
 └── README.md                      --> This file
 ```
 
+## Database 
+
+You can find the database of all processed data in the `9-database` folder, or in the releases of this repository. The database is available in two versions: one aggregated to match the 10min CO2 measurement, and one aggregated to match the 5min output CO2 measurement.
+
+The database is a compressed CSV file (`.csv.bz2`), and can be read using the following command:
+
+```bash
+bzip2 -d database_5min.csv.bz2
+```
+
+Or using Julia with the following command:
+
+```julia
+using CSV, DataFrames, CodecBzip2
+db = open(Bzip2DecompressorStream, "./9-database/database_5min.csv.bz2") do io
+    CSV.read(io, DataFrame)
+end
+```
+
+The database has the following columns:
+
+| name                     | Unit             | type              | Description                                                                                                                                                        |   |
+|--------------------------|------------------|-------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|---|
+| DateTime_start           | UTC              | ISODateTimeFormat | DateTime of the start of the measurement                                                                                                                           |   |
+| DateTime_end             | UTC              | ISODateTimeFormat | DateTime of the end of the measurement (either the 5-min output   measurement window, or the whole 10-min output-input)                                            |   |
+| Plant                    | -                | Int               | Plant ID                                                                                                                                                           |   |
+| Leaf                     | ID               | Int               | Leaf ID, leaf ID 1 is the first emitted leaf (the oldest)                                                                                                          |   |
+| Scenario                 | -                | String            | Scenario forcing climatic conditions                                                                                                                               |   |
+| Sequence                 | -                | Int               | Sequence for the scenario. Plants can stay in the chamber for one or   several days (one or several scenario). The sequence change value when the   plant changes. |   |
+| DateTime_end_CO2_in      | UTC              | ISODateTimeFormat | DateTime of the end of the CO2 input measurement (CO2 was measured for   5min output, then 5min input)                                                             |   |
+| DateTime_start_sequence  | UTC              | ISODateTimeFormat | DateTime of the start of the sequence                                                                                                                              |   |
+| DateTime_end_sequence    | UTC              | ISODateTimeFormat | DateTime of the end of the sequence                                                                                                                                |   |
+| CO2_outflux_umol_s       | umol plant-1 s-1 | Float             | CO2 flux measured from the chamber (outflux from the chamber)                                                                                                      |   |
+| CO2_dry_input            | ppm              | Float             | CO2 concentration of the input flux in the chamber                                                                                                                 |   |
+| CO2_dry_output           | ppm              | Float             | CO2 concentration of the output flux of the chamber                                                                                                                |   |
+| Ta_instruction           | Celsius degree   | Float             | Instruction on the air temperature of the chamber                                                                                                                  |   |
+| Ta_measurement           | Celsius degree   | Float             | Effective air temperature of the chamber (measurement)                                                                                                             |   |
+| Rh_instruction           | %                | Float             | Instruction on the relative humidity in the chamber                                                                                                                |   |
+| Rh_measurement           | %                | Float             | Effective relative humidity in the chamber (measurement)                                                                                                           |   |
+| R_instruction            | %                | Float             | Instruction on the radiation in the chamber (0 = turned off, 1 = maximal   intensity)                                                                              |   |
+| R_measurement            | umol m-2 s-1     | Float             | Effective radiation in the chamber (measurement)                                                                                                                   |   |
+| CO2_ppm                  | ppm              | Float             | CO2 concentration in the chamber                                                                                                                                   |   |
+| CO2_influx               |                  | Float             | Input CO2 flux of the chamber                                                                                                                                      |   |
+| CO2_instruction          | ppm              | Float             | Instruction for the CO2 concentration in the chamber                                                                                                               |   |
+| transpiration_linear_g_s | g plant-1 s-1    | Float             | Transpiration of the plant, computed from the rate of change within the   5min window using the slope of a linear regression (uses all points)                     |   |
+| transpiration_diff_g_s   | g plant-1 s-1    | Float             | Transpiration of the plant, computed from the difference in weight   between the begining and end of the time-step (uses fewer points)                             |   |
+| Tl_mean                  | Celsius degree   | Float             | Average leaf temperature of all pixels in the mask for the leaf                                                                                                    |   |
+| Tl_min                   | Celsius degree   | Float             | Minimum leaf temperature of all pixels in the mask for the leaf                                                                                                    |   |
+| Tl_max                   | Celsius degree   | Float             | Maximum leaf temperature of all pixels in the mask for the leaf                                                                                                    |   |
+| Tl_std                   | Celsius degree   | Float             | Standard deviation of the leaf temperature of all pixels in the mask for   the leaf                                                                                |   |
+| Date_walz                | UTC              | ISODateFormat     | Date of measurement of the response curves on which the parameters are   fitted on (VcMaxRef, JMaxRef, RdRef, g0 and g1)                                           |   |
+| Leaf_walz                | ID               | Int               | ID of the leaf on which the response curve was measured                                                                                                            |   |
+| VcMaxRef                 | umol m-2 s-1     | Float             | Reference VcMax, fitted on the response curve preceding the plant   sequence                                                                                       |   |
+| JMaxRef                  | umol m-2 s-1     | Float             | Reference JMax, fitted on the response curve preceding the plant sequence                                                                                          |   |
+| RdRef                    | umol m-2 s-1     | Float             | Reference Rd, fitted on the response curve preceding the plant sequence                                                                                            |   |
+| TPURef                   | umol m-2 s-1     | Float             | Reference TPU, fitted on the response curve preceding the plant sequence                                                                                           |   |
+| Tr                       | Celsius degree   | Float             | Reference temperature on which the parameters were fitted                                                                                                          |   |
+| g0                       | mol[CO2] m-2 s-1 | Float             | g0, fitted on the response curve preceding the plant sequence                                                                                                      |   |
+| g1                       | -                | Float             | g1, fitted on the response curve preceding the plant sequence                                                                                                      |   |
+| VcMaxRef_mean_leaf       | umol m-2 s-1     | Float             | Reference VcMax, averaged on all measurements of this leaf during the   whole experiment                                                                           |   |
+| JMaxRef_mean_leaf        | umol m-2 s-1     | Float             | Reference JMax, averaged on all measurements of this leaf during the   whole experiment                                                                            |   |
+| RdRef_mean_leaf          | umol m-2 s-1     | Float             | Reference RdMax, averaged on all measurements of this leaf during the   whole experiment                                                                           |   |
+| TPURef_mean_leaf         | umol m-2 s-1     | Float             | Reference TPU, averaged on all measurements of this leaf during the whole   experiment                                                                             |   |
+| Tr_mean_leaf             | umol m-2 s-1     | Float             | Reference temperature on which the parameters were fitted,   averaged over all measurements on that leaf during the whole experiment                               |   |
+| g0_mean_leaf             | umol m-2 s-1     | Float             | g0, averaged on all measurements of this leaf during the whole   experiment                                                                                        |   |
+| g1_mean_leaf             | umol m-2 s-1     | Float             | g1, averaged on all measurements of this leaf during the whole experiment                                                                                          |   |
+| VcMaxRef_mean_plant      | umol m-2 s-1     | Float             | Reference VcMax, averaged on all measurements of this plant (whatever the   leaf) during the whole experiment                                                      |   |
+| JMaxRef_mean_plant       | umol m-2 s-1     | Float             | Reference JMax, averaged on all measurements of this plant (whatever the   leaf) during the whole experiment                                                       |   |
+| RdRef_mean_plant         | umol m-2 s-1     | Float             | Reference Rd, averaged on all measurements of this plant (whatever the   leaf) during the whole experiment                                                         |   |
+| TPURef_mean_plant        | umol m-2 s-1     | Float             | Reference TPU, averaged on all measurements of this plant (whatever the   leaf) during the whole experiment                                                        |   |
+| Tr_mean_plant            | umol m-2 s-1     | Float             | Reference temperature of the measurements, averaged on all measurements   of this plant (whatever the leaf) during the whole experiment                            |   |
+| g0_mean_plant            | mol[CO2] m-2 s-1 | Float             | g0, averaged on all measurements of this plant (whatever the leaf) during   the whole experiment                                                                   |   |
+| g1_mean_plant            | -                | Float             | g1, averaged on all measurements of this plant (whatever the leaf) during   the whole experiment                                                                   |   |
+|                          |                  |                   |                                                                                                                                                                    |   |
+|                          |                  |                   |                                                                                                                                                                    |   |
 
 ## To do
 
