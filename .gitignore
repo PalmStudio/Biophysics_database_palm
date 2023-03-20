@@ -1,7 +1,6 @@
 .DS_Store
 
 # data (remove everything by default)
-0-data/
 *.tar.gz
 *.bz2
 *.csv
@@ -13,6 +12,8 @@
 ._images
 *.dat
 *.png
+*.ply
+*.prg
 
 1-code_old/
 
@@ -29,6 +30,10 @@
 !0-data/walz/walz.tar.bz2
 !0-data/spad/SPAD_all_plants.csv
 !0-data/spad/SPAD.csv
+!0-data/morphology_and_biomass/leaves_weight.csv
+!0-data/morphology_and_biomass/bulbs_weight.csv
+!0-data/morphology_and_biomass/roots_weight.csv
+!0-data/LiDAR/reconstructions.zip
 
 !2-climate/climate_mic3_5min.csv
 !2-climate/climate_mic3_10min.csv
