@@ -17,7 +17,7 @@ end
 # ╔═╡ 947be178-0b89-46b6-aa74-383e38bf903e
 begin
     using CSV, DataFrames
-    using CodecBzip2, Tar
+    using CodecBzip2, Tar, ZipFile
     using Dates
     using Statistics
     using PlutoUI
@@ -181,6 +181,28 @@ md"""
 	The parameters associated to a plant sequence are the ones measured on the date that is closest to the start of the sequence (*i.e.* just before).
 """
 
+# ╔═╡ 1da880af-e44f-4d90-80b6-6a19f88f598b
+md"""
+### Leaf area
+
+We measured the area of each leaf on the plants at the end of the experiment. We then computed the total leaf area of the plant, that we can transform into the LAI using the chamber soil surface.
+"""
+
+# ╔═╡ 3a26dc05-e3e6-466e-a3eb-bbca0e5b9adf
+surface = let
+	r = ZipFile.Reader("../0-data/LiDAR/reconstructions.zip")
+	surface_file_index = findfirst(x -> x == "surface.csv", [basename(i.name) for i in r.files])
+	df_ = CSV.read(r.files[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy")
+	select!(
+		df_,
+		:Date,
+		:plant => ByRow(x -> parse(Int, x[2])) => :Plant,
+		:PLA => (x -> x ./ (113.0 * 114.0)) => :LAI,
+		# 113.0 * 114.0 is the chamber dimensions
+	)
+	df_
+end
+
 # ╔═╡ 326b71c6-00b2-4046-9ac2-962a42ceaa69
 md"""
 ## Join
@@ -192,9 +214,6 @@ Joining the databases into one single database.
 md"""
 ### 5-minute database
 """
-
-# ╔═╡ b7022d9b-aed0-4eae-a116-13d8b4e67665
-df_sequence_params
 
 # ╔═╡ 2547928f-9569-4a1f-a636-7e8ecda893de
 md"""
@@ -222,6 +241,14 @@ md"""
 
 Saving both databases to disk:
 """
+
+# ╔═╡ b16f1a02-c063-48f6-a556-ac3ffc6ff4a0
+md"""
+Saving the measured plant surfaces:
+"""
+
+# ╔═╡ dd401cb4-5c04-4b43-8583-4c6e870c6b13
+CSV.write("plant_surface.csv", surface)
 
 # ╔═╡ 7a00a634-6c9d-4f4c-95fc-489d0e77a2d1
 md"""
@@ -378,9 +405,9 @@ db_5min = let
     db_ = leftjoin(CO2, climate_5min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
     db_ = leftjoin(db_, transpiration_5min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
     db_ = leftjoin(db_, leaf_temperature_5min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
-	
 	transform!(db_, :DateTime_start_output => (x -> Date.(x)) => :Date)
 	db_ = leftjoin(db_, df_scenario, on = :Date)
+	
 	# Adding the plant sequence: 
     y_nrows = nrow(df_sequence_params)
 	db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
@@ -635,6 +662,7 @@ Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
+ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
 AlgebraOfGraphics = "~0.6.14"
@@ -643,6 +671,7 @@ CairoMakie = "~0.10.2"
 CodecBzip2 = "~0.7.2"
 DataFrames = "~1.5.0"
 PlutoUI = "~0.7.50"
+ZipFile = "~0.10.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -651,7 +680,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "3d1f6640ad7b45a5777c0ef161ebc8f513387300"
+project_hash = "469b5ee2a8b8b2ad3704cdfbb796f41f3999a832"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -2000,6 +2029,12 @@ git-tree-sha1 = "79c31e7844f6ecf779705fbc12146eb190b7d845"
 uuid = "c5fb5394-a638-5e4d-96e5-b29de1b5cf10"
 version = "1.4.0+3"
 
+[[deps.ZipFile]]
+deps = ["Libdl", "Printf", "Zlib_jll"]
+git-tree-sha1 = "f492b7fe1698e623024e873244f10d89c95c340a"
+uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
+version = "0.10.1"
+
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
@@ -2103,9 +2138,10 @@ version = "3.5.0+0"
 # ╟─0e03ad86-22f0-4a4a-bfd0-c283f11df029
 # ╠═1c19481d-58c8-4caf-ad42-205cde510a86
 # ╟─fa7b6167-fc2d-4ae1-9287-9ecf9bbcba97
+# ╟─1da880af-e44f-4d90-80b6-6a19f88f598b
+# ╠═3a26dc05-e3e6-466e-a3eb-bbca0e5b9adf
 # ╟─326b71c6-00b2-4046-9ac2-962a42ceaa69
 # ╟─e92c7421-c8e6-47ff-81ae-9e8e25818e99
-# ╠═b7022d9b-aed0-4eae-a116-13d8b4e67665
 # ╠═42bcf804-8ed0-4573-8201-1fd79bc0a140
 # ╟─2547928f-9569-4a1f-a636-7e8ecda893de
 # ╠═415a440a-8aea-4f38-893f-d22d0114a16e
@@ -2120,6 +2156,8 @@ version = "3.5.0+0"
 # ╟─4407340e-12f9-429a-ba76-c8479f5d9c4a
 # ╠═168c5c96-9252-4a5a-85d2-613b2246cd63
 # ╠═eaed2c19-60a9-4fe2-8788-6143df1062d2
+# ╟─b16f1a02-c063-48f6-a556-ac3ffc6ff4a0
+# ╠═dd401cb4-5c04-4b43-8583-4c6e870c6b13
 # ╟─7a00a634-6c9d-4f4c-95fc-489d0e77a2d1
 # ╟─6d1223de-d6f3-4dab-a5c0-9d1289a7401e
 # ╟─4befe24a-fc2a-4ed1-99ef-ccda6c7eaeda
