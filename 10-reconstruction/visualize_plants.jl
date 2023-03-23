@@ -18,7 +18,7 @@ end
 begin
 	using JSServe
 	Page()
-	JSServe.configure_server!(listen_url="127.0.0.1", listen_port=1234)
+	#JSServe.configure_server!(listen_url="127.0.0.1", listen_port=1234)
 end
 
 # ╔═╡ a19e5cb1-9154-4f34-ab14-a28e7f0124d5
