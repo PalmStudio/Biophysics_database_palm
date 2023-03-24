@@ -19,14 +19,15 @@ using CodecBzip2, Tar # For the extraction of the images from the tar.bz2 file
 # `choco install exiftool` # On Windows
 # `sudo apt install libimage-exiftool-perl` # On Linux
 
-# Extract the reconstructions from the tar.bz2 file:
-open(Bzip2DecompressorStream, "000-data/LiDAR/reconstructions.tar.bz2") do io
-    Tar.extract(io, "000-data/LiDAR/reconstructions")
+# Extract the images from the tar.bz2 file. This can take a while, and the
+# images are 60Go of disk space, so make sure you really need to make this.
+open(Bzip2DecompressorStream, "00-data/thermal_camera_images/images.tar.bz2") do io
+    Tar.extract(io, "00-data/thermal_camera_images/images")
 end
 
-# Extract the LiDAR point clouds from the tar.bz2 file:
-open(Bzip2DecompressorStream, "000-data/LiDAR/LiDAR_data.tar.bz2") do io
-    Tar.extract(io, "000-data/LiDAR/LiDAR_data")
+# Extract the masks from the tar.bz2 file:
+open(Bzip2DecompressorStream, "00-data/thermal_camera_images/coordinates.tar.bz2") do io
+    Tar.extract(io, "00-data/thermal_camera_images/coordinates")
 end
 
 # Setting up the paths and climate data:

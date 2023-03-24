@@ -27,6 +27,21 @@ tar -cjvf reconstructions.tar.bz2 -C ./reconstructions .
 To decompress the archives, use the following commands:
 
 ```bash
-tar -xjvf LiDAR_data.tar.bz2
-tar -xjvf reconstructions.tar.bz2
+mkdir -p LiDAR_data && tar -xjvf LiDAR_data.tar.bz2 -C LiDAR_data
+mkdir -p reconstruction && tar -xjvf reconstructions.tar.bz2 -C reconstruction
+```
+
+Or using Julia:
+    
+```julia
+using CodecBzip2, Tar 
+# Extract the reconstructions from the tar.bz2 file:
+open(Bzip2DecompressorStream, "00-data/LiDAR/reconstructions.tar.bz2") do io
+    Tar.extract(io, "00-data/LiDAR/reconstructions")
+end
+
+# Extract the LiDAR point clouds from the tar.bz2 file:
+open(Bzip2DecompressorStream, "00-data/LiDAR/LiDAR_data.tar.bz2") do io
+    Tar.extract(io, "00-data/LiDAR/LiDAR_data")
+end
 ```

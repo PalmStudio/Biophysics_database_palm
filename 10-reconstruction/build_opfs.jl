@@ -2,12 +2,18 @@ using EcotronAnalysis
 using PlantGeom, MultiScaleTreeGraph
 using GLMakie, Colors
 using CSV, DataFrames, Dates
-using CodecBzip2, Tar # For the extraction of the images from the tar.bz2 file
+using CodecBzip2, Tar # For the extraction of the tar.bz2
 
-# Extract the images from the tar.bz2 file:
-open(Bzip2DecompressorStream, "00-data/LiDAR/reconstructions/") do io
-    Tar.extract(io, "00-data/thermal_camera_images/images")
+# Extract the reconstructions from the tar.bz2 file:
+open(Bzip2DecompressorStream, "00-data/LiDAR/reconstructions.tar.bz2") do io
+    Tar.extract(io, "00-data/LiDAR/reconstructions")
 end
+
+# Extract the LiDAR point clouds from the tar.bz2 file:
+open(Bzip2DecompressorStream, "00-data/LiDAR/LiDAR_data.tar.bz2") do io
+    Tar.extract(io, "00-data/LiDAR/LiDAR_data")
+end
+
 # List the folders containing the meshes:
 reconstruction_folders = filter(x -> startswith(basename(x), "Plant_"), readdir("00-data/LiDAR/reconstructions", join=true))
 
