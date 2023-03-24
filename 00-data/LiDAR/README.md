@@ -1,6 +1,6 @@
 # LiDAR Data
 
-The archive `LiDAR_data.zip` contains the LiDAR data for the four plants. 
+The archive `LiDAR_data.tar.bz2` contains the LiDAR data for the four plants. 
 
 Each folder inside the archive is a measurement session were we scanned all four plants with a Riegl VZ400. The data here are the point clouds extracted from the raw data. The raw data are not included here for disk space reasons (44 Go). The raw data can be sent upon request.
 
@@ -15,5 +15,19 @@ The archive `reconstructions.zip` contains the meshes reconstructed from the poi
 There are also three other files:
 
 - `RecapEcotronSelectionDate.xlsx`: the dates of the LiDAR scans (on which the meshes were reconstructed) and dates of the scenarios
-- `EvoArea.csv`: the evolution of the area of the plant at each reconstrucion, computed from the reconstructed meshes
-- `surface.csv`: the evolution of the surface of each leaf in the plant over time, computed from the the two previous files
+- `SequencePlantScenarios.csv`: the plant and scenario associated to each day of the experiment. Some scenario x plant sets are repeated in the experiment, and some are incomplete because we switched plants during the day. The column `Ref` helps identify one reference day for each scenario and plant that is complete and free of issues.
+- `surface.csv`: the evolution of the surface of each leaf in the plant over time, computed from the reconstructed meshes
+
+The archives where generated with the following commands:
+
+```bash
+tar -cjvf LiDAR_data.tar.bz2 -C ./LiDAR_data .
+tar -cjvf reconstructions.tar.bz2 -C ./reconstructions .
+```
+
+To decompress the archives, use the following commands:
+
+```bash
+tar -xjvf LiDAR_data.tar.bz2
+tar -xjvf reconstructions.tar.bz2
+```

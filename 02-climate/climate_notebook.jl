@@ -6,12 +6,12 @@ using InteractiveUtils
 
 # ╔═╡ 4b871515-5f38-4b6a-a9c1-00f40160041e
 begin
-	using CSV
-	using DataFrames
-	using ZipFile
-	using Dates
-	using Statistics
-	using PlutoUI
+    using CSV
+    using DataFrames
+    using ZipFile
+    using Dates
+    using Statistics
+    using PlutoUI
 end
 
 # ╔═╡ 1a8b0e04-b1c7-11ed-2dba-758bc57db4b4
@@ -40,21 +40,21 @@ Read the data from the zip archive, without uncompressing all files:
 
 # ╔═╡ b1ab6d25-6fa7-4d58-9515-c1910d999224
 begin
-	r = ZipFile.Reader("../0-data/climate/climate.zip");
- 	mic4_files = []
- 	mic3_files = []
- 	for f in r.files
-		startswith(f.name, "Mic4") && push!(mic4_files, CSV.read(f, DataFrame))
- 		startswith(f.name, "Mic3") && push!(mic3_files, CSV.read(f, DataFrame))
- 	end
-	close(r)
+    r = ZipFile.Reader("../00-data/climate/climate.zip")
+    mic4_files = []
+    mic3_files = []
+    for f in r.files
+        startswith(f.name, "Mic4") && push!(mic4_files, CSV.read(f, DataFrame))
+        startswith(f.name, "Mic3") && push!(mic3_files, CSV.read(f, DataFrame))
+    end
+    close(r)
 
-	mic3 = vcat(mic3_files...)
-	mic4 = vcat(mic4_files...)
+    mic3 = vcat(mic3_files...)
+    mic4 = vcat(mic4_files...)
 
-	select!(mic3, Not(:Column1))
-	select!(mic4, Not(:Column1))
-	nothing
+    select!(mic3, Not(:Column1))
+    select!(mic4, Not(:Column1))
+    nothing
 end
 
 # ╔═╡ 5774b396-cece-4252-b1f2-c969d80a8b04
@@ -68,35 +68,35 @@ Some data is duplicated in the files (they are overlapping), so we need to make 
 """
 
 # ╔═╡ 21fb221b-e3ef-4515-ac83-73daf9c6721d
-mic3_df = 
-	select(
-		unique(mic3),
-		"DateTime" => (x -> DateTime.(x, dateformat"yyy-mm-dd HH:MM:SS")) => "DateTime",
-		"consigne T\xb0C" => :Ta_instruction,
-		"mesure T\xb0C" => :Ta_measurement,
-		"consigne HR" => :Rh_instruction,
-		"mesure HR" => :Rh_measurement,
-		"consigne Rayo" => :R_instruction,
-		"mesure Rayo" => :R_measurement,
-		"mesures [CO2]" => :CO2_ppm,
-		"mesure debit CO2" => :CO2_flux,
-		"Mic"
-)
+mic3_df =
+    select(
+        unique(mic3),
+        "DateTime" => (x -> DateTime.(x, dateformat"yyy-mm-dd HH:MM:SS")) => "DateTime",
+        "consigne T\xb0C" => :Ta_instruction,
+        "mesure T\xb0C" => :Ta_measurement,
+        "consigne HR" => :Rh_instruction,
+        "mesure HR" => :Rh_measurement,
+        "consigne Rayo" => :R_instruction,
+        "mesure Rayo" => :R_measurement,
+        "mesures [CO2]" => :CO2_ppm,
+        "mesure debit CO2" => :CO2_flux,
+        "Mic"
+    )
 
 # ╔═╡ c3a421e1-2edc-4974-83b5-652f40519735
-mic4_df = 
-	select(
-		unique(mic4),
-		"DateTime" => (x -> DateTime.(x, dateformat"yyy-mm-dd HH:MM:SS")) => "DateTime",
-		"consigne T\xb0C" => :Ta_instruction,
-		"mesure T\xb0C" => :Ta_measurement,
-		"consigne HR" => :Rh_instruction,
-		"mesure HR" => :Rh_measurement,
-		"consigne Rayo" => :R_instruction,
-		"mesure Rayo" => :R_measurement,
-		"mesures [CO2]" => :CO2_ppm,
-		"Mic"
-)
+mic4_df =
+    select(
+        unique(mic4),
+        "DateTime" => (x -> DateTime.(x, dateformat"yyy-mm-dd HH:MM:SS")) => "DateTime",
+        "consigne T\xb0C" => :Ta_instruction,
+        "mesure T\xb0C" => :Ta_measurement,
+        "consigne HR" => :Rh_instruction,
+        "mesure HR" => :Rh_measurement,
+        "consigne Rayo" => :R_instruction,
+        "mesure Rayo" => :R_measurement,
+        "mesures [CO2]" => :CO2_ppm,
+        "Mic"
+    )
 
 # ╔═╡ 40a4a501-68fc-4d63-9b9c-93f6dd177020
 md"""
@@ -116,25 +116,25 @@ Second, we import the data of the CO2 fluxes measurements in the chamber, which 
 """
 
 # ╔═╡ 5e72d148-855e-48b4-8e4f-921569aeee4c
-needed_period_df = 
-	let
-		df_ = CSV.read("../0-data/picarro_flux/data_mean_flux.csv", DataFrame)
-		transform!(
-		 	df_,
-			:MPV1_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV1_time,
-			:MPV2_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV2_time
-		)
-		
-		 transform!(
-		 	df_,
-			:MPV1_time => (x -> x .- Second(150)) => :DateTime_start_input,
-		 	:MPV1_time => (x -> x .+ Second(150)) => :DateTime_end_input,
-		 	:MPV2_time => (x -> x .- Second(150)) => :DateTime_start_output,
-		 	:MPV2_time => (x -> x .+ Second(150)) => :DateTime_end_output
-		)
+needed_period_df =
+    let
+        df_ = CSV.read("../00-data/picarro_flux/data_mean_flux.csv", DataFrame)
+        transform!(
+            df_,
+            :MPV1_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV1_time,
+            :MPV2_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV2_time
+        )
 
-		df_
-	end
+        transform!(
+            df_,
+            :MPV1_time => (x -> x .- Second(150)) => :DateTime_start_input,
+            :MPV1_time => (x -> x .+ Second(150)) => :DateTime_end_input,
+            :MPV2_time => (x -> x .- Second(150)) => :DateTime_start_output,
+            :MPV2_time => (x -> x .+ Second(150)) => :DateTime_end_output
+        )
+
+        df_
+    end
 
 # ╔═╡ fc40172d-2c75-4376-9b8a-94b24a9597a6
 md"""
@@ -180,64 +180,64 @@ is_change([1,1,1,2,2,2])
 ```
 """
 function is_change(x)
-	change = fill("no_change", length(x))
-	for i in eachindex(change)
-		if i > 1 && x[i] != x[i-1]
-			change[i] = "change"
-		end
-	end
-	return change
+    change = fill("no_change", length(x))
+    for i in eachindex(change)
+        if i > 1 && x[i] != x[i-1]
+            change[i] = "change"
+        end
+    end
+    return change
 end
 
 # ╔═╡ 261b93fd-a903-40b2-a0fc-a5b745ed56c7
-mic3_2 = 
-	let 
-		df_ = transform(
-			mic3_df,
-			:CO2_flux => ByRow(x -> begin
-					if 30 <= x <= 45 
-						return 400.0
-					elseif 45 <= x <= 55
-						return 600.0
-					elseif x >= 55
-						return 800.0
-					else 
-						return 0.0
-					end
-				end
-			) => :CO2_instruction,
-		)
-		transform!(df_,
-			:CO2_instruction => is_change => :CO2_change,
-		)
-		
-		df_
-	end
+mic3_2 =
+    let
+        df_ = transform(
+            mic3_df,
+            :CO2_flux => ByRow(x -> begin
+                if 30 <= x <= 45
+                    return 400.0
+                elseif 45 <= x <= 55
+                    return 600.0
+                elseif x >= 55
+                    return 800.0
+                else
+                    return 0.0
+                end
+            end
+            ) => :CO2_instruction,
+        )
+        transform!(df_,
+            :CO2_instruction => is_change => :CO2_change,
+        )
+
+        df_
+    end
 
 # ╔═╡ 60914f72-ee28-46f0-9ce0-1c608dd01193
 mic3_5min = let
-	mic3_ = copy(mic3_2)
-	mic3_.DateTime_start = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
-	mic3_.DateTime_end = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
+    mic3_ = copy(mic3_2)
+    mic3_.DateTime_start = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
+    mic3_.DateTime_end = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
 
-	for row in eachrow(needed_period_df)
-		timestamps_within = findall(row.DateTime_start_output .<= mic3_.DateTime .<= row.DateTime_end_output)
-		
-		if length(timestamps_within) > 0
-			mic3_.DateTime_start[timestamps_within] .= row.DateTime_start_output
-			mic3_.DateTime_end[timestamps_within] .= row.DateTime_end_output
-		end
-	end
-	filter!(x-> !ismissing(x.DateTime_start), mic3_)
+    for row in eachrow(needed_period_df)
+        timestamps_within = findall(row.DateTime_start_output .<= mic3_.DateTime .<= row.DateTime_end_output)
 
-	mic3_c = combine(
-		groupby(mic3_, :DateTime_start),
-		:DateTime_end => unique => :DateTime_end,
-		names(mic3_, Number) .=> mean .=> names(mic3_, Number),
-		:CO2_change => (x -> any(x .== "change") ? "change" : "no_change") => :CO2_change
-	)
+        if length(timestamps_within) > 0
+            mic3_.DateTime_start[timestamps_within] .= row.DateTime_start_output
+            mic3_.DateTime_end[timestamps_within] .= row.DateTime_end_output
+        end
+    end
+    filter!(x -> !ismissing(x.DateTime_start), mic3_)
 
-	mic3_c
+    mic3_c = combine(
+        groupby(mic3_, :DateTime_start),
+        :DateTime_end => unique => :DateTime_end,
+        names(mic3_, Number) .=> mean .=> names(mic3_, Number),
+        :CO2_change => (x -> any(x .== "change") ? "change" : "no_change") => :CO2_change
+    )
+
+    mic3_c
 end
 
 # ╔═╡ c4675a60-1951-4e7c-aa00-00d1efa1a430
@@ -245,31 +245,31 @@ CSV.write("climate_mic3_5min.csv", mic3_5min)
 
 # ╔═╡ af847638-1dbf-4ae6-b88b-9f58bd5974f3
 mic3_10min = let
-	mic3_ = copy(mic3_2)
-	mic3_.DateTime_start = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
-	mic3_.DateTime_end = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
+    mic3_ = copy(mic3_2)
+    mic3_.DateTime_start = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
+    mic3_.DateTime_end = Vector{Union{DateTime,Missing}}(undef, nrow(mic3_))
 
-	nrows_df = nrow(needed_period_df)
+    nrows_df = nrow(needed_period_df)
 
-	for row in eachrow(needed_period_df)		
-		timestamps_within = findall(row.DateTime_start_input .<= mic3_.DateTime .< row.DateTime_end_output)
-		
-		if length(timestamps_within) > 0
-			mic3_.DateTime_start[timestamps_within] .= row.DateTime_start_input
-			mic3_.DateTime_end[timestamps_within] .= row.DateTime_end_output
-		end
-	end
-	
-	filter!(x-> !ismissing(x.DateTime_start), mic3_)
+    for row in eachrow(needed_period_df)
+        timestamps_within = findall(row.DateTime_start_input .<= mic3_.DateTime .< row.DateTime_end_output)
 
-	mic3_c = combine(
-		groupby(mic3_, :DateTime_start),
-		:DateTime_end => unique => :DateTime_end,
-		names(mic3_, Number) .=> mean .=> names(mic3_, Number),
-		:CO2_change => (x -> any(x .== "change") ? "change" : "no_change") => :CO2_change
-	)
+        if length(timestamps_within) > 0
+            mic3_.DateTime_start[timestamps_within] .= row.DateTime_start_input
+            mic3_.DateTime_end[timestamps_within] .= row.DateTime_end_output
+        end
+    end
 
-	mic3_c
+    filter!(x -> !ismissing(x.DateTime_start), mic3_)
+
+    mic3_c = combine(
+        groupby(mic3_, :DateTime_start),
+        :DateTime_end => unique => :DateTime_end,
+        names(mic3_, Number) .=> mean .=> names(mic3_, Number),
+        :CO2_change => (x -> any(x .== "change") ? "change" : "no_change") => :CO2_change
+    )
+
+    mic3_c
 end
 
 # ╔═╡ 877f55bd-69dc-408f-9f5c-33ab345a1e01

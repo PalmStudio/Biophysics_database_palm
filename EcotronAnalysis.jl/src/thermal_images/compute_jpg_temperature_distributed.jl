@@ -26,10 +26,10 @@ It should have the following columns:
     
 ```julia
 using EcotronAnalysis, DataFrames, CSV, Distributed
-img_dir = "../0-data/0-raw/thermal_camera_images/sample"
-mask_dir = "../0-data/0-raw/thermal_camera_roi_coordinates/coordinates"
+img_dir = "../00-data/0-raw/thermal_camera_images/sample"
+mask_dir = "../00-data/0-raw/thermal_camera_roi_coordinates/coordinates"
 out_dir = "tmp"
-climate = CSV.read("../0-data/2-climate/climate_mic3.csv", DataFrame, dateformat="y-m-d H:M:S")
+climate = CSV.read("../00-data/02-climate/climate_mic3.csv", DataFrame, dateformat="y-m-d H:M:S")
 
 # Running the computation in parrallel:
 addprocs(exeflags="--project")

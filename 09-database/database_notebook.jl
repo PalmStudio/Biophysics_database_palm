@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -21,7 +25,7 @@ begin
     using Dates
     using Statistics
     using PlutoUI
-	using CairoMakie, AlgebraOfGraphics
+    using CairoMakie, AlgebraOfGraphics
 end
 
 # ╔═╡ e85f0778-b384-11ed-304a-891e802cbdae
@@ -46,10 +50,10 @@ Climatic conditions inside the chamber, at 5 min time-step resolution, only for 
 """
 
 # ╔═╡ 86632c33-1ad9-428e-a5a2-8da77166f515
-climate_5min = CSV.read("../2-climate/climate_mic3_5min.csv", DataFrame)
+climate_5min = CSV.read("../02-climate/climate_mic3_5min.csv", DataFrame)
 
 # ╔═╡ 9311888e-7235-4149-9265-809337086f23
-climate_10min = CSV.read("../2-climate/climate_mic3_10min.csv", DataFrame)
+climate_10min = CSV.read("../02-climate/climate_mic3_10min.csv", DataFrame)
 
 # ╔═╡ b873be15-d214-4a3b-b20b-98868bf0909f
 md"""
@@ -61,9 +65,9 @@ Each plant was monitored in the microcosm 3 for a sequence of one or more scenar
 
 # ╔═╡ 331f94ef-9b9a-44d4-abc5-7f9336a79415
 df_scenario = let
-	df_ = CSV.read("../0-data/scenario_sequence/SequenceScenarioMicro3.csv", DataFrame)
-	transform!(df_, :Date => (x -> Date.(x, dateformat"dd/mm/yyyy")) => :Date)
-	df_
+    df_ = CSV.read("../00-data/scenario_sequence/SequenceScenarioMicro3.csv", DataFrame)
+    transform!(df_, :Date => (x -> Date.(x, dateformat"dd/mm/yyyy")) => :Date)
+    df_
 end
 
 # ╔═╡ a7fe0d48-2155-4bb1-8948-d8c0a91b0ea6
@@ -73,10 +77,10 @@ md"""
 
 # ╔═╡ 69f60c67-575d-4e05-8dd0-f75ac5055be3
 df_sequence = let
-	df_ = CSV.read("../6-transpiration/plant_sequence_delayed_corrected.csv", DataFrame)
-	transform!(df_, :Plant => ByRow(x -> parse(Int, x[2])) => :Plant)
-	df_.sequence .= 1:nrow(df_)
-	df_
+    df_ = CSV.read("../06-transpiration/plant_sequence_delayed_corrected.csv", DataFrame)
+    transform!(df_, :Plant => ByRow(x -> parse(Int, x[2])) => :Plant)
+    df_.sequence .= 1:nrow(df_)
+    df_
 end
 
 # ╔═╡ b67defe6-42cf-4bf6-b2ed-714d1b14f6ec
@@ -87,12 +91,12 @@ Plant transpiration, averaged for the 5-minute time-window of the CO2 output mea
 """
 
 # ╔═╡ aa63bf29-146c-4363-85a1-d692848cd540
-transpiration_5min = open(Bzip2DecompressorStream, "../6-transpiration/transpiration_first_5min.csv.bz2") do io
+transpiration_5min = open(Bzip2DecompressorStream, "../06-transpiration/transpiration_first_5min.csv.bz2") do io
     CSV.read(io, DataFrame)
 end
 
 # ╔═╡ bcf18489-c285-4168-99b8-2cc9be4cbaad
-transpiration_10min = open(Bzip2DecompressorStream, "../6-transpiration/transpiration_10min.csv.bz2") do io
+transpiration_10min = open(Bzip2DecompressorStream, "../06-transpiration/transpiration_10min.csv.bz2") do io
     CSV.read(io, DataFrame)
 end
 
@@ -105,7 +109,7 @@ CO2 fluxes, measured every 10 minutes for 5 minutes. The first five minutes are 
 
 # ╔═╡ 4158de69-29ff-4402-873b-7287e7e74b48
 CO2 = let
-    df_ = CSV.read("../4-CO2/CO2_fluxes.csv", DataFrame)
+    df_ = CSV.read("../04-CO2/CO2_fluxes.csv", DataFrame)
 end
 
 # ╔═╡ 3013d612-b8ff-45be-b159-aaadc19fa86f
@@ -145,13 +149,13 @@ md"""
 
 Leaf-scale measurements where performed on a reference leaf before each scenario sequence with a portable gas exchange analyser (Walz GFS-3000). 
 
-These measurements are used to compute the photosynthetic and stomatal conductance parameters for the model of Farquhar et al. (1980) and Medlyn et al. (2011) respectively (see [this notebook](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/7-walz/notebook_walz.jl))).
+These measurements are used to compute the photosynthetic and stomatal conductance parameters for the model of Farquhar et al. (1980) and Medlyn et al. (2011) respectively (see [this notebook](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/07-walz/notebook_walz.jl))).
 """
 
 # ╔═╡ ec8b2c6b-2535-4d12-ac78-46d8940c150c
 df_parameters = let
-	df_ = CSV.read("../7-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
-	sort!(df_, [:Date, :Plant, :Leaf])
+    df_ = CSV.read("../07-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
+    sort!(df_, [:Date, :Plant, :Leaf])
 end
 
 # ╔═╡ 0e03ad86-22f0-4a4a-bfd0-c283f11df029
@@ -161,18 +165,18 @@ Joining the parameters with the plant sequence:
 
 # ╔═╡ 1c19481d-58c8-4caf-ad42-205cde510a86
 df_sequence_params = let
-	last_params = []
-	for row in eachrow(df_sequence)
-		last_parameters_plant = filter(
-				x -> x.Plant == row.Plant && x.Date <= Date(row.DateTime_start),
-				df_parameters
-		)[[end],:]
-		rename!(last_parameters_plant, :Date => :Date_walz, :Leaf => :Leaf_walz)
-		last_parameters_plant.DateTime_start .= row.DateTime_start
-		
-		push!(last_params, last_parameters_plant)
-	end
-	leftjoin(df_sequence, vcat(last_params...), on = [:DateTime_start, :Plant], makeunique=true)
+    last_params = []
+    for row in eachrow(df_sequence)
+        last_parameters_plant = filter(
+            x -> x.Plant == row.Plant && x.Date <= Date(row.DateTime_start),
+            df_parameters
+        )[[end], :]
+        rename!(last_parameters_plant, :Date => :Date_walz, :Leaf => :Leaf_walz)
+        last_parameters_plant.DateTime_start .= row.DateTime_start
+
+        push!(last_params, last_parameters_plant)
+    end
+    leftjoin(df_sequence, vcat(last_params...), on=[:DateTime_start, :Plant], makeunique=true)
 end
 
 # ╔═╡ fa7b6167-fc2d-4ae1-9287-9ecf9bbcba97
@@ -190,17 +194,17 @@ We measured the area of each leaf on the plants at the end of the experiment. We
 
 # ╔═╡ 3a26dc05-e3e6-466e-a3eb-bbca0e5b9adf
 surface = let
-	r = ZipFile.Reader("../0-data/LiDAR/reconstructions.zip")
-	surface_file_index = findfirst(x -> x == "surface.csv", [basename(i.name) for i in r.files])
-	df_ = CSV.read(r.files[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy")
-	select!(
-		df_,
-		:Date,
-		:plant => ByRow(x -> parse(Int, x[2])) => :Plant,
-		:PLA => (x -> x ./ (113.0 * 114.0)) => :LAI,
-		# 113.0 * 114.0 is the chamber dimensions
-	)
-	df_
+    r = ZipFile.Reader("../00-data/LiDAR/reconstructions.zip")
+    surface_file_index = findfirst(x -> x == "surface.csv", [basename(i.name) for i in r.files])
+    df_ = CSV.read(r.files[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy")
+    select!(
+        df_,
+        :Date,
+        :plant => ByRow(x -> parse(Int, x[2])) => :Plant,
+        :PLA => (x -> x ./ (113.0 * 114.0)) => :LAI,
+        # 113.0 * 114.0 is the chamber dimensions
+    )
+    df_
 end
 
 # ╔═╡ 326b71c6-00b2-4046-9ac2-962a42ceaa69
@@ -349,18 +353,18 @@ function add_timeperiod(x, y)
 
         if length(timestamps_within) > 0
             df_.DateTime_start_input[timestamps_within] .= row.DateTime_start_input
-			df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
-			#NB: we add DateTime_end_output here for the time-steps that are within the input, because we still want to know when the measurement ends
+            df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
+            #NB: we add DateTime_end_output here for the time-steps that are within the input, because we still want to know when the measurement ends
         end
     end
 
-	df_.DateTime_end_input = df_.DateTime_start_output
+    df_.DateTime_end_input = df_.DateTime_start_output
 
     return df_
 end
 
 # ╔═╡ 3025bd11-bcbf-4fa5-b67a-73be7bb6db07
-leaf_temperature = open(Bzip2DecompressorStream, "../5-thermal_camera_measurements/leaf_temperature.csv.bz2") do io
+leaf_temperature = open(Bzip2DecompressorStream, "../05-thermal_camera_measurements/leaf_temperature.csv.bz2") do io
     df_ = CSV.read(io, DataFrame)
     select!(df_, Not(:mask))
 
@@ -370,7 +374,7 @@ leaf_temperature = open(Bzip2DecompressorStream, "../5-thermal_camera_measuremen
         :plant,
         :leaf,
         :DateTime,
-		:DateTime_start_input,
+        :DateTime_start_input,
         :DateTime_end_input,
         :DateTime_start_output,
         :DateTime_end_output,
@@ -390,7 +394,7 @@ leaf_temperature_5min = let
         #nrow;
         renamecols=false
     )
-	
+
     rename!(df_, :DateTime_start_output => :DateTime_start)
 
     select!(
@@ -402,17 +406,17 @@ end
 
 # ╔═╡ 42bcf804-8ed0-4573-8201-1fd79bc0a140
 db_5min = let
-    db_ = leftjoin(CO2, climate_5min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
-    db_ = leftjoin(db_, transpiration_5min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
-    db_ = leftjoin(db_, leaf_temperature_5min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
-	transform!(db_, :DateTime_start_output => (x -> Date.(x)) => :Date)
-	db_ = leftjoin(db_, df_scenario, on = :Date)
-	
-	# Adding the plant sequence: 
+    db_ = leftjoin(CO2, climate_5min, on=[:DateTime_start_output => :DateTime_start], makeunique=true)
+    db_ = leftjoin(db_, transpiration_5min, on=[:DateTime_start_output => :DateTime_start], makeunique=true)
+    db_ = leftjoin(db_, leaf_temperature_5min, on=[:DateTime_start_output => :DateTime_start], makeunique=true)
+    transform!(db_, :DateTime_start_output => (x -> Date.(x)) => :Date)
+    db_ = leftjoin(db_, df_scenario, on=:Date)
+
+    # Adding the plant sequence: 
     y_nrows = nrow(df_sequence_params)
-	db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
-	db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
-	
+    db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
+    db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
+
     for (i, row) in enumerate(eachrow(df_sequence_params))
         ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
         timestamps_within = findall(row.DateTime_start .<= db_.DateTime_start_output .<= row.DateTime_end)
@@ -421,18 +425,18 @@ db_5min = let
             db_.DateTime_start_sequence[timestamps_within] .= row.DateTime_start
             db_.DateTime_end_sequence[timestamps_within] .= row.DateTime_end
         end
-	end
-	# End of plant sequence computation
-	
+    end
+    # End of plant sequence computation
+
     select!(
         db_,
-		:Scenario,
+        :Scenario,
         :leaf => :Leaf,
         :DateTime_start_output,
         :DateTime_end_output => :DateTime_end,
         :DateTime_end => :DateTime_end_CO2_in,
-		:DateTime_start_sequence,
-		:DateTime_end_sequence,
+        :DateTime_start_sequence,
+        :DateTime_end_sequence,
         #:DateTime_end_CO2_in,
         :CO2_flux_umol_s => :CO2_outflux_umol_s,
         :CO2_dry_input,
@@ -454,34 +458,34 @@ db_5min = let
         :Tl_std,
     )
 
-	# Adding the biophysical parameters now that we have the Plant properly set:
-	db_ = leftjoin(
-		db_, 
-		select(df_sequence_params, Not([:DateTime_end, :Event])), 
-		on = [:DateTime_start_sequence => :DateTime_start], 
-		#makeunique=true, 
-		matchmissing = :notequal
-	)
+    # Adding the biophysical parameters now that we have the Plant properly set:
+    db_ = leftjoin(
+        db_,
+        select(df_sequence_params, Not([:DateTime_end, :Event])),
+        on=[:DateTime_start_sequence => :DateTime_start],
+        #makeunique=true, 
+        matchmissing=:notequal
+    )
 
-	rename!(db_, 
-		:DateTime_start_output => :DateTime_start,
-		:sequence => :Sequence,
-		:Tᵣ => :Tr,
-		:Tᵣ_mean_leaf => :Tr_mean_leaf,
-		:Tᵣ_mean_plant => :Tr_mean_plant	
-	)
-	
-	# Re-order columns:
-	select!(
-		db_,
-		:DateTime_start,
-		:DateTime_end,
-		:Plant,
-		:Leaf,
-		:Scenario,
-		:Sequence,
-		:
-	)
+    rename!(db_,
+        :DateTime_start_output => :DateTime_start,
+        :sequence => :Sequence,
+        :Tᵣ => :Tr,
+        :Tᵣ_mean_leaf => :Tr_mean_leaf,
+        :Tᵣ_mean_plant => :Tr_mean_plant
+    )
+
+    # Re-order columns:
+    select!(
+        db_,
+        :DateTime_start,
+        :DateTime_end,
+        :Plant,
+        :Leaf,
+        :Scenario,
+        :Sequence,
+        :
+    )
 
     db_
 end
@@ -502,34 +506,34 @@ $(@bind last_date PlutoUI.Slider(min_date:Day(1):max_date, default = max_date, s
 
 # ╔═╡ 329cd584-2ca0-4bc0-90db-e1f170c6c5b5
 let
-	df_ = dropmissing(db_5min, [:DateTime_end, :CO2_outflux_umol_s,])
-	filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
-	p = data(df_) *
-		mapping(:DateTime_start, :CO2_outflux_umol_s, color = :Scenario => string) *
-		visual(Scatter) 	
-	draw(p)
+    df_ = dropmissing(db_5min, [:DateTime_end, :CO2_outflux_umol_s,])
+    filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
+    p = data(df_) *
+        mapping(:DateTime_start, :CO2_outflux_umol_s, color=:Scenario => string) *
+        visual(Scatter)
+    draw(p)
 end
 
 # ╔═╡ 4088884b-f1de-40e3-82e6-95118def79b7
-let 
-	df_ = dropmissing(db_5min, [:DateTime_end, :transpiration_linear_g_s,])
-	filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
-	p = data(df_) *
-		mapping(:DateTime_start, :transpiration_linear_g_s, color = :Scenario => string) *
-		visual(Scatter)
+let
+    df_ = dropmissing(db_5min, [:DateTime_end, :transpiration_linear_g_s,])
+    filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
+    p = data(df_) *
+        mapping(:DateTime_start, :transpiration_linear_g_s, color=:Scenario => string) *
+        visual(Scatter)
 
-	draw(p)
+    draw(p)
 end
 
 # ╔═╡ d6ba6743-3ba0-4e04-b2bf-431a524ce6e5
-let 
-	df_ = dropmissing(db_5min, [:DateTime_end, :Tl_mean,])
-	filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
-	p = data(df_) *
-		mapping(:DateTime_start, :Tl_mean, color = :Scenario => string) *
-		visual(Scatter)
+let
+    df_ = dropmissing(db_5min, [:DateTime_end, :Tl_mean,])
+    filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
+    p = data(df_) *
+        mapping(:DateTime_start, :Tl_mean, color=:Scenario => string) *
+        visual(Scatter)
 
-	draw(p)
+    draw(p)
 end
 
 # ╔═╡ eaed2c19-60a9-4fe2-8788-6143df1062d2
@@ -558,17 +562,17 @@ end
 
 # ╔═╡ 415a440a-8aea-4f38-893f-d22d0114a16e
 db_10min = let
-    db_ = leftjoin(CO2, climate_10min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
-    db_ = leftjoin(db_, transpiration_10min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
-    db_ = leftjoin(db_, leaf_temperature_10min, on=[:DateTime_start_output=>:DateTime_start], makeunique=true)
-	transform!(db_, :DateTime_start_output => (x -> Date.(x)) => :Date)
-	db_ = leftjoin(db_, df_scenario, on = :Date)
-	
-	# Adding the plant sequence: 
-	y_nrows = nrow(df_sequence_params)
-	db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
-	db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
-	
+    db_ = leftjoin(CO2, climate_10min, on=[:DateTime_start_output => :DateTime_start], makeunique=true)
+    db_ = leftjoin(db_, transpiration_10min, on=[:DateTime_start_output => :DateTime_start], makeunique=true)
+    db_ = leftjoin(db_, leaf_temperature_10min, on=[:DateTime_start_output => :DateTime_start], makeunique=true)
+    transform!(db_, :DateTime_start_output => (x -> Date.(x)) => :Date)
+    db_ = leftjoin(db_, df_scenario, on=:Date)
+
+    # Adding the plant sequence: 
+    y_nrows = nrow(df_sequence_params)
+    db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
+    db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
+
     for (i, row) in enumerate(eachrow(df_sequence))
         ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
         timestamps_within = findall(row.DateTime_start .<= db_.DateTime_start_output .<= row.DateTime_end)
@@ -576,19 +580,19 @@ db_10min = let
         if length(timestamps_within) > 0
             db_.DateTime_start_sequence[timestamps_within] .= row.DateTime_start
             db_.DateTime_end_sequence[timestamps_within] .= row.DateTime_end
-        end		
-	end
-	# End of plant sequence computation
-	
+        end
+    end
+    # End of plant sequence computation
+
     select!(
         db_,
-		:Scenario,
+        :Scenario,
         :leaf => :Leaf,
         :DateTime_start_output => :DateTime_start,
         :DateTime_end_output => :DateTime_end,
         :DateTime_end => :DateTime_end_CO2_in,
-		:DateTime_start_sequence,
-		:DateTime_end_sequence,
+        :DateTime_start_sequence,
+        :DateTime_end_sequence,
         #:DateTime_end_CO2_in,
         :CO2_flux_umol_s => :CO2_outflux_umol_s,
         :CO2_dry_input,
@@ -611,33 +615,31 @@ db_10min = let
     )
 
 
-	# Adding the biophysical parameters now that we have the Plant properly set:
-	db_ = leftjoin(
-		db_, 
-		select(df_sequence_params, Not([:DateTime_end, :Event])), 
-		on = [:DateTime_start_sequence => :DateTime_start], 
-		matchmissing = :notequal
-	)
+    # Adding the biophysical parameters now that we have the Plant properly set:
+    db_ = leftjoin(
+        db_,
+        select(df_sequence_params, Not([:DateTime_end, :Event])),
+        on=[:DateTime_start_sequence => :DateTime_start],
+        matchmissing=:notequal
+    )
 
-	rename!(db_, 
-		:sequence => :Sequence,
-		:Tᵣ => :Tr,
-		:Tᵣ_mean_leaf => :Tr_mean_leaf,
-		:Tᵣ_mean_plant => :Tr_mean_plant	
-	
-	)
+    rename!(db_,
+        :sequence => :Sequence,
+        :Tᵣ => :Tr,
+        :Tᵣ_mean_leaf => :Tr_mean_leaf,
+        :Tᵣ_mean_plant => :Tr_mean_plant)
 
-	# Re-order columns:
-	select!(
-		db_,
-		:DateTime_start,
-		:DateTime_end,
-		:Plant,
-		:Leaf,
-		:Scenario,
-		:Sequence,
-		:
-	)
+    # Re-order columns:
+    select!(
+        db_,
+        :DateTime_start,
+        :DateTime_end,
+        :Plant,
+        :Leaf,
+        :Scenario,
+        :Sequence,
+        :
+    )
 
     db_
 end

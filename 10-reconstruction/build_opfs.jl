@@ -2,14 +2,17 @@ using EcotronAnalysis
 using PlantGeom, MultiScaleTreeGraph
 using GLMakie, Colors
 using CSV, DataFrames, Dates
+using CodecBzip2, Tar # For the extraction of the images from the tar.bz2 file
 
-#! Please unzip the folders 0-data/LiDAR/LiDAR_data and 0-data/LiDAR/reconstructions before running this script.
-
+# Extract the images from the tar.bz2 file:
+open(Bzip2DecompressorStream, "00-data/LiDAR/reconstructions/") do io
+    Tar.extract(io, "00-data/thermal_camera_images/images")
+end
 # List the folders containing the meshes:
-reconstruction_folders = filter(x -> startswith(basename(x), "Plant_"), readdir("0-data/LiDAR/reconstructions", join=true))
+reconstruction_folders = filter(x -> startswith(basename(x), "Plant_"), readdir("00-data/LiDAR/reconstructions", join=true))
 
 # List the LiDAR sessions:
-LiDAR_sessions = filter(x -> startswith(basename(x), "SESSION"), readdir("0-data/LiDAR/LiDAR_data", join=true))
+LiDAR_sessions = filter(x -> startswith(basename(x), "SESSION"), readdir("00-data/LiDAR/LiDAR_data", join=true))
 
 # Reconstruct the OPF for each plant from the set of meshes:
 translations = DataFrame(plant=Int[], date_reconstruction=Date[], x=Float64[], y=Float64[], z=Float64[])

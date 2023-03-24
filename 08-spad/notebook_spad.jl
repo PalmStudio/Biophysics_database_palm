@@ -5,11 +5,11 @@ using Markdown
 using InteractiveUtils
 
 # ╔═╡ 0bba0195-e4d8-44c7-a06d-37b2d0de181c
-begin 
-	using CSV, DataFrames, Dates
-	using CairoMakie, AlgebraOfGraphics
-	using PlutoUI
-	using GLM
+begin
+    using CSV, DataFrames, Dates
+    using CairoMakie, AlgebraOfGraphics
+    using PlutoUI
+    using GLM
 end
 
 # ╔═╡ e4ff89ea-be9e-11ed-2fc5-27bdaa05a067
@@ -20,7 +20,7 @@ md"""
 
 We made two types of SPAD measurements:
 
-1. During the pre-experiment (see 7-walz), where we made response curves at the leaf level for half the leaves of the plant during a week during four weeks (4 plants), we made three SPAD measurements on and around the position of the Walz GFS-3000 head. The objective here is to link SPAD measurements to photosynthetic parameters of a leaf, with the hypothesis that very young leaves have lower photosynthetic efficiency, mature leaves have the highest, and then lowering again with age.
+1. During the pre-experiment (see 07-walz), where we made response curves at the leaf level for half the leaves of the plant during a week during four weeks (4 plants), we made three SPAD measurements on and around the position of the Walz GFS-3000 head. The objective here is to link SPAD measurements to photosynthetic parameters of a leaf, with the hypothesis that very young leaves have lower photosynthetic efficiency, mature leaves have the highest, and then lowering again with age.
 
 2. During the Ecotron experiment, to be able to recompute the photosynthetic parameters of all leaves in the plant based on their SPAD and a response curve made on the reference leaf.
 
@@ -39,7 +39,7 @@ Importing the SPAD measurements. We have two different source of data:
 """
 
 # ╔═╡ d475c313-82ea-4e48-b249-ff179752359e
-SPAD_all_leaves = CSV.read("../0-data/spad/SPAD_all_plants.csv", DataFrame)
+SPAD_all_leaves = CSV.read("../00-data/spad/SPAD_all_plants.csv", DataFrame)
 
 # ╔═╡ f703eb8f-7e1d-4a0f-a510-880ab5fc4766
 md"""
@@ -48,9 +48,9 @@ md"""
 
 # ╔═╡ 85109740-232c-42d3-bb9e-30785a6f5219
 SPAD_sequence = let
-	df_ = CSV.read("../0-data/spad/SPAD.csv", DataFrame)
-	filter!(x -> x.SPAD > 0 , df_)
-	transform!(df_,  :Date => (x->Date.(x, dateformat"dd/mm/yyyy")) => :Date)
+    df_ = CSV.read("../00-data/spad/SPAD.csv", DataFrame)
+    filter!(x -> x.SPAD > 0, df_)
+    transform!(df_, :Date => (x -> Date.(x, dateformat"dd/mm/yyyy")) => :Date)
 end
 
 # ╔═╡ 75ddc948-ef76-4628-8151-c8969d9dad40
@@ -67,7 +67,7 @@ Importing the results of adjusting the FvCB (Farquhar–von Caemmerer–Berry) m
 """
 
 # ╔═╡ 50f1d996-882e-46e6-9e8c-754370d59eb8
-parameters = CSV.read("../7-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
+parameters = CSV.read("../07-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
 
 # ╔═╡ ae182b01-751e-41d4-90ab-bd71dc46269f
 md"""
@@ -86,7 +86,7 @@ Visualizing SPAD measurement on all leaves of all plants on the same dates:
 
 # ╔═╡ 3e064ea3-6507-4e14-b87b-d289fb68818a
 data(SPAD_all_leaves) *
-	mapping(:Leaf => string, :SPAD, color = :Plant => string, layout = :Date) |> draw
+mapping(:Leaf => string, :SPAD, color=:Plant => string, layout=:Date) |> draw
 
 # ╔═╡ 629b0443-85de-41be-ae93-207d7a7279ea
 md"""
@@ -95,10 +95,10 @@ The relationship bewteen SPAD and leaf rank seams quite conservative between pla
 
 # ╔═╡ 74073b91-942e-4b2e-8d71-578911409905
 let
-	p = data(SPAD_all_leaves) *
-		mapping(:Leaf => string, :SPAD, color = :Date, layout = :Plant => (x -> string("Plant ", x))) *
-		visual(Lines) 
-	draw(p, legend = (position = :bottom,))
+    p = data(SPAD_all_leaves) *
+        mapping(:Leaf => string, :SPAD, color=:Date, layout=:Plant => (x -> string("Plant ", x))) *
+        visual(Lines)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 03ec4f3f-55c9-49f9-ba77-3aca0de104ca
@@ -117,10 +117,10 @@ Vizualising the SPAD values for each leaf of each plant according to the date of
 
 # ╔═╡ 4391896a-bd2d-4be2-8138-533942d03332
 let
-	p = data(SPAD_sequence) *
-		mapping(:Leaf, :SPAD, color = :Date => string, layout = :Plant => (x -> string("Plant ", x))) *
-		visual(Lines) 
-	draw(p, legend = (position = :bottom,))
+    p = data(SPAD_sequence) *
+        mapping(:Leaf, :SPAD, color=:Date => string, layout=:Plant => (x -> string("Plant ", x))) *
+        visual(Lines)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 38f5aaac-88dd-4b94-a0c1-954201c38857
@@ -143,7 +143,7 @@ md"""
 
 # ╔═╡ f0445fa0-e9b6-4edf-a047-e96b244023ee
 df_all = let
-	leftjoin(parameters, vcat(SPAD_all_leaves, SPAD_sequence), on= [:Date, :Plant, :Leaf])
+    leftjoin(parameters, vcat(SPAD_all_leaves, SPAD_sequence), on=[:Date, :Plant, :Leaf])
 end
 
 # ╔═╡ 6cf0f50c-e12c-467d-a104-c0fd20ca92da
@@ -160,11 +160,11 @@ The value of the SPAD tends to be higher on the more mature leaves (lower leaf I
 
 # ╔═╡ fb98292e-bcd9-499d-8647-8d46f481efae
 let
-	df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:Leaf, :SPAD, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :SPAD, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 5c4cd186-e13b-48a1-a390-76b9f7a6ab01
@@ -174,11 +174,11 @@ SPAD also decrease with time when considering the same leaf (look at the points 
 
 # ╔═╡ 4ae7d579-0f79-47cf-a33c-646d1d04edbb
 let
-	df_ = dropmissing(df_all, :SPAD)
-	p = data(df_) *
-		mapping(:Date, :SPAD, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :SPAD, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ ea6336ce-23e8-4bae-b6d9-2b8e8523a954
@@ -193,11 +193,11 @@ We see that the value of VcMaxRef on the same reference leaf decreases with time
 
 # ╔═╡ 3f5c7536-0491-4e3e-aa14-9f44b01643ef
 let
-	df_ = dropmissing(df_all, :SPAD)
-	p = data(df_) *
-		mapping(:Date, :VcMaxRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ ade36dec-d71f-47a8-98d0-b9c9be02b9d3
@@ -207,11 +207,11 @@ If we look at the points taken before the ecotron experiment to remove the dynam
 
 # ╔═╡ e0018619-7cf4-4b42-a543-5f09fb637066
 let
-	df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:Leaf, :VcMaxRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 2deb246d-518a-44a3-bbec-0fb375cda465
@@ -221,11 +221,11 @@ We can relate the value of VcMaxRef observed along the leaf rank with the SPAD:
 
 # ╔═╡ ad2a826a-7e29-4651-a291-46dd77f5d6b8
 let
-	df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:SPAD, :VcMaxRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ cd22103a-bb7e-4c24-813a-ec845f113c0e
@@ -235,11 +235,11 @@ Unfortunately, the relationship we expected is not visible here, the SPAD does n
 
 # ╔═╡ 2ff74fb7-0008-45cc-b6cf-6566a26e3479
 let
-	df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:SPAD, :VcMaxRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 210856b4-d6d0-41b7-8a71-ec6eb4793334
@@ -249,11 +249,11 @@ That's better! We can see a positive relationship between SPAD and VcMaxRef. Let
 
 # ╔═╡ 5608d879-f246-40bc-bd8b-518aecbf1d3f
 let
-	df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:SPAD, :VcMaxRef, color = :Plant => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :VcMaxRef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ fdaa74a6-77b1-4684-b5b4-a28f832879cf
@@ -273,11 +273,11 @@ Similarly to VcMaxRef, JmaxRef seems to decrease with time when looking at the s
 
 # ╔═╡ 3b78c8cf-0246-4ae6-95b3-0ae13b86651b
 let
-	df_ = dropmissing(df_all, :SPAD)
-	p = data(df_) *
-		mapping(:Date, :JMaxRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ ad53c43a-2efe-4325-a23a-7fb300795991
@@ -287,11 +287,11 @@ Again, we observe a similar result when comparing JMaxRef between leaves of the 
 
 # ╔═╡ d4babf23-b3b6-45a5-8cef-182727e25342
 let
-	df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:Leaf, :JMaxRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 802017f3-d852-4aab-a22e-bf868b86ea90
@@ -301,11 +301,11 @@ md"""
 
 # ╔═╡ f2e8c160-5bcd-4df4-a08c-0db8cc5f97f9
 let
-	df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:SPAD, :JMaxRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 89501cb6-4f1e-4b1c-8fb8-a4abb41af63b
@@ -315,11 +315,11 @@ But a little bit better looking at the dynamic data:
 
 # ╔═╡ 4ebfa8ce-0017-41bd-a78a-1561ba418c8a
 let
-	df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:SPAD, :JMaxRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ ed1ac430-42ec-4f1c-a792-93d9497605cd
@@ -329,11 +329,11 @@ And mixing all plants together shows a relationship:
 
 # ╔═╡ e7b2d76e-76d4-40f2-a762-d6ded5946988
 let
-	df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:SPAD, :JMaxRef, color = :Plant => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :JMaxRef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 3e48e96a-105a-499a-be36-65d1685e245c
@@ -353,11 +353,11 @@ RdRef seems more complicated to explain:
 
 # ╔═╡ 746c2f8a-bd94-4f5b-9813-593807440d2c
 let
-	df_ = dropmissing(df_all, :SPAD)
-	p = data(df_) *
-		mapping(:Date, :RdRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :RdRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 1f5490da-618e-4b87-a153-af6401251924
@@ -367,11 +367,11 @@ As expected, there is no relationship between the value of RdRef and the leaf ag
 
 # ╔═╡ f8e0162a-28cb-4e29-9cf6-b9ff121e380a
 let
-	df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:Leaf, :RdRef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :RdRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 015cdc5d-7541-4254-ad4e-3b7893030bb0
@@ -381,11 +381,11 @@ This is confirmed when using all the data:
 
 # ╔═╡ 338006ee-124d-4739-9b74-37bab45b54e2
 let
-	df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:SPAD, :RdRef, color = :Plant => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :RdRef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 1fe63420-26af-436a-b50a-9bf0106fbddd
@@ -405,38 +405,38 @@ The relationship is not very clear either with TPURef, with the same graphs as b
 
 # ╔═╡ 7399e605-8b46-4d31-a62f-4402b0deb420
 let
-	df_ = dropmissing(df_all, :SPAD)
-	p = data(df_) *
-		mapping(:Date, :TPURef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ ec76ac76-8a5e-4dec-b72c-816f16ef4e90
 let
-	df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:Leaf, :TPURef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 53fd254c-00c4-4f3e-bd3f-faa9a487fc82
 let
-	df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:SPAD, :TPURef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 6624f95c-b4e4-40b1-9a8e-7ca0ddd6d814
 let
-	df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-	p = data(df_) *
-		mapping(:SPAD, :TPURef, layout = :Plant => (x -> string("Plant ", x)), color = :Leaf => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 55799b2e-d442-4e22-abba-b7a49408ac12
@@ -446,10 +446,10 @@ Looking at plant scale data, we could think there might be a relationship (Plant
 
 # ╔═╡ e40a10e4-832c-453d-927f-7016c4472cf4
 let
-	p = data(dropmissing(df_all, :SPAD)) *
-		mapping(:SPAD, :TPURef, color = :Plant => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    p = data(dropmissing(df_all, :SPAD)) *
+        mapping(:SPAD, :TPURef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 6ae1df90-7b27-4b3b-916b-6c268ac93a5e
@@ -464,19 +464,19 @@ md"""
 
 # ╔═╡ 411d5fcd-f1b5-403a-8748-fd4f1a2de136
 let
-	p = data(dropmissing(df_all, [:g0, :SPAD])) *
-		mapping(:SPAD, :g0, layout = :Plant => (x -> string("Plant ", x))) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:SPAD, :g0, layout=:Plant => (x -> string("Plant ", x))) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 44c9a8cf-3657-4eb8-9b28-8d32c06a4711
 let
-	df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), [:SPAD, :g0])
-	p = data(df_) *
-		mapping(:SPAD, :g0, color = :Plant => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), [:SPAD, :g0])
+    p = data(df_) *
+        mapping(:SPAD, :g0, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 7cf9c401-b08b-40dd-9091-21786cd583a9
@@ -491,18 +491,18 @@ md"""
 
 # ╔═╡ 1c36d0a4-3ee8-439f-83b3-820d5dbb3971
 let
-	p = data(dropmissing(df_all, [:g0, :SPAD])) *
-		mapping(:SPAD, :g1, layout = :Plant => (x -> string("Plant ", x))) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:SPAD, :g1, layout=:Plant => (x -> string("Plant ", x))) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ cef058f0-6214-42e4-bc27-152c13bdb9b4
 let
-	p = data(dropmissing(df_all, [:g0, :SPAD])) *
-		mapping(:SPAD, :g1, color = :Plant => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:SPAD, :g1, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ e543ed13-7ec4-4423-a9da-028e4edd21f6
@@ -532,15 +532,15 @@ lm_VcMaxRef = lm(@formula(VcMaxRef ~ 0 + SPAD), df_all)
 
 # ╔═╡ 9b70dd59-39af-4b63-8322-13b6f7d209aa
 let
-	df_ = dropmissing(df_all, [:g0, :SPAD])
-	df_.VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
-	p = data(df_) *
-		mapping(:SPAD => "SPAD (-)", :VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", color = :Plant => string) *
-		visual(Scatter) +
-		data(df_) *
-		mapping(:SPAD => "SPAD (-)", :VcMaxRef_predicted => "VcMaxRef (μmol m⁻² s⁻¹)") *
-		visual(Lines)
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(df_all, [:g0, :SPAD])
+    df_.VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
+    p = data(df_) *
+        mapping(:SPAD => "SPAD (-)", :VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter) +
+        data(df_) *
+        mapping(:SPAD => "SPAD (-)", :VcMaxRef_predicted => "VcMaxRef (μmol m⁻² s⁻¹)") *
+        visual(Lines)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ be98fbce-2335-41bb-9c7b-541690b21879
@@ -563,28 +563,28 @@ If we look at its performance at the plant level, we see that indeed we should u
 
 # ╔═╡ 34593fb7-3145-4df0-9bf9-38cb70fc240d
 let
-	df_ = dropmissing(df_all, [:g0, :SPAD])
-	df_.VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
-	p = data(df_) *
-		mapping(:SPAD => "SPAD (-)", :VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", layout = :Plant => string) *
-		visual(Scatter) +
-		data(df_) *
-		mapping(:SPAD => "SPAD (-)", :VcMaxRef_predicted => "VcMaxRef (μmol m⁻² s⁻¹)", layout = :Plant => string) *
-		visual(Lines)
-	draw(p, legend = (position = :bottom,))
+    df_ = dropmissing(df_all, [:g0, :SPAD])
+    df_.VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
+    p = data(df_) *
+        mapping(:SPAD => "SPAD (-)", :VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", layout=:Plant => string) *
+        visual(Scatter) +
+        data(df_) *
+        mapping(:SPAD => "SPAD (-)", :VcMaxRef_predicted => "VcMaxRef (μmol m⁻² s⁻¹)", layout=:Plant => string) *
+        visual(Lines)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ bfeeddab-a586-4bbc-bb20-6392545c4ad2
 let
-	df_ = dropmissing(df_all, [:SPAD, :VcMaxRef])
-	df_.lm_VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
-	
-	p_mod = 
-		data(df_) *
-		mapping(:VcMaxRef => "Observed (μmol m⁻² s⁻¹)", :lm_VcMaxRef_predicted => "Simulated (μmol m⁻² s⁻¹)", color = :Plant => string) *
-		visual(Scatter)
-	abline_ =  mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)	
-	draw(p_mod + abline_, legend = (position = :bottom,), axis = (title = "VcMaxRef",))
+    df_ = dropmissing(df_all, [:SPAD, :VcMaxRef])
+    df_.lm_VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:VcMaxRef => "Observed (μmol m⁻² s⁻¹)", :lm_VcMaxRef_predicted => "Simulated (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+    abline_ = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
+    draw(p_mod + abline_, legend=(position=:bottom,), axis=(title="VcMaxRef",))
 end
 
 # ╔═╡ d5a229c9-f97c-471d-a2d2-3db0de5cabc5
@@ -604,19 +604,19 @@ lm_JMaxRef = lm(@formula(JMaxRef ~ 0 + VcMaxRef), df_all)
 
 # ╔═╡ 131b3260-5872-48b8-93a1-cb59389392f9
 let
-	df_ = dropmissing(df_all, [:JMaxRef, :VcMaxRef])
-	p = data(df_) *
-		mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :JMaxRef => "JMaxRef (μmol m⁻² s⁻¹)", color = :Plant => string) *
-		visual(Scatter) 
-	
-	df_.lm_JMaxRef_predicted = predict(lm_JMaxRef, df_)
-	
-	p_mod = 
-		data(df_) *
-		mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :lm_JMaxRef_predicted => "JMaxRef (μmol m⁻² s⁻¹)") *
-		visual(Lines)
-	
-	draw(p_mod + p, legend = (position = :bottom,))
+    df_ = dropmissing(df_all, [:JMaxRef, :VcMaxRef])
+    p = data(df_) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :JMaxRef => "JMaxRef (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+
+    df_.lm_JMaxRef_predicted = predict(lm_JMaxRef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :lm_JMaxRef_predicted => "JMaxRef (μmol m⁻² s⁻¹)") *
+        visual(Lines)
+
+    draw(p_mod + p, legend=(position=:bottom,))
 end
 
 # ╔═╡ 09374b54-3451-43b5-b8c8-9352941eddb2
@@ -629,15 +629,15 @@ Markdown.parse("""
 
 # ╔═╡ fdf3a6ed-61b7-4c74-a591-b019d01e25b1
 let
-	df_ = dropmissing(df_all, [:JMaxRef, :VcMaxRef])
-	df_.lm_JMaxRef_predicted = predict(lm_JMaxRef, df_)
-	
-	p_mod = 
-		data(df_) *
-		mapping(:JMaxRef => "Observed (μmol m⁻² s⁻¹)", :lm_JMaxRef_predicted => "Simulated (μmol m⁻² s⁻¹)", color = :Plant => string) *
-		visual(Scatter)
-	abline_ =  mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)	
-	draw(p_mod + abline_, legend = (position = :bottom,), axis = (title = "JMaxRef",))
+    df_ = dropmissing(df_all, [:JMaxRef, :VcMaxRef])
+    df_.lm_JMaxRef_predicted = predict(lm_JMaxRef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:JMaxRef => "Observed (μmol m⁻² s⁻¹)", :lm_JMaxRef_predicted => "Simulated (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+    abline_ = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
+    draw(p_mod + abline_, legend=(position=:bottom,), axis=(title="JMaxRef",))
 end
 
 # ╔═╡ 7023c18c-1301-4369-8dac-04294b87d153
@@ -655,24 +655,24 @@ lm_TPURef = lm(@formula(TPURef ~ 0 + VcMaxRef), df_all)
 
 # ╔═╡ 8985210e-07a5-4b64-87f7-85a8ad0a62ab
 let
-	p = data(dropmissing(df_all, [:g0, :SPAD])) *
-		mapping(:VcMaxRef, :TPURef, color = :Plant => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:VcMaxRef, :TPURef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 
-	df_ = dropmissing(df_all, [:TPURef, :VcMaxRef])
-	p = data(df_) *
-		mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :TPURef => "TPURef (μmol m⁻² s⁻¹)", color = :Plant => string) *
-		visual(Scatter) 
-	
-	df_.lm_TPURef_predicted = predict(lm_TPURef, df_)
-	
-	p_mod = 
-		data(df_) *
-		mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :lm_TPURef_predicted => "TPURef (μmol m⁻² s⁻¹)") *
-		visual(Lines)
-	
-	draw(p_mod + p, legend = (position = :bottom,))
+    df_ = dropmissing(df_all, [:TPURef, :VcMaxRef])
+    p = data(df_) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :TPURef => "TPURef (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+
+    df_.lm_TPURef_predicted = predict(lm_TPURef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :lm_TPURef_predicted => "TPURef (μmol m⁻² s⁻¹)") *
+        visual(Lines)
+
+    draw(p_mod + p, legend=(position=:bottom,))
 end
 
 # ╔═╡ b130b61a-21cc-44ce-988f-b8f127663984
@@ -690,15 +690,15 @@ Comparing observed and simulated TPURef:
 
 # ╔═╡ 62bb7355-3a4c-4c6f-ada7-84767430dc76
 let
-	df_ = dropmissing(df_all, [:VcMaxRef, :TPURef])
-	df_.lm_TPURef_predicted = predict(lm_TPURef, df_)
-	
-	p_mod = 
-		data(df_) *
-		mapping(:TPURef => "Observed (μmol m⁻² s⁻¹)", :lm_TPURef_predicted => "Simulated (μmol m⁻² s⁻¹)", color = :Plant => string) *
-		visual(Scatter)
-	abline_ =  mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)	
-	draw(p_mod + abline_, legend = (position = :bottom,), axis = (title = "TPURef",))
+    df_ = dropmissing(df_all, [:VcMaxRef, :TPURef])
+    df_.lm_TPURef_predicted = predict(lm_TPURef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:TPURef => "Observed (μmol m⁻² s⁻¹)", :lm_TPURef_predicted => "Simulated (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+    abline_ = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
+    draw(p_mod + abline_, legend=(position=:bottom,), axis=(title="TPURef",))
 end
 
 # ╔═╡ e3bb4406-0bc2-45ac-ad8d-913a9f2e5d29
@@ -708,10 +708,10 @@ md"""
 
 # ╔═╡ 7e19bec8-9e3b-41b2-bed4-d131930db3ac
 let
-	p = data(dropmissing(df_all, [:g0, :SPAD])) *
-		mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :RdRef => "RdRef (μmol m⁻² s⁻¹)", color = :Plant => string) *
-		visual(Scatter) 
-	draw(p, legend = (position = :bottom,))
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :RdRef => "RdRef (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
 end
 
 # ╔═╡ b6a496a0-eb39-422f-b7ec-9e995d6f44d0
@@ -737,12 +737,12 @@ The resulting models are the following:
 
 # ╔═╡ 8d7e0fb1-734a-4156-9d6f-32c712331d3b
 CSV.write(
-	"SPAD_models.csv", 
-	DataFrame(
-		:variable => [:VcMaxref, :JMaxRef, :TPURef],
-		:predictor => [:SPAD, :VcMaxref, :VcMaxref],
-		:coefficient => [coef(lm_VcMaxRef)[1], coef(lm_JMaxRef)[1], coef(lm_TPURef)[1]]
-	)
+    "SPAD_models.csv",
+    DataFrame(
+        :variable => [:VcMaxref, :JMaxRef, :TPURef],
+        :predictor => [:SPAD, :VcMaxref, :VcMaxref],
+        :coefficient => [coef(lm_VcMaxRef)[1], coef(lm_JMaxRef)[1], coef(lm_TPURef)[1]]
+    )
 )
 
 # ╔═╡ 99ae2011-ab49-4b4b-b15a-538ac9b0ab88

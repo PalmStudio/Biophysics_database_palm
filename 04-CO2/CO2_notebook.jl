@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -61,37 +65,37 @@ md"""
 # ╔═╡ 256aa6ab-9655-4929-b43f-a491e7f758e8
 CO2_flux =
     let
-        df_ = CSV.read("../0-data/picarro_flux/data_mean_flux.csv", DataFrame)
+        df_ = CSV.read("../00-data/picarro_flux/data_mean_flux.csv", DataFrame)
 
-		# Some measurements are repeated:
-		unique!(df_, :MPV1_time)
-		
-		transform!(
-		 	df_,
-			:MPV1_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV1_time,
-			:MPV2_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV2_time
-		)
-		
-		 transform!(
-		 	df_,
-			:MPV1_time => (x -> x .- Second(150)) => :DateTime_start_input,
-		 	:MPV1_time => (x -> x .+ Second(150)) => :DateTime_end_input,
-		 	:MPV2_time => (x -> x .- Second(150)) => :DateTime_start_output,
-		 	:MPV2_time => (x -> x .+ Second(150)) => :DateTime_end_output
-		)
-		
-		# Some 10-min measurements are not 10-min...
-		for row in 1:nrow(df_)-1
-			if df_[row,:DateTime_end_output] > df_[row+1,:DateTime_start_input]
-				df_[row,:DateTime_end_output] = df_[row+1,:DateTime_start_input]
-			end
-		end
-		
-		transform!(
-		 	df_,
-			:DateTime_start_input => (x -> round.(x, Dates.Minute(10))) => :DateTime_start_input_10min,
-		)
-		
+        # Some measurements are repeated:
+        unique!(df_, :MPV1_time)
+
+        transform!(
+            df_,
+            :MPV1_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV1_time,
+            :MPV2_time => (x -> DateTime.(x, dateformat"dd/mm/yyy HH:MM")) => :MPV2_time
+        )
+
+        transform!(
+            df_,
+            :MPV1_time => (x -> x .- Second(150)) => :DateTime_start_input,
+            :MPV1_time => (x -> x .+ Second(150)) => :DateTime_end_input,
+            :MPV2_time => (x -> x .- Second(150)) => :DateTime_start_output,
+            :MPV2_time => (x -> x .+ Second(150)) => :DateTime_end_output
+        )
+
+        # Some 10-min measurements are not 10-min...
+        for row in 1:nrow(df_)-1
+            if df_[row, :DateTime_end_output] > df_[row+1, :DateTime_start_input]
+                df_[row, :DateTime_end_output] = df_[row+1, :DateTime_start_input]
+            end
+        end
+
+        transform!(
+            df_,
+            :DateTime_start_input => (x -> round.(x, Dates.Minute(10))) => :DateTime_start_input_10min,
+        )
+
         rename!(df_, :MPV1_time => :DateTime)
     end
 
@@ -102,11 +106,11 @@ md"""
 
 # ╔═╡ 5005c489-7123-4620-8a2a-83fc7bee0b1a
 climate_5min = let
-    df = CSV.read("../2-climate/climate_mic3_5min.csv", DataFrame)
-    rename!(df, 
-		:DateTime_start => :DateTime_start_output,
-		:DateTime_end => :DateTime_end_output
-	)
+    df = CSV.read("../02-climate/climate_mic3_5min.csv", DataFrame)
+    rename!(df,
+        :DateTime_start => :DateTime_start_output,
+        :DateTime_end => :DateTime_end_output
+    )
     df
 end
 
@@ -122,7 +126,7 @@ The opening and closing of the chamber's door is monitored continuously and avai
 
 # ╔═╡ af4b9718-ec17-4737-9978-15e41981b56a
 door_df = let
-    df = CSV.read("../0-data/door_opening/Mic3_door_opening.csv", DataFrame)
+    df = CSV.read("../00-data/door_opening/Mic3_door_opening.csv", DataFrame)
     select!(
         df,
         :DateTime => (x -> Dates.DateTime.(x, "yyy-mm-dd HH:MM:SS")) => :DateTime,
@@ -145,7 +149,7 @@ Some outliers were manually identified. These outliers are the ones that are obv
 
 # ╔═╡ 90f88cb4-c718-424e-8d5b-a20e14cde703
 outliers = let
-    df_ = CSV.read("../0-data/picarro_flux/outliers.csv", DataFrame)
+    df_ = CSV.read("../00-data/picarro_flux/outliers.csv", DataFrame)
     transform!(
         df_,
         :Time => ByRow(x -> floor(DateTime(x[1:19], dateformat"yyy-mm-ddTHH:MM:SS.s") .- Second(150), Minute(1))) => :DateTime_start_input
@@ -452,12 +456,12 @@ CSV.write(
     select(
         sort(df_filt_outliers_filt, :DateTime_start_input),
         :DateTime_start_input,
-		:DateTime_end_input,
-		:DateTime_start_output, 
-		:DateTime_end_output,
-		:CO2_dry_MPV1 => :CO2_dry_input, 
-		:CO2_dry_MPV2 => :CO2_dry_output, 
-		:flux_umol_s => :CO2_flux_umol_s
+        :DateTime_end_input,
+        :DateTime_start_output,
+        :DateTime_end_output,
+        :CO2_dry_MPV1 => :CO2_dry_input,
+        :CO2_dry_MPV2 => :CO2_dry_output,
+        :flux_umol_s => :CO2_flux_umol_s
     )
 )
 

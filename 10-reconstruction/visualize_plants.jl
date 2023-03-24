@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -16,16 +20,16 @@ end
 
 # ╔═╡ 7c4f9c36-78a0-4a69-8f2d-f28c9de2e1aa
 begin
-	using JSServe
-	Page()
-	#JSServe.configure_server!(listen_url="127.0.0.1", listen_port=1234)
+    using JSServe
+    Page()
+    #JSServe.configure_server!(listen_url="127.0.0.1", listen_port=1234)
 end
 
 # ╔═╡ a19e5cb1-9154-4f34-ab14-a28e7f0124d5
 begin
-	using PlantGeom, WGLMakie
-	using Dates, Colors
-	using PlutoUI, CSV, DataFrames
+    using PlantGeom, WGLMakie
+    using Dates, Colors
+    using PlutoUI, CSV, DataFrames
 end
 
 # ╔═╡ 54f3d030-c985-11ed-30b9-41f0bdfdae8a
@@ -43,10 +47,10 @@ md"""
 """
 
 # ╔═╡ a8262ba2-81e3-4dcf-89b5-8b19ccec328a
-LiDAR_sessions = filter(x -> startswith(basename(x), "SESSION"), readdir("../0-data/LiDAR/LiDAR_data", join=true))
+LiDAR_sessions = filter(x -> startswith(basename(x), "SESSION"), readdir("../00-data/LiDAR/LiDAR_data", join=true))
 
 # ╔═╡ c501796d-335c-4625-b44a-136efcfb971d
-OPFs = readdir("./reconstructions", join = true)
+OPFs = readdir("./reconstructions", join=true)
 
 # ╔═╡ 46ecd169-e3dd-4c79-a505-cf87beecddf0
 md"""
@@ -61,10 +65,10 @@ $(@bind plant Select([1,2,3,5]))
 """
 
 # ╔═╡ 57107cea-8ee8-44d9-9885-bf0cc55b194b
-sessions = begin 
-	files_plant = OPFs[findall(x -> startswith(x, "Plant_$(plant)"), basename.(OPFs))]
-	folders_dates = replace.(basename.(files_plant), "Plant_$(plant)_" => "", ".opf" => "")
-	Date.(folders_dates, dateformat"yyyy_mm_dd")
+sessions = begin
+    files_plant = OPFs[findall(x -> startswith(x, "Plant_$(plant)"), basename.(OPFs))]
+    folders_dates = replace.(basename.(files_plant), "Plant_$(plant)_" => "", ".opf" => "")
+    Date.(folders_dates, dateformat"yyyy_mm_dd")
 end
 
 # ╔═╡ ba76d91a-122b-4062-b69c-6615a9cf2dce
@@ -73,30 +77,30 @@ Select the LiDAR measurement session: $(@bind session Select(sessions))
 """
 
 # ╔═╡ 6a66bfda-c3a9-44fa-81b8-d199d8a5ba88
-opf = read_opf(files_plant[findfirst(x -> x == session,  sessions)])
+opf = read_opf(files_plant[findfirst(x -> x == session, sessions)])
 
 # ╔═╡ ed81cdbc-6a4b-48d8-be2f-e2f78862d598
 lidar = let
-	# 1. Find the LiDAR session corresponding to the reconstruction:
-	folder_session = LiDAR_sessions[findfirst(x -> occursin(Dates.format(session, dateformat"dd_mm_yyyy"), basename(x)), LiDAR_sessions)]
-	
-	# Grep the plant in the session:
-	session_files = readdir(folder_session, join=true)
-	plant_file = session_files[findfirst(x -> occursin("Plant$(plant).txt", basename(x)), session_files)]
-	CSV.read(plant_file, DataFrame, header=["X", "Y", "Z", "Reflectance"], skipto=2)
+    # 1. Find the LiDAR session corresponding to the reconstruction:
+    folder_session = LiDAR_sessions[findfirst(x -> occursin(Dates.format(session, dateformat"dd_mm_yyyy"), basename(x)), LiDAR_sessions)]
+
+    # Grep the plant in the session:
+    session_files = readdir(folder_session, join=true)
+    plant_file = session_files[findfirst(x -> occursin("Plant$(plant).txt", basename(x)), session_files)]
+    CSV.read(plant_file, DataFrame, header=["X", "Y", "Z", "Reflectance"], skipto=2)
 end
 
 # ╔═╡ 130a9ae5-aaf8-43da-9e73-66afb3e19525
-let	
-	fig = Figure(resolution=(2400, 1200))
-	ax = LScene(fig[1, 1])
-	scatter!(ax, lidar.X, lidar.Y, lidar.Z, color=lidar.Reflectance, markersize=5, alpha=0.5)
-	ax2 = LScene(fig[1, 2])
-	scatter!(ax2, lidar.X, lidar.Y, lidar.Z, color=lidar.Reflectance, markersize=5, alpha=0.5)
-	viz!(ax2, opf, showfacets=true, color_vertex=true, alpha=0.5)
-	ax3 = LScene(fig[1, 3])
-	viz!(ax3, opf, showfacets=true, color_vertex=true, alpha=0.5)
-	fig
+let
+    fig = Figure(resolution=(2400, 1200))
+    ax = LScene(fig[1, 1])
+    scatter!(ax, lidar.X, lidar.Y, lidar.Z, color=lidar.Reflectance, markersize=5, alpha=0.5)
+    ax2 = LScene(fig[1, 2])
+    scatter!(ax2, lidar.X, lidar.Y, lidar.Z, color=lidar.Reflectance, markersize=5, alpha=0.5)
+    viz!(ax2, opf, showfacets=true, color_vertex=true, alpha=0.5)
+    ax3 = LScene(fig[1, 3])
+    viz!(ax3, opf, showfacets=true, color_vertex=true, alpha=0.5)
+    fig
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001

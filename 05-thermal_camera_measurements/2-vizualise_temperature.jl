@@ -22,7 +22,7 @@ Leaf temperature was measured with a a FLIR Vue™ Pro R thermal camera that too
 
 The image database was compresses using `tar` with the `bzip2` algorithm, which reduced significantly disk space from ~60Go to ~23Go.
 
-The images were then processed in the script [1-compute_leaf_temperature.jl](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/5-thermal_camera_measurements/1-compute_leaf_temperature.jl), resulting in a new file `leaf_temperature.csv.bz2`, a compressed CSV file.
+The images were then processed in the script [1-compute_leaf_temperature.jl](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/05-thermal_camera_measurements/1-compute_leaf_temperature.jl), resulting in a new file `leaf_temperature.csv.bz2`, a compressed CSV file.
 """
 
 # ╔═╡ 28792394-5038-4640-9e45-f3bfa3bd96e1
@@ -42,7 +42,7 @@ leaf_temperature_df = let
     df = open(Bzip2DecompressorStream, "leaf_temperature.csv.bz2") do io
         CSV.read(io, DataFrame)
     end
-    climate = CSV.read("../2-climate/climate_mic3.csv", DataFrame)
+    climate = CSV.read("../02-climate/climate_mic3.csv", DataFrame)
     leftjoin(df, climate, on=:DateTime)
 end
 

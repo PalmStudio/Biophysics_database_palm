@@ -6,15 +6,15 @@ using InteractiveUtils
 
 # ╔═╡ c246f348-110e-443c-886a-1cdb191acbd3
 begin
-	using CSV, DataFrames
-	using CodecBzip2, Tar # For the compression of the resulting CSV
-	using PlantSimEngine, PlantBiophysics, PlantMeteo
-	using Dates
-	using Impute # for locf, equivalent of R's fill function
-	using PlutoUI
-	using Plots
-	using Statistics
-	using AlgebraOfGraphics, CairoMakie
+    using CSV, DataFrames
+    using CodecBzip2, Tar # For the compression of the resulting CSV
+    using PlantSimEngine, PlantBiophysics, PlantMeteo
+    using Dates
+    using Impute # for locf, equivalent of R's fill function
+    using PlutoUI
+    using Plots
+    using Statistics
+    using AlgebraOfGraphics, CairoMakie
 end
 
 # ╔═╡ 978781b8-bd04-11ed-29c1-79bcfacc154d
@@ -43,25 +43,25 @@ md"""
 """
 
 # ╔═╡ 176f994b-12d4-48d0-8c10-bb94b8ec9dcb
-if !isdir("../0-data/walz/walz/")
-    open(Bzip2DecompressorStream, "../0-data/walz/walz.tar.bz2") do io
-        Tar.extract(io, "../0-data/walz/walz")
-	end
+if !isdir("../00-data/walz/walz/")
+    open(Bzip2DecompressorStream, "../00-data/walz/walz.tar.bz2") do io
+        Tar.extract(io, "../00-data/walz/walz")
+    end
 end
 
 # ╔═╡ b6a20bdf-4e24-45a7-b778-7465954d6ba8
- walz_files = filter(x -> occursin(r"^P.*\.csv$", basename(x)), readdir("../0-data/walz/walz", join = true))
+walz_files = filter(x -> occursin(r"^P.*\.csv$", basename(x)), readdir("../00-data/walz/walz", join=true))
 
 # ╔═╡ ab0a1dbd-825c-4b69-8f6a-78bc4dc96c68
 walz_df = let
-	df_ = read_walz(walz_files)
-	transform!(
-		df_,
-		:source => ByRow(x -> begin
-				file_name = basename(string(x))
-				[parse(Int,file_name[2]), parse(Int, file_name[4]), Date(string(file_name[5:8], "2021"), dateformat"mmddyyyy")]
-		end) => [:Plant, :Leaf, :Date_file_name]
-	)
+    df_ = read_walz(walz_files)
+    transform!(
+        df_,
+        :source => ByRow(x -> begin
+            file_name = basename(string(x))
+            [parse(Int, file_name[2]), parse(Int, file_name[4]), Date(string(file_name[5:8], "2021"), dateformat"mmddyyyy")]
+        end) => [:Plant, :Leaf, :Date_file_name]
+    )
 end
 
 # ╔═╡ 53ee1090-5b78-4cce-826a-eb76dd7685e3
@@ -86,18 +86,18 @@ walz_df_CO2 = filter(x -> x.curve != "Rh Curve" && x.curve != "ligth Curve", wal
 
 # ╔═╡ 01c8345e-0cf8-4b59-9c98-e217b5bf877f
 df_fit_CO2 = let
-	gdf = groupby(walz_df_CO2, [:Date, :Plant, :Leaf])
-	res = []
-	for group_df in gdf
-		push!(
-			res, 
-			merge(
-				(Date = unique(group_df.Date)[1], Plant = unique(group_df.Plant)[1], Leaf = unique(group_df.Leaf)[1]), 
-				fit(Fvcb, group_df; Tᵣ = 25.0)
-			)
-		)
-	end
-	DataFrame(res)
+    gdf = groupby(walz_df_CO2, [:Date, :Plant, :Leaf])
+    res = []
+    for group_df in gdf
+        push!(
+            res,
+            merge(
+                (Date=unique(group_df.Date)[1], Plant=unique(group_df.Plant)[1], Leaf=unique(group_df.Leaf)[1]),
+                fit(Fvcb, group_df; Tᵣ=25.0)
+            )
+        )
+    end
+    DataFrame(res)
 end
 
 # ╔═╡ ec8aee54-9c07-454b-9000-1e0c561a9c87
@@ -112,35 +112,35 @@ We can now simulate the response curves with the parameters we just fitted:
 
 # ╔═╡ a6f6430e-3d06-4626-8db8-2bc06384d35b
 df_sim_A = let
-	df_ = leftjoin(walz_df_CO2, df_fit_CO2, on = [:Date, :Plant, :Leaf])
-	sort!(df_, :Cᵢ)
-	dropmissing!(df_, [:VcMaxRef, :JMaxRef, :RdRef, :TPURef])
-	gdf = groupby(df_, [:Date, :Plant, :Leaf])
-	dfs = []
-	for g in gdf
-		leaf =
-		    ModelList(
-				photosynthesis = FvcbRaw(
-					VcMaxRef = unique(g.VcMaxRef)[1], 
-					JMaxRef = unique(g.JMaxRef)[1], 
-					RdRef = unique(g.RdRef)[1], 
-					TPURef = unique(g.TPURef)[1]
-				),
-				status = (Tₗ = g.Tₗ, PPFD = g.PPFD, Cᵢ = g.Cᵢ)
-			)
+    df_ = leftjoin(walz_df_CO2, df_fit_CO2, on=[:Date, :Plant, :Leaf])
+    sort!(df_, :Cᵢ)
+    dropmissing!(df_, [:VcMaxRef, :JMaxRef, :RdRef, :TPURef])
+    gdf = groupby(df_, [:Date, :Plant, :Leaf])
+    dfs = []
+    for g in gdf
+        leaf =
+            ModelList(
+                photosynthesis=FvcbRaw(
+                    VcMaxRef=unique(g.VcMaxRef)[1],
+                    JMaxRef=unique(g.JMaxRef)[1],
+                    RdRef=unique(g.RdRef)[1],
+                    TPURef=unique(g.TPURef)[1]
+                ),
+                status=(Tₗ=g.Tₗ, PPFD=g.PPFD, Cᵢ=g.Cᵢ)
+            )
 
-		run!(leaf)
+        run!(leaf)
 
-		df_sim = rename!(DataFrame(leaf), :Tₗ => :Tₗ_sim, :Cᵢ => :Cᵢ_sim, :A => :A_sim)
-		df_sim.Date = g.Date
-		df_sim.Plant = g.Plant
-		df_sim.Leaf = g.Leaf
-		df_sim.Cᵢ = g.Cᵢ
-		df_sim.A = g.A
-		push!(dfs, df_sim)
-	end	
+        df_sim = rename!(DataFrame(leaf), :Tₗ => :Tₗ_sim, :Cᵢ => :Cᵢ_sim, :A => :A_sim)
+        df_sim.Date = g.Date
+        df_sim.Plant = g.Plant
+        df_sim.Leaf = g.Leaf
+        df_sim.Cᵢ = g.Cᵢ
+        df_sim.A = g.A
+        push!(dfs, df_sim)
+    end
 
-	vcat(dfs...)
+    vcat(dfs...)
 end
 
 # ╔═╡ 799cc4b9-d68e-4ff2-b492-7df076044376
@@ -150,14 +150,14 @@ And plot the simulation (lines) against the measurements (points)
 
 # ╔═╡ 92f3d853-90e6-40bb-ac17-67774f24eb9e
 let
-	lay = (:Date, :Leaf) => ((x,y)->string(x, " leaf: ", y))
-	p = data(df_sim_A) *
-		mapping(:Cᵢ, :A, layout = lay, color = :Plant => string)
-	p_sim = data(df_sim_A) *
-		mapping(:Cᵢ_sim, :A_sim, layout = lay, color = :Plant => string)*
-		visual(Lines)	
-	
-	draw(p + p_sim, legend = (position = :bottom,), axis = (width = 225, height = 225))
+    lay = (:Date, :Leaf) => ((x, y) -> string(x, " leaf: ", y))
+    p = data(df_sim_A) *
+        mapping(:Cᵢ, :A, layout=lay, color=:Plant => string)
+    p_sim = data(df_sim_A) *
+            mapping(:Cᵢ_sim, :A_sim, layout=lay, color=:Plant => string) *
+            visual(Lines)
+
+    draw(p + p_sim, legend=(position=:bottom,), axis=(width=225, height=225))
 end
 
 # ╔═╡ aa5fd3d4-2c50-4b3d-a228-dd92af40ce1b
@@ -172,25 +172,25 @@ walz_df_Gs = filter(x -> x.curve != "ligth Curve" && x.curve != "CO2 Curve", wal
 
 # ╔═╡ f6e1a928-d645-449f-bdfa-abb9c9eebf0a
 df_fit_Gs = let
-	gdf = groupby(walz_df_Gs, [:Date, :Plant, :Leaf])
-	res = []
-	for group_df in gdf
-		g0, g1 = fit(Medlyn, group_df)
-		if g1 < 0.0 
-			g1 = missing
-			g0 = missing
-		end
-		
-		push!(
-			res, 
-			merge(
-				(Date = unique(group_df.Date)[1], Plant = unique(group_df.Plant)[1], Leaf = unique(group_df.Leaf)[1]), 
-				(;g0, g1)
-				#fit(Medlyn, group_df)
-			)
-		)
-	end
-	DataFrame(res)
+    gdf = groupby(walz_df_Gs, [:Date, :Plant, :Leaf])
+    res = []
+    for group_df in gdf
+        g0, g1 = fit(Medlyn, group_df)
+        if g1 < 0.0
+            g1 = missing
+            g0 = missing
+        end
+
+        push!(
+            res,
+            merge(
+                (Date=unique(group_df.Date)[1], Plant=unique(group_df.Plant)[1], Leaf=unique(group_df.Leaf)[1]),
+                (; g0, g1)
+                #fit(Medlyn, group_df)
+            )
+        )
+    end
+    DataFrame(res)
 end
 
 # ╔═╡ 0f475632-0159-46e9-8734-832d948215da
@@ -209,66 +209,67 @@ names(walz_df_Gs)
 
 # ╔═╡ a91b82a7-8253-4966-9c02-bf511fa40179
 df_sim_gs = let
-	df_ = leftjoin(walz_df_Gs, df_fit_Gs, on = [:Date, :Plant, :Leaf])
-	 #h.A_meas ./ (h.Cₐ_meas .* sqrt.(h.Dₗ_meas))
-	# sort!(df_, :Cᵢ)
-	dropmissing!(df_, [:g0, :g1])
-	gdf = groupby(df_, [:Date, :Plant, :Leaf])
-	dfs = []
-	for g in gdf
-		w = Weather(select(g, :T, :P, :Rh, :Cₐ, :VPD, :T => (x -> 10) => :Wind))
-		leaf = ModelList(
-        	stomatal_conductance = Medlyn(unique(g.g0)[1], unique(g.g1)[1]),
-        	status = (A = g.A, Cₛ = g.Cₐ, Dₗ = g.Dₗ)
-    	)
-		run!(leaf, w)
+    df_ = leftjoin(walz_df_Gs, df_fit_Gs, on=[:Date, :Plant, :Leaf])
+    #h.A_meas ./ (h.Cₐ_meas .* sqrt.(h.Dₗ_meas))
+    # sort!(df_, :Cᵢ)
+    dropmissing!(df_, [:g0, :g1])
+    gdf = groupby(df_, [:Date, :Plant, :Leaf])
+    dfs = []
+    for g in gdf
+        w = Weather(select(g, :T, :P, :Rh, :Cₐ, :VPD, :T => (x -> 10) => :Wind))
+        leaf = ModelList(
+            stomatal_conductance=Medlyn(unique(g.g0)[1], unique(g.g1)[1]),
+            status=(A=g.A, Cₛ=g.Cₐ, Dₗ=g.Dₗ)
+        )
+        run!(leaf, w)
 
-		df_sim = rename!(DataFrame(leaf), :Gₛ => :Gₛ_sim)
-		df_sim.Date = g.Date
-		df_sim.Plant = g.Plant
-		df_sim.Leaf = g.Leaf
-		df_sim.Gₛ = g.Gₛ
-		df_sim.Dₗ = g.Dₗ
-		df_sim.Cₐ = g.Cₐ
-		df_sim.A = g.A
-		push!(dfs, df_sim)
-	end	
+        df_sim = rename!(DataFrame(leaf), :Gₛ => :Gₛ_sim)
+        df_sim.Date = g.Date
+        df_sim.Plant = g.Plant
+        df_sim.Leaf = g.Leaf
+        df_sim.Gₛ = g.Gₛ
+        df_sim.Dₗ = g.Dₗ
+        df_sim.Cₐ = g.Cₐ
+        df_sim.A = g.A
+        push!(dfs, df_sim)
+    end
 
-	vcat(dfs...)
+    vcat(dfs...)
 end
 
 # ╔═╡ 6570d865-61b6-4708-ae0e-a67da7967bac
 let
-	df_ = transform(
-		df_sim_gs, 
-		[:A, :Cₐ, :Dₗ] => ((A,Ca,Dl) -> A ./ (Ca .* sqrt.(Dl))) => "A/(Cₐ√Dₗ) (ppm)"
-	)
+    df_ = transform(
+        df_sim_gs,
+        [:A, :Cₐ, :Dₗ] => ((A, Ca, Dl) -> A ./ (Ca .* sqrt.(Dl))) => "A/(Cₐ√Dₗ) (ppm)"
+    )
 
-	lay = (:Date, :Leaf) => ((x,y)->string(x, " leaf: ", y))
-	p = data(df_) *
-		mapping("A/(Cₐ√Dₗ) (ppm)", :Gₛ, layout = lay, color = :Plant => string)
-	p_sim = data(df_) *
-		mapping("A/(Cₐ√Dₗ) (ppm)", :Gₛ_sim, layout = lay, color = :Plant => string)*
-		visual(Lines)	
-	
-	draw(p + p_sim, legend = (position = :bottom,), axis = (width = 225, height = 225))
+    lay = (:Date, :Leaf) => ((x, y) -> string(x, " leaf: ", y))
+    p = data(df_) *
+        mapping("A/(Cₐ√Dₗ) (ppm)", :Gₛ, layout=lay, color=:Plant => string)
+    p_sim = data(df_) *
+            mapping("A/(Cₐ√Dₗ) (ppm)", :Gₛ_sim, layout=lay, color=:Plant => string) *
+            visual(Lines)
+
+    draw(p + p_sim, legend=(position=:bottom,), axis=(width=225, height=225))
 end
 
 # ╔═╡ c4b47d49-253c-4beb-bcff-fcc25f3c557e
 df_tmp, gsAvpd = let
-	df_ = groupby(walz_df_Gs, [:Date, :Plant, :Leaf])[1]
-	w = Weather(select(df_, :T, :P, :Rh, :Cₐ, :VPD, :T => (x -> 10) => :Wind))
-	g0, g1 = fit(Medlyn, transform(df_, :Dₗ => :VPD))
-	leaf = ModelList(
-	        Medlyn(g0, g1),
-	        status = (A = df_.A, Cₛ = df_.Cₐ, Dₗ = df_.Dₗ)
-	    )
-	run!(leaf, w)
-	
-	# Visualising the results:
-	gsAvpd = PlantBiophysics.GsADₗ(g0, g1, df_.Gₛ, df_.VPD, df_.A, df_.Cₐ, leaf[:Gₛ])
-	df_, gsAvpd
-end; nothing
+    df_ = groupby(walz_df_Gs, [:Date, :Plant, :Leaf])[1]
+    w = Weather(select(df_, :T, :P, :Rh, :Cₐ, :VPD, :T => (x -> 10) => :Wind))
+    g0, g1 = fit(Medlyn, transform(df_, :Dₗ => :VPD))
+    leaf = ModelList(
+        Medlyn(g0, g1),
+        status=(A=df_.A, Cₛ=df_.Cₐ, Dₗ=df_.Dₗ)
+    )
+    run!(leaf, w)
+
+    # Visualising the results:
+    gsAvpd = PlantBiophysics.GsADₗ(g0, g1, df_.Gₛ, df_.VPD, df_.A, df_.Cₐ, leaf[:Gₛ])
+    df_, gsAvpd
+end;
+nothing
 
 # ╔═╡ 53a229b0-0725-4284-9418-8348acfbd492
 md"""
@@ -276,7 +277,7 @@ Here's an example of a response curve that does not allow for fitting (plant $(u
 """
 
 # ╔═╡ e31761d5-912c-4fa3-a111-1572d1d0bec5
-Plots.plot(gsAvpd,leg=:bottomright)
+Plots.plot(gsAvpd, leg=:bottomright)
 
 # ╔═╡ 0ab05d43-b097-4f11-ae67-e67410cc0af3
 md"""
@@ -285,18 +286,18 @@ And here's one that does:
 
 # ╔═╡ 39f50fb5-d46d-4441-b15a-8ecc83a15362
 let
-	df_ = groupby(walz_df_Gs, [:Date, :Plant, :Leaf])[5]
-	w = Weather(select(df_, :T, :P, :Rh, :Cₐ, :VPD, :T => (x -> 10) => :Wind))
-	g0, g1 = fit(Medlyn, transform(df_, :Dₗ => :VPD))
-	leaf = ModelList(
-	        Medlyn(g0, g1),
-	        status = (A = df_.A, Cₛ = df_.Cₐ, Dₗ = df_.Dₗ)
-	    )
-	run!(leaf, w)
-	
-	# Visualising the results:
-	gsAvpd2 = PlantBiophysics.GsADₗ(g0, g1, df_.Gₛ, df_.VPD, df_.A, df_.Cₐ, leaf[:Gₛ])
-	Plots.plot(gsAvpd2,leg=:bottomright)
+    df_ = groupby(walz_df_Gs, [:Date, :Plant, :Leaf])[5]
+    w = Weather(select(df_, :T, :P, :Rh, :Cₐ, :VPD, :T => (x -> 10) => :Wind))
+    g0, g1 = fit(Medlyn, transform(df_, :Dₗ => :VPD))
+    leaf = ModelList(
+        Medlyn(g0, g1),
+        status=(A=df_.A, Cₛ=df_.Cₐ, Dₗ=df_.Dₗ)
+    )
+    run!(leaf, w)
+
+    # Visualising the results:
+    gsAvpd2 = PlantBiophysics.GsADₗ(g0, g1, df_.Gₛ, df_.VPD, df_.A, df_.Cₐ, leaf[:Gₛ])
+    Plots.plot(gsAvpd2, leg=:bottomright)
 end
 
 # ╔═╡ 02712ce9-285f-425f-826b-b9d44da700ef
@@ -308,26 +309,26 @@ Join the photosynthetic and conductance parameters into a single DataFrame.
 
 # ╔═╡ 86dd8580-f3ed-4548-b834-7ce2da42ec32
 db = let
-	df_ = outerjoin(df_fit_CO2, df_fit_Gs, on = [:Date, :Plant, :Leaf])
-	# Columns to average over:
-	to_average = names(df_, Union{Float64, Missing}) 
-	
-	transform!(
-		groupby(df_, [:Plant, :Leaf]),
-		to_average .=> (x -> begin
-			no_missing_vals = collect(skipmissing(x))
-			length(no_missing_vals) == 0 ? missing : mean(no_missing_vals)
-		end) .=> string.(to_average, "_mean_leaf"),
-	)
+    df_ = outerjoin(df_fit_CO2, df_fit_Gs, on=[:Date, :Plant, :Leaf])
+    # Columns to average over:
+    to_average = names(df_, Union{Float64,Missing})
 
-	transform!(
-		groupby(df_, :Plant),
-		to_average .=> (x -> begin
-			no_missing_vals = collect(skipmissing(x))
-			length(no_missing_vals) == 0 ? missing : mean(no_missing_vals)
-		end) .=> string.(to_average, "_mean_plant"),
-	)
-	df_
+    transform!(
+        groupby(df_, [:Plant, :Leaf]),
+        to_average .=> (x -> begin
+            no_missing_vals = collect(skipmissing(x))
+            length(no_missing_vals) == 0 ? missing : mean(no_missing_vals)
+        end) .=> string.(to_average, "_mean_leaf"),
+    )
+
+    transform!(
+        groupby(df_, :Plant),
+        to_average .=> (x -> begin
+            no_missing_vals = collect(skipmissing(x))
+            length(no_missing_vals) == 0 ? missing : mean(no_missing_vals)
+        end) .=> string.(to_average, "_mean_plant"),
+    )
+    df_
 end
 
 # ╔═╡ d1ceee7a-2a24-41ba-a270-ed90410e1c99

@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -64,7 +68,7 @@ Importing the file that tells us the correction to apply on the time measurement
 
 # ╔═╡ 7027478e-8ba6-4b17-9448-628114d73816
 time_correction = CSV.read(
-    "../3-time-synchronization/time_synchronization.csv",
+    "../03-time-synchronization/time_synchronization.csv",
     DataFrame
 )
 
@@ -74,9 +78,9 @@ md"""
 """
 
 # ╔═╡ c8f60ef9-2caa-46de-ab51-11de279a678b
-if !isdir("../0-data/scale_weight/weight")
-    open(Bzip2DecompressorStream, "../0-data/scale_weight/weights.tar.bz2") do io
-        Tar.extract(io, "../0-data/scale_weight/weight")
+if !isdir("../00-data/scale_weight/weight")
+    open(Bzip2DecompressorStream, "../00-data/scale_weight/weights.tar.bz2") do io
+        Tar.extract(io, "../00-data/scale_weight/weight")
     end
 end
 
@@ -99,7 +103,7 @@ Reading phase 0 data. We know this one is at UTC+1 because it was connected to R
 
 # ╔═╡ b6766baa-73a3-446a-a531-e20cca27c27e
 df_phase_0_delayed, df_phase_0 = let
-    df_raw = CSV.read("../0-data/scale_weight/weight/weights_1.txt", DataFrame, header=["DateTime", "weight"])
+    df_raw = CSV.read("../00-data/scale_weight/weight/weights_1.txt", DataFrame, header=["DateTime", "weight"])
     df_ = copy(df_raw)
     df_ = unique(df_, :DateTime)
     df_.DateTime = df_.DateTime - Dates.Hour(1)
@@ -115,7 +119,7 @@ Starting from phase 1 until phase 4 measurements, we double-checked the delays b
 
 # ╔═╡ d48b9b43-07e8-464d-949b-40fa6e145c65
 df_phase_1_delayed, df_phase_1 = let
-    df_raw = CSV.read("../0-data/scale_weight/weight/weightsPhase1.txt", DataFrame, header=["DateTime", "weight"])
+    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase1.txt", DataFrame, header=["DateTime", "weight"])
     df_ = copy(df_raw)
     # Phase 0 is at UTC+1, so we need to correct the time:
     delay = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
@@ -134,7 +138,7 @@ md"""
 
 # ╔═╡ c3c56b52-dc31-4528-a84d-e81b322dd3cf
 df_phase_2_delayed, df_phase_2 = let
-    df_raw = CSV.read("../0-data/scale_weight/weight/weightsPhase2.txt", DataFrame, header=["DateTime", "weight"])
+    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase2.txt", DataFrame, header=["DateTime", "weight"])
     df_ = copy(df_raw)
     # Phase 0 is at UTC+1, so we need to correct the time:
     delay = filter(x -> x.type == "scale" && x.phase == "phase2", time_correction).delay_seconds[1]
@@ -151,7 +155,7 @@ md"""
 
 # ╔═╡ ffb69b11-816a-4e37-983d-fd18fdb86b08
 df_phase_3_delayed, df_phase_3 = let
-    df_raw = CSV.read("../0-data/scale_weight/weight/weightsPhase3.txt", DataFrame, header=["DateTime", "weight"])
+    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase3.txt", DataFrame, header=["DateTime", "weight"])
     df_ = copy(df_raw)
     # Phase 0 is at UTC+1, so we need to correct the time:
     delay = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
@@ -168,7 +172,7 @@ md"""
 
 # ╔═╡ fd652e98-a33b-491a-b95d-b512165f037d
 df_phase_4_delayed, df_phase_4 = let
-    df_raw = CSV.read("../0-data/scale_weight/weight/weightsPhase4.txt", DataFrame, header=["DateTime", "weight"])
+    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase4.txt", DataFrame, header=["DateTime", "weight"])
     df_ = copy(df_raw)
     # Phase 0 is at UTC+1, so we need to correct the time:
     delay = filter(x -> x.type == "scale" && x.phase == "phase4", time_correction).delay_seconds[1]
@@ -187,16 +191,16 @@ Transpiration was measured every minute at the begining, and then every second. 
 
 # ╔═╡ c26df749-aa82-4815-a27d-516a79efdabe
 CO2 = let
-    df_ = CSV.read("../4-CO2/CO2_fluxes.csv", DataFrame)
-	select!(df_,
-		:DateTime_start_input,
-		:DateTime_end_input,
-		:DateTime_start_output,
-		:DateTime_end_output,
-		:
-	)
-	
-	df_
+    df_ = CSV.read("../04-CO2/CO2_fluxes.csv", DataFrame)
+    select!(df_,
+        :DateTime_start_input,
+        :DateTime_end_input,
+        :DateTime_start_output,
+        :DateTime_end_output,
+        :
+    )
+
+    df_
 end
 
 # ╔═╡ b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
@@ -213,7 +217,7 @@ We also correct the timestamps of the dates in the file as they were reported us
 
 # ╔═╡ ac08d634-e1b3-4b8f-995e-6c24e2941095
 plant_sequence = let
-    df_ = CSV.read("../0-data/scenario_sequence/SequencePlanteMicro3.csv", DataFrame)
+    df_ = CSV.read("../00-data/scenario_sequence/SequencePlanteMicro3.csv", DataFrame)
     transform!(
         df_,
         :DateTime_start => ByRow(x -> DateTime(x, dateformat"dd/mm/yyyy HH:MM:SS\'")) => :DateTime_start,
@@ -481,12 +485,12 @@ function add_timeperiod(x, y)
 
         if length(timestamps_within) > 0 && length(unique(df_.sequence[timestamps_within])) == 1
             df_.DateTime_start_input[timestamps_within] .= row.DateTime_start_input
-			df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
-			#NB: we add DateTime_end_output here for the time-steps that are within the input, because we still want to know when the measurement ends
+            df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
+            #NB: we add DateTime_end_output here for the time-steps that are within the input, because we still want to know when the measurement ends
         end
     end
 
-	df_.DateTime_end_input = df_.DateTime_start_output
+    df_.DateTime_end_input = df_.DateTime_start_output
 
     return df_
 end
@@ -516,8 +520,8 @@ transpiration_first_5min = let
     df_ = combine(
         gdf,
         :DateTime_end_output => unique => :DateTime_end,
-		:sequence => unique => :sequence,
-		:Plant_id => unique => :Plant,
+        :sequence => unique => :sequence,
+        :Plant_id => unique => :Plant,
         [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
             x = [i.value for i in Second.(x)]
             (x' * x) \ x' * (y[1] .- y)
@@ -539,7 +543,7 @@ transpiration_first_5min = let
     # Keep only the time-steps where we have 3 minutes of data to compute Tr:
     filter!(x -> x.nrow > 3, df_)
 
-	filter!(x -> x.transpiration_g_s > -0.005, df_)
+    filter!(x -> x.transpiration_g_s > -0.005, df_)
     df_
 end
 
@@ -580,8 +584,8 @@ transpiration_10min = let
     df_ = combine(
         gdf,
         :DateTime_end_output => unique => :DateTime_end,
-		:sequence => unique => :sequence,
-		:Plant_id => unique => :Plant,
+        :sequence => unique => :sequence,
+        :Plant_id => unique => :Plant,
         [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
             x = [i.value for i in Second.(x)]
             (x' * x) \ x' * (y[1] .- y)
@@ -599,8 +603,8 @@ transpiration_10min = let
     # Keep only the time-steps where we have 3 minutes of data to compute Tr:
     filter!(x -> x.nrow > 3, df_)
 
-	filter!(x -> x.transpiration_g_s > -0.005, df_)
-	
+    filter!(x -> x.transpiration_g_s > -0.005, df_)
+
     df_
 end
 

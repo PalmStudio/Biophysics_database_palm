@@ -19,26 +19,25 @@ using CodecBzip2, Tar # For the extraction of the images from the tar.bz2 file
 # `choco install exiftool` # On Windows
 # `sudo apt install libimage-exiftool-perl` # On Linux
 
-# Extract the images from the tar.bz2 file. This can take a while, and the
-# images are 60Go of disk space, so make sure you really need to make this.
-open(Bzip2DecompressorStream, "0-data/thermal_camera_images/images.tar.bz2") do io
-    Tar.extract(io, "0-data/thermal_camera_images/images")
+# Extract the reconstructions from the tar.bz2 file:
+open(Bzip2DecompressorStream, "000-data/LiDAR/reconstructions.tar.bz2") do io
+    Tar.extract(io, "000-data/LiDAR/reconstructions")
 end
 
-# Extract the masks from the tar.bz2 file:
-open(Bzip2DecompressorStream, "0-data/thermal_camera_images/coordinates.tar.bz2") do io
-    Tar.extract(io, "0-data/thermal_camera_images/coordinates")
+# Extract the LiDAR point clouds from the tar.bz2 file:
+open(Bzip2DecompressorStream, "000-data/LiDAR/LiDAR_data.tar.bz2") do io
+    Tar.extract(io, "000-data/LiDAR/LiDAR_data")
 end
 
 # Setting up the paths and climate data:
-img_dir = "0-data/thermal_camera_images/images/images"
-mask_dir = "0-data/thermal_camera_roi_coordinates/coordinates"
+img_dir = "00-data/thermal_camera_images/images/images"
+mask_dir = "00-data/thermal_camera_roi_coordinates/coordinates"
 out_dir = @__DIR__
 
 # Climate data (for correcting the leaf temperature from air temperature and humidity):
-climate = CSV.read("2-climate/climate_mic3.csv", DataFrame)
+climate = CSV.read("02-climate/climate_mic3.csv", DataFrame)
 # There was a delay in the camera clock of -59m32s (name of the file VS UTC)::
-delay_df = CSV.read("3-time-synchronization/time_synchronization.csv", DataFrame)
+delay_df = CSV.read("03-time-synchronization/time_synchronization.csv", DataFrame)
 delay = Second(filter(x -> x.type == "thermal camera", delay_df).delay_seconds[1])
 
 # Date format of the image file names:

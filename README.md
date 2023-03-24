@@ -31,7 +31,7 @@ This repository does not contain the raw thermal images and the raw LiDAR data t
 
 ```
 This folder
-├── 0-data                         --> Contains raw, unprocessed data
+├── 00-data                         --> Contains raw, unprocessed data
 │   ├── LiDAR                      --> LiDAR data for the 3D reconstruction of the plants
 │   │   ├── LiDAR_data.zip         --> LiDAR point clouds for each plant and session
 │   │   ├── README.md              --> Instructions on how to use the LiDAR data
@@ -70,34 +70,34 @@ This folder
 │   └── walz                       --> Walz GFS-3000 portable gas analyzer data
 │       ├── README.md
 │       └── walz.tar.bz2           --> Walz data archive
-├── 2-climate                      --> Contains processed climatic data
+├── 02-climate                      --> Contains processed climatic data
 │   ├── climate_mic3.csv           --> Climatic data for Mic3
 │   ├── climate_mic3_10min.csv     --> Climatic data for Mic3, aggregated to 10 minutes matching CO2 inut/output measurement cycle
 │   ├── climate_mic3_5min.csv      --> Climatic data for Mic3, aggregated to 5 minutes matching CO2 output measurement
 │   ├── climate_mic4.csv           --> Climatic data for Mic4
 │   └── climate_notebook.jl        --> Notebook to process climatic data
-├── 3-time-synchronization         --> Computation of the data to synchronize all sensors to UTC time
+├── 03-time-synchronization         --> Computation of the data to synchronize all sensors to UTC time
 │   ├── README.md
 │   ├── correspondance_scale_camera_time.csv --> Correspondance between the scale and the thermal camera
 │   ├── time_synchronization.csv             --> Time synchronization data
 │   └── time_synchronization_notebook.jl     --> Notebook to compute time synchronization data
-├── 4-CO2                          --> Processed CO2 data
+├── 04-CO2                          --> Processed CO2 data
 │   ├── CO2_fluxes.csv             --> CO2 fluxes data
 │   └── CO2_notebook.jl            --> Notebook to process CO2 data
-├── 5-thermal_camera_measurements  --> Processed thermal camera data
+├── 05-thermal_camera_measurements  --> Processed thermal camera data
 │   ├── 1-compute_leaf_temperature.jl --> Script to compute leaf temperature (careful, it takes several hours to process)
 │   ├── 2-vizualise_temperature.jl --> Notebook to vizualise processed leaf temperature
 │   └── leaf_temperature.csv.bz2   --> Leaf temperature data (at 1min time-scale, but with information to match with CO2 fluxes)
-├── 6-transpiration                --> Processed plant transpiration data
+├── 06-transpiration                --> Processed plant transpiration data
 │   ├── README.md
 │   ├── plant_sequence_delayed_corrected.csv --> Plant sequence with corrected delay
 │   ├── transpiration_10min.csv.bz2 --> Plant transpiration data aggregated to match the 10 minutes CO2 measurement
 │   ├── transpiration_first_5min.csv.bz2 --> Plant transpiration data aggregated to match the 5min output CO2 measurement
 │   └── transpiration_notebook.jl  --> Notebook to process plant transpiration data 
-├── 7-walz                         --> Processed Walz data
+├── 07-walz                         --> Processed Walz data
 │   ├── notebook_walz.jl           --> Notebook to process Walz data
 │   └── photosynthetic_and_stomatal_parameters.csv --> Computed photosynthetic and stomatal parameters data
-├── 8-spad                         --> Processed SPAD data
+├── 08-spad                         --> Processed SPAD data
 │   ├── SPAD_models.csv            --> SPAD models
 │   └── notebook_spad.jl           --> Notebook to process SPAD data
 ├── 9-database                     --> Database of all processed data
