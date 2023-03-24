@@ -100,7 +100,7 @@ This folder
 ├── 08-spad                         --> Processed SPAD data
 │   ├── SPAD_models.csv            --> SPAD models
 │   └── notebook_spad.jl           --> Notebook to process SPAD data
-├── 9-database                     --> Database of all processed data
+├── 09-database                     --> Database of all processed data
 │   ├── database_10min.csv.bz2     --> Database of all processed data aggregated to match the 10min CO2 measurement
 │   ├── database_5min.csv.bz2      --> Database of all processed data aggregated to match the 5min output CO2 measurement
 │   └── database_notebook.jl       --> Notebook to process the database
@@ -131,7 +131,7 @@ This folder
 
 ## Database 
 
-You can find the database of all processed data in the `9-database` folder, or in the releases of this repository. The database is available in two versions: one aggregated to match the 10min CO2 measurement, and one aggregated to match the 5min output CO2 measurement.
+You can find the database of all processed data in the `09-database` folder, or in the releases of this repository. The database is available in two versions: one aggregated to match the 10min CO2 measurement, and one aggregated to match the 5min output CO2 measurement.
 
 The database is a compressed CSV file (`.csv.bz2`), and can be read using the following command:
 
@@ -143,7 +143,7 @@ Or using Julia with the following command:
 
 ```julia
 using CSV, DataFrames, CodecBzip2
-db = open(Bzip2DecompressorStream, "./9-database/database_5min.csv.bz2") do io
+db = open(Bzip2DecompressorStream, "./09-database/database_5min.csv.bz2") do io
     CSV.read(io, DataFrame)
 end
 ```
@@ -210,7 +210,9 @@ The database has the following columns:
 - [ ] Check all data
 - [ ] Make a release of the data on Zenodo
 - [ ] Use https://github.com/JuliaImages/ExifViewer.jl now that https://github.com/JuliaImages/ExifViewer.jl/issues/17 is fixed
+- [ ] Make a zenodo for 00-data/LiDAR/LiDAR_data.tar.bz2
+- [ ] Make a zenodo for 00-data/thermal_camera_images/images.tar.bz2
 - [ ] Reconstruct the plants in 3d:
-  - [ ] Separate each leaf and make a mesh for it. Then identify it and name it accordingly.
-  - [ ] Make an OPF for each plant from this collection of leaf meshes, using them as ref. meshes with no transformation
+  - [x] Separate each leaf and make a mesh for it. Then identify it and name it accordingly.
+  - [x] Make an OPF for each plant from this collection of leaf meshes, using them as ref. meshes with no transformation
   - [ ] Add attributes such as SPAD and photosynthetic and conductance parameters.
