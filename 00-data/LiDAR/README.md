@@ -15,7 +15,6 @@ The archive `reconstructions.zip` contains the meshes reconstructed from the poi
 There are also three other files:
 
 - `RecapEcotronSelectionDate.xlsx`: the dates of the LiDAR scans (on which the meshes were reconstructed) and dates of the scenarios
-- `SequencePlantScenarios.csv`: the plant and scenario associated to each day of the experiment. Some scenario x plant sets are repeated in the experiment, and some are incomplete because we switched plants during the day. The column `Ref` helps identify one reference day for each scenario and plant that is complete and free of issues.
 - `surface.csv`: the evolution of the surface of each leaf in the plant over time, computed from the reconstructed meshes
 
 The archives where generated with the following commands:
