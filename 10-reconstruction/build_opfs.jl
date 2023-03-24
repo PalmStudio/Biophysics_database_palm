@@ -48,6 +48,14 @@ end
 # Save the translations:
 CSV.write("10-reconstruction/translations.csv", translations)
 
+# Compress the reconstructions:
+begin
+    tar_bz = open("10-reconstruction/reconstructions.tar.bz2", write=true)
+    tar = Bzip2CompressorStream(tar_bz)
+    Tar.create("10-reconstruction/reconstructions", tar)
+    close(tar)
+end
+
 # Visualize the reconstructions and the LiDAR point-clouds:
 # Choose a plant (1, 2, 3 or 5):
 plant = 1
