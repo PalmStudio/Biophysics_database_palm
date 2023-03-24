@@ -35,7 +35,7 @@
 !00-data/morphology_and_biomass/leaves_weight.csv
 !00-data/morphology_and_biomass/bulbs_weight.csv
 !00-data/morphology_and_biomass/roots_weight.csv
-!00-data/LiDAR/reconstructions.zip
+!00-data/LiDAR/reconstructions.tar.bz2
 
 !02-climate/climate_mic3_5min.csv
 !02-climate/climate_mic3_10min.csv
