@@ -1,5 +1,25 @@
 # Ecotron 2021
 
+- [Ecotron 2021](#ecotron-2021)
+  - [Folder structure](#folder-structure)
+  - [Database](#database)
+  - [Notebook links](#notebook-links)
+    - [Climate](#climate)
+    - [Time synchronization](#time-synchronization)
+    - [CO₂ fluxes](#co-fluxes)
+    - [Leaf temperature](#leaf-temperature)
+    - [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
+    - [Leaf gas exchange (A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves)](#leaf-gas-exchange-a-cᵢ-and-gs-acₐdₗ-response-curves)
+    - [SPAD](#spad)
+    - [Making the database](#making-the-database)
+    - [3D reconstructions](#3d-reconstructions)
+  - [Usage](#usage)
+    - [Pluto](#pluto)
+      - [Install Pluto](#install-pluto)
+      - [Open a notebook](#open-a-notebook)
+    - [Download and instantiate](#download-and-instantiate)
+  - [To do](#to-do)
+
 The Ecotron is a controlled environment facility for plants located in Montpellier, France. In this work, we made an experiment that consisted in investigating the behavior of oil palm (*Elaeis guineensis*) in response to different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day without rain, not too cold, not too hot. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapor pressure deficit. 
 
 The height resulting conditions were the following:
@@ -204,6 +224,128 @@ The database has the following columns:
 | g1_mean_plant            | -                | Float             | g1, averaged on all measurements of this plant (whatever the leaf) during   the whole experiment                                                                   |   |
 |                          |                  |                   |                                                                                                                                                                    |   |
 |                          |                  |                   |                                                                                                                                                                    |   |
+
+## Notebook links
+
+Here are the commands that you may paste into a terminal to open the Pluto notebooks. Note that you have to install Julia first, and install Pluto on your global environment. See the [Usage](#usage) section for more details.
+
+### Climate
+
+```bash
+julia -e 'using Pluto; Pluto.run(notebook = "02-climate/climate_notebook.jl")'
+```
+
+### Time synchronization
+
+```bash
+julia -e 'using Pluto; (notebook = "03-time-synchronization/time_synchronization_notebook.jl")'
+```
+
+### CO₂ fluxes
+
+```bash
+julia -e 'using Pluto; (notebook = "04-CO2/CO2_notebook.jl")'
+```
+
+### Leaf temperature
+
+- Computation:
+  ```bash
+  julia -e 'using Pluto; (notebook = "05-thermal_camera_measurements/1-compute_leaf_temperature.jl")'
+  ```
+
+- Visualization:
+  ```bash
+  julia -e 'using Pluto; (notebook = "05-thermal_camera_measurements/1-compute_leaf_temperature.jl")'
+  ```
+
+### H₂O fluxes (transpiration)
+
+```bash
+julia -e 'using Pluto; (notebook = "06-transpiration/transpiration_notebook.jl")'
+```
+
+### Leaf gas exchange (A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves)
+
+```bash
+julia -e 'using Pluto; (notebook = "07-walz/notebook_walz.jl")'
+```
+
+### SPAD
+
+```bash
+julia -e 'using Pluto; (notebook = "08-spad/notebook_spad.jl")'
+```
+
+### Making the database
+
+```bash
+julia -e 'using Pluto; (notebook = "09-database/database_notebook.jl")'
+```
+
+### 3D reconstructions
+
+The 3D reconstructions of the plants are done using a script. You'll have to open this repository in VS Code, and then open a Julia REPL in the repository. Then, you can open and run the following script: "10-reconstruction/build_opfs.jl".
+
+The visualization of the 3D reconstructions is done using a Pluto notebook. You can open it using the following command:
+
+```julia
+Pluto.run(notebook = "10-reconstruction/visualize_plants.jl")
+```
+
+## Usage
+
+### Pluto
+
+Most of the resources are Pluto reactive notebooks. You know when a julia script (a `.jl` file) is a notebook when it starts with "### A Pluto.jl notebook ###". In this case, use Pluto to execute the file.
+
+#### Install Pluto
+
+To install Pluto, enter the package manager mode in Julia by pressing `]` in the REPL, and then execute the following code:
+
+```julia
+add Pluto
+```
+
+Then, each time you want to use Pluto, type the following command in the REPL (in julia mode):
+
+```julia
+using Pluto
+```
+
+#### Open a notebook
+
+There are different ways to open a notebook, but it's always using the same function: `Pluto.run()`.
+
+The most simple way is to just run it:
+
+```julia
+using Pluto
+Pluto.run()
+```
+
+Then you'll have to navigate manually to your notebook.
+
+A second way is to open a notebook by passing its path, *e.g.*:
+
+```julia
+Pluto.run(notebook = "02-climate/climate_notebook.jl")
+```
+
+Watch [this video](https://www.youtube.com/watch?v=jdEqGOv8ycc&list=PLLiJ249IkzRFxZGALbKy75_ZyHxYCUmuk&index=4) if you need more details about how to use Pluto.
+
+### Download and instantiate
+
+If you want to use the resources from this repository locally, the best way is to download a local copy (or clone it if you know GIT). To do so, click on the green button in this page called "Code":
+
+![](www_readme/clone_button.png)
+
+And choose "Download ZIP":
+
+![](www_readme/Download_ZIP.png)
+
+Then, unzip the file, and open the directory in VS Code, or just open Julia in a command prompt / terminal in this repository and use *e.g.*:
+
 
 ## To do
 
