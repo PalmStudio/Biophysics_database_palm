@@ -542,7 +542,6 @@ transpiration_first_5min = let
 				duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
 				
 				return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
-                # return (median(first(x, points_mean)) - median(last(x, points_mean))) / (Second(last(y)).value - Second(first(y)).value)
             end
         end) => :transpiration_diff_g_s,
         #:duration_cum => (x -> canonicalize(maximum(x))) => :period_computation,
@@ -596,12 +595,25 @@ transpiration_10min = let
         :sequence => unique => :sequence,
         :Plant_id => unique => :Plant,
         [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
-            x = [i.value for i in Second.(x)]
+			first_duration = Second(x[1]).value
+            x = [i.value - first_duration for i in Second.(x)]
             (x' * x) \ x' * (y[1] .- y)
         end
         ) => :transpiration_g_s, # grammes s-1
-        # To compute as the weight difference between first last time-step(s):
-        [:weight_no_irrig, :duration_cum] => ((x, y) -> (median(first(x, 1)) - median(last(x, 1))) / Second(last(y)).value) => :transpiration_diff_g_s,
+		# To compute as the weight difference between first last time-step(s):
+        [:weight_no_irrig, :duration_cum] => ((x, y) -> begin
+            if length(x) < 20
+                return (median(first(x, 1)) - median(last(x, 1))) / (Second(last(y)).value - Second(first(y)).value)
+            else
+                # If enough data points, we take the median of the last 10 points (for the 1s time-step data with high variability)
+
+				# For the duration, we take the average duration of the first "points_mean" points, and the average duration of the last "points_mean" points, because this becomes a moving window instead of jsut a point, so we need the duration between the two moving windows. We take the average window time because the size of the window can vary (the durations vary).
+				duration_cumul_first = mean([Second(i).value for i in first(y, points_mean)])
+				duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
+				
+				return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
+            end
+        end) => :transpiration_diff_g_s,
         nrow,
         :weight => mean,
         :diff_no_irrig => sum,
