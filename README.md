@@ -238,49 +238,49 @@ julia -e 'using Pluto; Pluto.run(notebook = "02-climate/climate_notebook.jl")'
 ### Time synchronization
 
 ```bash
-julia -e 'using Pluto; (notebook = "03-time-synchronization/time_synchronization_notebook.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "03-time-synchronization/time_synchronization_notebook.jl")'
 ```
 
 ### CO₂ fluxes
 
 ```bash
-julia -e 'using Pluto; (notebook = "04-CO2/CO2_notebook.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "04-CO2/CO2_notebook.jl")'
 ```
 
 ### Leaf temperature
 
 - Computation:
   ```bash
-  julia -e 'using Pluto; (notebook = "05-thermal_camera_measurements/1-compute_leaf_temperature.jl")'
+  julia -e 'using Pluto; Pluto.run(notebook = "05-thermal_camera_measurements/1-compute_leaf_temperature.jl")'
   ```
 
 - Visualization:
   ```bash
-  julia -e 'using Pluto; (notebook = "05-thermal_camera_measurements/1-compute_leaf_temperature.jl")'
+  julia -e 'using Pluto; Pluto.run(notebook = "05-thermal_camera_measurements/1-compute_leaf_temperature.jl")'
   ```
 
 ### H₂O fluxes (transpiration)
 
 ```bash
-julia -e 'using Pluto; (notebook = "06-transpiration/transpiration_notebook.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "06-transpiration/transpiration_notebook.jl")'
 ```
 
 ### Leaf gas exchange (A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves)
 
 ```bash
-julia -e 'using Pluto; (notebook = "07-walz/notebook_walz.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "07-walz/notebook_walz.jl")'
 ```
 
 ### SPAD
 
 ```bash
-julia -e 'using Pluto; (notebook = "08-spad/notebook_spad.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "08-spad/notebook_spad.jl")'
 ```
 
 ### Making the database
 
 ```bash
-julia -e 'using Pluto; (notebook = "09-database/database_notebook.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "09-database/database_notebook.jl")'
 ```
 
 ### 3D reconstructions
