@@ -1,4 +1,23 @@
-function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file)
+"""
+    meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=ReferenceFrameRotations.EulerAngleAxis(π, [0, 0, 1]), scale=100.0)
+
+Make an OPF from the meshes of the leaves, spears, bulb and pot.
+
+# Arguments
+
+* `leaves_files`: list of paths to the leaves meshes for a plant.
+* `spear_files`: list of paths to the spears meshes for a plant.
+* `bulb_file`: path to the bulb mesh for a plant.
+* `pot_file`: path to the pot mesh for a plant.
+* `rot`: rotation to apply to the meshes, by default, a rotation of 180° around the z axis.
+* `scale`: scale to apply to the meshes, by default, a scale of 100 to transform from meters to centimeters (required for the OPF).
+
+# Returns
+
+* `opf`: the OPF of the plant.
+* `translationxyz`: the translation that was applied to the mesh to put the center of the pot at the origin.
+"""
+function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=ReferenceFrameRotations.EulerAngleAxis(π, [0, 0, 1]), scale=100.0)
 
     # Empty reference meshes:
     refmeshes = PlantGeom.RefMeshes(RefMesh[])
@@ -19,7 +38,8 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file)
             refmeshes.meshes,
             PlantGeom.RefMesh(
                 "Pot",
-                Meshes.simplexify(mesh |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(100.0)) # Triangulated quad mesh
+                # Triangulated quad mesh:
+                Meshes.simplexify(mesh |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(scale) |> Meshes.Rotate(rot))
             )
         )
     # Add the Pot to the OPF:
@@ -40,7 +60,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file)
     )
 
     # Adding the bulb:
-    mesh = readply(bulb_file[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(100.0)
+    mesh = readply(bulb_file[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(scale) |> Meshes.Rotate(rot)
     mesh_tri =
         push!(
             refmeshes.meshes,
@@ -72,7 +92,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file)
     # Import each leaf mesh, triangulate it and add it as a leaf node after a stipe node
     for i in leaves_files
         # i = leaves_files[1]
-        mesh = readply(i) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(100.0)
+        mesh = readply(i) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(scale) |> Meshes.Rotate(rot)
         mesh_tri = Meshes.simplexify(mesh) # Triangulate the quad mesh for Archimed
         id_leaf = parse(Int, replace(basename(i), ".ply" => "", r"Plant_[0-9]_[0-9][0-9]_[0-9][0-9]_[0-9]{4}_R" => "")) # Get the leaf number
         # Add stipe (no mesh but we want a goof MTG):
@@ -111,7 +131,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file)
     if length(spear_files) > 0
         prev_stipe = MultiScaleTreeGraph.Node(id[1], prev_stipe, NodeMTG("<", "Stipe", 1, 3), Dict())
         id[1] += 1
-        mesh = readply(spear_files[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(100.0)
+        mesh = readply(spear_files[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(scale) |> Meshes.Rotate(rot)
         mesh_tri = Meshes.simplexify(mesh) # Triangulate the quad mesh for Archimed
         push!(
             refmeshes.meshes,

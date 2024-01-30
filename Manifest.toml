@@ -2,7 +2,7 @@
 
 julia_version = "1.8.2"
 manifest_format = "2.0"
-project_hash = "29cea515b74b40ce435cd67a5432f4ecebd97442"
+project_hash = "458172c800fdf54440ccc7bf7d429fa7e37b59b3"
 
 [[deps.AbstractFFTs]]
 deps = ["ChainRulesCore", "LinearAlgebra"]
@@ -313,7 +313,7 @@ uuid = "5ae413db-bbd1-5e63-b57d-d24a61df00f5"
 version = "2.2.4+0"
 
 [[deps.EcotronAnalysis]]
-deps = ["ArchGDAL", "CSV", "CoordinateTransformations", "DataFrames", "Dates", "Distributed", "Images", "Meshes", "MultiScaleTreeGraph", "PlantGeom", "PlyIO", "PolygonOps", "ProgressMeter", "Statistics", "TimeZones"]
+deps = ["ArchGDAL", "CSV", "CoordinateTransformations", "DataFrames", "Dates", "Distributed", "Images", "Meshes", "MultiScaleTreeGraph", "PlantGeom", "PlyIO", "PolygonOps", "ProgressMeter", "ReferenceFrameRotations", "Statistics", "TimeZones"]
 path = "EcotronAnalysis.jl"
 uuid = "15d6e983-43c8-42c7-802c-5e0543598720"
 version = "0.1.0"

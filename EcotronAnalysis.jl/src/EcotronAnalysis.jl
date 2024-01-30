@@ -15,6 +15,7 @@ import PlyIO: load_ply
 import Meshes
 import CoordinateTransformations
 using MultiScaleTreeGraph
+import ReferenceFrameRotations
 
 include("thermal_images/read_FLIR.jl")
 include("thermal_images/parse_mask_name.jl")
