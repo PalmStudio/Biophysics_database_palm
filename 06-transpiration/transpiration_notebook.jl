@@ -442,6 +442,14 @@ md"""
 ### 10 minute transpiration
 """
 
+# ╔═╡ 466c8b32-d3aa-47b4-a4b6-f3b986418689
+md"""
+## Analyses of the output
+"""
+
+# ╔═╡ 98667070-9121-42da-92bf-322329d7aff6
+@bind date_plot PlutoUI.Select(["2021-03-12", "2021-04-24"])
+
 # ╔═╡ 8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
 md"""
 ## Saving
@@ -545,7 +553,8 @@ transpiration_first_5min = let
             end
         end) => :transpiration_diff_g_s,
         #:duration_cum => (x -> canonicalize(maximum(x))) => :period_computation,
-        nrow
+        nrow,
+		:irrigation => sum,
     )
     rename!(df_, :DateTime_start_output => :DateTime_start)
     # Keep only the time-steps where we have 3 minutes of data to compute Tr:
@@ -615,10 +624,10 @@ transpiration_10min = let
             end
         end) => :transpiration_diff_g_s,
         nrow,
-        :weight => mean,
-        :diff_no_irrig => sum,
         :irrigation => sum,
-        :weight_no_irrig => (x -> [x]) => :weight_no_irrig
+		# :weight => mean,
+        # :diff_no_irrig => sum,
+        # :weight_no_irrig => (x -> [x]) => :weight_no_irrig
     )
     rename!(df_, :DateTime_start_input => :DateTime_start)
     # Keep only the time-steps where we have 3 minutes of data to compute Tr:
@@ -638,6 +647,21 @@ let
             color=dims(1) => renamer(["Difference", "Linear reg."])
         ) *
         visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 505e0783-f20d-45b9-b4ff-b60983cbdb59
+let
+	date_to_plot = Date(date_plot)
+	df_ = filter(row -> row.DateTime_start >= date_to_plot && row.DateTime_start < date_to_plot + Day(1), transpiration_10min)
+    p = data(df_) *
+        mapping(
+            :DateTime_start => "Date (UTC)",
+            [:transpiration_diff_g_s, :transpiration_g_s] .=> "Instantaneous transpiration (g)",
+            color=dims(1) => renamer(["Difference", "Linear reg."]),
+			#layout=:
+        ) *
+        visual(Lines, title = date_to_plot)
     draw(p, legend=(position=:bottom,))
 end
 
@@ -2495,6 +2519,9 @@ version = "3.5.0+0"
 # ╟─b5239d02-4898-479b-9078-be7d6365028c
 # ╠═6031c01c-ee91-45cc-a8e9-45d77dc1e7e3
 # ╟─1ff00740-b298-4df4-ab91-8b5bb7f2bd49
+# ╟─466c8b32-d3aa-47b4-a4b6-f3b986418689
+# ╟─98667070-9121-42da-92bf-322329d7aff6
+# ╟─505e0783-f20d-45b9-b4ff-b60983cbdb59
 # ╟─8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
 # ╠═9caab45e-f33b-4b54-a7de-7f7035144f0e
 # ╠═fa15b07f-03b9-4abe-9a40-879d59d62131
