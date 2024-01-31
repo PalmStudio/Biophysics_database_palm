@@ -178,7 +178,7 @@ The database has the following columns:
 | Leaf                     | ID               | Int               | Leaf ID, leaf ID 1 is the first emitted leaf (the oldest)                                                                                                          |   |
 | Scenario                 | -                | String            | Scenario forcing climatic conditions                                                                                                                               |   |
 | Sequence                 | -                | Int               | Sequence for the scenario. Plants can stay in the chamber for one or   several days (one or several scenario). The sequence change value when the   plant changes. |   |
-| DateTime_end_CO2_in      | UTC              | ISODateTimeFormat | DateTime of the end of the CO2 input measurement (CO2 was measured for   5min output, then 5min input)                                                             |   |
+| DateTime_start_CO2_in      | UTC              | ISODateTimeFormat | DateTime of the start of the CO2 input measurement (CO2 was measured for 5min input, then 5min output, end of CO2 output is equal to `DateTime_end`)                                                             |   |
 | DateTime_start_sequence  | UTC              | ISODateTimeFormat | DateTime of the start of the sequence                                                                                                                              |   |
 | DateTime_end_sequence    | UTC              | ISODateTimeFormat | DateTime of the end of the sequence                                                                                                                                |   |
 | CO2_outflux_umol_s       | umol plant-1 s-1 | Float             | CO2 flux measured from the chamber (outflux from the chamber)                                                                                                      |   |
@@ -350,6 +350,13 @@ Then, unzip the file, and open the directory in VS Code, or just open Julia in a
 ## To do
 
 - [ ] Check all data
+  - [ ] For CO2, 2021-03-27 to 30 is `missing` for the plant, but should be plant 5 (as seen in the plant sequence). This is three days where we can't use the H20 data because of a scale failure.
+  - [ ] Light is spelled "ligth" in the Walz files, replace.
+  - [ ] Select days that are "clean", i.e. full data for the whole day, no door opening, etc.
+  - [ ] Make sure we have the 3D reconstructions for all plants and days that are clean
+  - [ ] Add irrigations to the database (from the transpiration db)
+  - [ ] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
+  - [ ] For the fact that CO2 800ppm is simulated higher than CO2 600ppm when the observation is the opposite, see correction of Medlyn's model in Dewar et al. 2018 (New Phytologist), eq.11 in the paper that is the same model than Medlyn, but removes Gamma* to Ca in the model.
 - [ ] Make a release of the data on Zenodo
 - [ ] Use https://github.com/JuliaImages/ExifViewer.jl now that https://github.com/JuliaImages/ExifViewer.jl/issues/17 is fixed
 - [ ] Make a zenodo for 00-data/LiDAR/LiDAR_data.tar.bz2
