@@ -219,7 +219,7 @@ plant_sequence = let
         :DateTime_start => ByRow(x -> DateTime(x, dateformat"dd/mm/yyyy HH:MM:SS\'")) => :DateTime_start,
         :DateTime_end => ByRow(x -> DateTime(x, dateformat"dd/mm/yyyy HH:MM:SS\'")) => :DateTime_end
     )
-
+	filter!(row -> row.Event != "delete transpiration", df_) # This is a day when the scale was at maximum capacity, so there is no measurement of transpiration
     phase1_dates = [first(df_phase_1_delayed.DateTime), last(df_phase_1_delayed.DateTime)]
     delay_phase1 = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
     df_.DateTime_start[df_.DateTime_start.>=phase1_dates[1].&&df_.DateTime_start.<=phase1_dates[2]] .+= Dates.Second(delay_phase1)
