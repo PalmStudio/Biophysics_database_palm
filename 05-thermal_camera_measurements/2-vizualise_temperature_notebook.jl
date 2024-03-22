@@ -12,7 +12,8 @@ begin
     using AlgebraOfGraphics
     using CodecBzip2
     using Colors
-    using Images
+	using Images
+	using Makie.GeometryBasics
 end
 
 # ╔═╡ 7b224c6c-b28a-11ed-1e13-cd4c9ebd2f85
@@ -24,16 +25,34 @@ Leaf temperature was measured with a a FLIR Vue™ Pro R thermal camera that too
 The image database was compresses using `tar` with the `bzip2` algorithm, which reduced significantly disk space from ~60Go to ~23Go.
 
 The images were then processed in the script [1-compute_leaf_temperature.jl](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/05-thermal_camera_measurements/1-compute_leaf_temperature.jl), resulting in a new file `leaf_temperature.csv.bz2`, a compressed CSV file.
-"""
 
-# ╔═╡ d3578b01-e2eb-44de-b3f2-9d4db6a53590
-ls()
+Here is an example thermal image of plant 3 with a mask for leaf 3:
+"""
 
 # ╔═╡ efed6b69-6632-4212-aa68-ff0762a7eb36
 let
-    #img_file = joinpath(dirname(dirname(pathof(EcotronAnalysis))), "test", "test_data", "20210308_180009_R.jpg")
-    #mask_file = joinpath(dirname(dirname(pathof(EcotronAnalysis))), "test", "test_data", "P3F3-S1-S2-S3-20210308_174136-20210309_140728_XY_Coordinates.csv")
+	img_file = "../EcotronAnalysis.jl/test/test_data/20210308_180009_R.jpg"
+	mask_file = "../EcotronAnalysis.jl/test/test_data/P3F3-S1-S2-S3-20210308_174136-20210309_140728_XY_Coordinates.csv"
 
+	mask = CSV.read(mask_file, DataFrame)
+	f = Figure()
+	image(
+		f[1, 1], 
+		Images.load(img_file)',
+	    axis = (
+			aspect = DataAspect(), 
+			yreversed = true,
+	        title = "Mask for leaf 3 from plant 1", 
+			subtitle = "Applicable from 17:41 on the 08/03/2021 to 14:07 on the 09/03/2021",
+		)
+	)
+
+	poly!(
+		f[1, 1], 
+		Polygon([Point(round(i.X), round(i.Y)) for i in eachrow(mask)]), 
+		color = "red"
+	)
+	f
 end
 
 # ╔═╡ 28792394-5038-4640-9e45-f3bfa3bd96e1
@@ -114,6 +133,7 @@ CodecBzip2 = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [compat]
 AlgebraOfGraphics = "~0.6.14"
@@ -123,6 +143,7 @@ CodecBzip2 = "~0.7.2"
 Colors = "~0.12.10"
 DataFrames = "~1.5.0"
 Images = "~0.26.0"
+Makie = "~0.19.12"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -131,7 +152,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "3126d222fd0a0a84904ba841a68d4a9b4e02c84a"
+project_hash = "f35d390d1fc2de4b814d4f97a3343cee342e290e"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2181,8 +2202,7 @@ version = "3.5.0+0"
 
 # ╔═╡ Cell order:
 # ╟─7b224c6c-b28a-11ed-1e13-cd4c9ebd2f85
-# ╠═d3578b01-e2eb-44de-b3f2-9d4db6a53590
-# ╠═efed6b69-6632-4212-aa68-ff0762a7eb36
+# ╟─efed6b69-6632-4212-aa68-ff0762a7eb36
 # ╟─28792394-5038-4640-9e45-f3bfa3bd96e1
 # ╠═3090d002-8236-46d1-8add-5a8921cbe835
 # ╟─8d49c5bc-5d82-4b88-9893-64d6056a3c24
