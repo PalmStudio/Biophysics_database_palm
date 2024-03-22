@@ -1,24 +1,24 @@
 # Ecotron 2021 {#ecotron-2021}
 
--   [Ecotron 2021](#ecotron-2021)
-    -   [Folder structure](#folder-structure)
-    -   [Database](#database)
-    -   [Notebook links](#notebook-links)
-        -   [Climate](#climate)
-        -   [Time synchronization](#time-synchronization)
-        -   [CO₂ fluxes](#co-fluxes)
-        -   [Leaf temperature](#leaf-temperature)
-        -   [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
-        -   [Leaf gas exchange (A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves)](#leaf-gas-exchange-a-cᵢ-and-gs-acₐdₗ-response-curves)
-        -   [SPAD](#spad)
-        -   [Making the database](#making-the-database)
-        -   [3D reconstructions](#3d-reconstructions)
-    -   [Usage](#usage)
-        -   [Pluto](#pluto)
-            -   [Install Pluto](#install-pluto)
-            -   [Open a notebook](#open-a-notebook)
-        -   [Download and instantiate](#download-and-instantiate)
-    -   [To do](#to-do)
+- [Ecotron 2021 {#ecotron-2021}](#ecotron-2021-ecotron-2021)
+  - [Folder structure {#folder-structure}](#folder-structure-folder-structure)
+  - [Database {#database}](#database-database)
+  - [Notebook links {#notebook-links}](#notebook-links-notebook-links)
+    - [Climate {#climate}](#climate-climate)
+    - [Time synchronization {#time-synchronization}](#time-synchronization-time-synchronization)
+    - [CO₂ fluxes](#co-fluxes)
+    - [Leaf temperature {#leaf-temperature}](#leaf-temperature-leaf-temperature)
+    - [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
+    - [Leaf gas exchange (A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves) {#leaf-gas-exchange-a-cᵢ-and-gs-acₐdₗ-response-curves}](#leaf-gas-exchange-a-cᵢ-and-gs-acₐdₗ-response-curves-leaf-gas-exchange-a-cᵢ-and-gs-acₐdₗ-response-curves)
+    - [SPAD {#spad}](#spad-spad)
+    - [Making the database {#making-the-database}](#making-the-database-making-the-database)
+    - [3D reconstructions](#3d-reconstructions)
+  - [Usage {#usage}](#usage-usage)
+    - [Pluto {#pluto}](#pluto-pluto)
+      - [Install Pluto {#install-pluto}](#install-pluto-install-pluto)
+      - [Open a notebook {#open-a-notebook}](#open-a-notebook-open-a-notebook)
+    - [Download and instantiate {#download-and-instantiate}](#download-and-instantiate-download-and-instantiate)
+  - [To do {#to-do}](#to-do-to-do)
 
 The Ecotron is a controlled environment facility for plants located in Montpellier, France. In this work, we made an experiment that consisted in investigating the behavior of oil palm (*Elaeis guineensis*) in response to different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day without rain, not too cold, not too hot. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapor pressure deficit.
 
@@ -143,7 +143,7 @@ This folder
 │       ├── runtests.jl
 │       └── test_data
 │           ├── 20210308_180009_R.jpg
-│           └── P1F3-20210427_154213-20210428_080428_XY_Coordinates_V1.csv
+│           └── P3F3-S1-S2-S3-20210308_174136-20210309_140728_XY_Coordinates.csv
 ├── Manifest.toml                  --> Manifest of the Julia environment (tracks dependencies versions)
 ├── Project.toml                   --> Project of the Julia environment  (tracks dependencies)
 └── README.md                      --> This file
@@ -350,19 +350,20 @@ Then, unzip the file, and open the directory in VS Code, or just open Julia in a
 
 ## To do {#to-do}
 
--   [ ] Check all data
-    -   [ ] For CO2, 2021-03-27 to 30 is `missing` for the plant, but should be plant 5 (as seen in the plant sequence). This is three days where we can't use the H20 data because of a scale failure.
-    -   [ ] Light is spelled "ligth" in the Walz files, replace.
-    -   [ ] Select days that are "clean", i.e. full data for the whole day, no door opening, etc.
-    -   [ ] Make sure we have the 3D reconstructions for all plants and days that are clean
-    -   [ ] Add irrigations to the database (from the transpiration db)
-    -   [ ] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
-    -   [ ] For the fact that CO2 800ppm is simulated higher than CO2 600ppm when the observation is the opposite, see correction of Medlyn's model in Dewar et al. 2018 (New Phytologist), eq.11 in the paper that is the same model than Medlyn, but removes Gamma\* to Ca in the model.
--   [ ] Make a release of the data on Zenodo
--   [ ] Use <https://github.com/JuliaImages/ExifViewer.jl> now that <https://github.com/JuliaImages/ExifViewer.jl/issues/17> is fixed
--   [ ] Make a zenodo for 00-data/LiDAR/LiDAR_data.tar.bz2
--   [ ] Make a zenodo for 00-data/thermal_camera_images/images.tar.bz2
--   [ ] Reconstruct the plants in 3d:
-    -   [x] Separate each leaf and make a mesh for it. Then identify it and name it accordingly.
-    -   [x] Make an OPF for each plant from this collection of leaf meshes, using them as ref. meshes with no transformation
-    -   [ ] Add attributes such as SPAD and photosynthetic and conductance parameters.
+- [ ] Check all data
+  - [ ] For CO2, 2021-03-27 to 30 is `missing` for the plant, but should be plant 5 (as seen in the plant sequence). This is three days where we can't use the H20 data because of a scale failure.
+  - [ ] Light is spelled "ligth" in the Walz files, replace.
+  - [ ] Select days that are "clean", i.e. full data for the whole day, no door opening, etc.
+  - [ ] Make sure we have the 3D reconstructions for all plants and days that are clean
+  - [ ] Add irrigations to the database (from the transpiration db)
+  - [ ] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
+  - [ ] For the fact that CO2 800ppm is simulated higher than CO2 600ppm when the observation is the opposite, see correction of Medlyn's model in Dewar et al. 2018 (New Phytologist), eq.11 in the paper that is the same model than Medlyn, but removes Gamma* to Ca in the model.
+- [ ] Make a release of the data on Zenodo
+- [ ] Use <https://github.com/JuliaImages/ExifViewer.jl> now that <https://github.com/JuliaImages/ExifViewer.jl/issues/17> is fixed
+- [ ] Make a zenodo for 00-data/LiDAR/LiDAR_data.tar.bz2
+- [ ] Make a zenodo for 00-data/thermal_camera_images/images.tar.bz2
+- [ ] Reconstruct the plants in 3d:
+  - [x] Separate each leaf and make a mesh for it. Then identify it and name it accordingly.
+  - [x] Make an OPF for each plant from this collection of leaf meshes, using them as ref. meshes with no transformation
+  - [ ] Add attributes such as SPAD and photosynthetic and conductance parameters.
+- [ ] Vcmax can be estimated from one point (one-point Vcmax method, see De Kauwe et al. 2016, New Phytologist, also tested in Burnett et al. 2019, Plant Cell and Environment). With this database, we can test the method and see if it applies to Oil Palm, then we could use it on further work. With this method, we can also estimate Jmax, as a ratio of Vcmax. This ratio can be estimated from our curves.
