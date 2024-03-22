@@ -19,7 +19,7 @@ lapply(packs, InstIfNec)
 colors_event=c('darkolivegreen3','darkolivegreen4','darkolivegreen','cyan','blue3','firebrick','firebrick1','grey')
 names(colors_event)=c("400ppm",'600ppm','800ppm','DryCold','Cold','Hot','DryHot','Cloudy')
 
-tabelEvent=data.frame(event=c(paste0('S',1:8)),scenar=c("400ppm",'Cloudy','600ppm','Cold','800ppm','DryCold','Hot','DryHot'))
+tabelEvent=data.frame(event=c(paste0('S',1:8),'WalzClosed','WalzOpen'),scenar=c("400ppm",'Cloudy','600ppm','Cold','800ppm','DryCold','Hot','DryHot','WalzClosed','WalzOpen'))
 
 myTheme=theme_minimal() %+replace% 
   theme(
@@ -37,10 +37,15 @@ myTheme=theme_minimal() %+replace%
 
 
 cal_raw=fread('0-data/calendrier.csv') %>% 
-  mutate(Date=dmy(Date)) %>% 
-  filter(Date<ymd('2021-04-26'))
+  mutate(Date=dmy(Date)) 
+# %>% 
+#   filter(Date<ymd('2021-04-26'))
 
-cal=cal_raw%>%
+reco=fread('0-data/ReconstructionsDates.csv') %>% 
+  data.frame() %>% 
+  mutate(Date=dmy(Date))
+
+cal=rbind(cal_raw,reco)%>%
   tidyr::gather(key = 'plant',value = 'event',P1,P2,P3,P4)
 
 
@@ -50,6 +55,9 @@ cal[cal$event %in% c("S4 (chgt matin)" ),'event']='S4'
 cal[cal$event %in% c("S8 (+nuit)"),'event']='S8'
 cal[cal$event %in% c('Curves',"CurveF+2","CurvesF+1","Curves (manque HR)","CurveF+1" ),'event']='Response curves'
 cal[cal$event %in% c("A"),'event']='Storage'
+cal[cal$event %in% c("SWalzC"),'event']='WalzClosed'
+cal[cal$event %in% c("SWalzO"),'event']='WalzOpen'
+cal[cal$event %in% c("Reconstruction"),'event']='3D'
 unique(cal$event)
 
 
@@ -57,14 +65,16 @@ cal=merge(cal,tabelEvent,all.x=T)
 
 ggplot()+
   geom_tile(data=cal,aes(x=Date,y=plant,fill=scenar),col=1)+
-  geom_point(data=cal%>%filter(event=='Response curves'),aes(x=Date,y=plant,col='Response curves'),pch=8)+
+  geom_point(data=cal%>%filter(event=='Response curves'),aes(x=Date,y=plant,col='Response curves',shape='Response curves'),size=2)+
+  geom_point(data=cal%>%filter(event=='3D'),aes(x=Date,y=plant,col='3D',shape='3D'))+
   scale_x_date()+
-  scale_fill_manual(values =colors_event,name='Scenario')+
-  scale_color_manual(name='',values=list('Response curves'=1))+
+  scale_fill_manual(values =c(colors_event,WalzClosed='orange',WalzOpen='yellow'),name='Scenario')+
+  scale_color_manual(name='',values=c('Response curves'=1,'3D'=2))+
+  scale_shape_manual(name='',values=c('Response curves'=8,'3D'=16))+
   myTheme+
   labs(x='',y='Plant')
 
-ggsave(filename = '2-figuresTables/calendar.pdf',width = 12,height = 3)
+ggsave(filename = '2-figuresTables/calendar.pdf',width = 12,height = 4)
 
 
 # climate -----------------------------------------------------------------
@@ -116,13 +126,13 @@ mic3_m=merge(mic3_raw,cal%>%filter(!is.na(scenar)),all.y=T)%>%
          `CO2 (ppm)`=CO2_ppm) %>% 
   tidyr::gather(key = 'variable','value',`Temperature (°C)`,`Relative humidity (%)`,`PAR (mircomol of CO2 m-2 s-1)`,`CO2 (ppm)`)
 
-  ggplot()+
+ggplot()+
   geom_line(data=mic3,aes(x=hms(hms),y=value,col=scenar,group=Date),alpha=0.2)+
   geom_line(data=mic3_m,aes(x=hms(hms),y=value,col=scenar))+
   facet_grid(variable~scenar,scale='free_y')+
   scale_color_manual(values =colors_event,name='Scenario')+
-    scale_x_time()+
+  scale_x_time()+
   labs(x='Time of the day',y='')+
-    theme(axis.text.x = element_text(angle=90))
+  theme(axis.text.x = element_text(angle=90))
 
 ggsave(filename = '2-figuresTables/Scenarios.pdf',width = 10,height = 8)
