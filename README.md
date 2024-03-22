@@ -171,7 +171,7 @@ end
 The database has the following columns:
 
 | name                     | Unit             | type              | Description                                                                                                                                                    |     |
-|---------|---------|---------|---------------------------------------|---------|
+|--------------------------|------------------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
 | DateTime_start           | UTC              | ISODateTimeFormat | DateTime of the start of the measurement                                                                                                                       |     |
 | DateTime_end             | UTC              | ISODateTimeFormat | DateTime of the end of the measurement (either the 5-min output measurement window, or the whole 10-min output-input)                                          |     |
 | Plant                    | \-               | Int               | Plant ID                                                                                                                                                       |     |

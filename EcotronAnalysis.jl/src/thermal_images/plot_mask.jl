@@ -7,7 +7,7 @@ Plot the image and the mask.
 # Examples
 
 ```julia
-using Images, CSV, Plot
+using Images, CSV, Plots, DataFrames
 img_file = joinpath(dirname(dirname(pathof(EcotronAnalysis))), "test", "test_data", "20210308_180009_R.jpg")
 mask_file = joinpath(dirname(dirname(pathof(EcotronAnalysis))), "test", "test_data", "P1F3-20210427_154213-20210428_080428_XY_Coordinates_V1.csv")
 
