@@ -49,10 +49,12 @@ cal=rbind(cal_raw,reco)%>%
   tidyr::gather(key = 'plant',value = 'event',P1,P2,P3,P4)
 
 
-cal[cal$event %in% c('Curves (rat\x8e)',"S6 rat\x8e","S4 rat\x8e","S5 rat\x8e","Curves rat\x8e",''),'event']='A'
-cal[cal$event %in% c("S3 (+nuit)",'S3*',"S1 (erreur S3)"),'event']='S3'
-cal[cal$event %in% c("S4 (chgt matin)" ),'event']='S4'
+cal[cal$event %in% c('Curves (rat\x8e)',"Curves rat\x8e",''),'event']='A'
+cal[cal$event %in% c("S3 (+nuit)","S1 (erreur S3)",'S3*'),'event']='S3'
+cal[cal$event %in% c("S4 (chgt matin)","S4 rat\x8e"),'event']='S4'
 cal[cal$event %in% c("S8 (+nuit)"),'event']='S8'
+cal[cal$event %in% c("S5 rat\x8e"),'event']='S5'
+cal[cal$event %in% c("S6 rat\x8e"),'event']='S6'
 cal[cal$event %in% c('Curves',"CurveF+2","CurvesF+1","Curves (manque HR)","CurveF+1" ),'event']='Response curves'
 cal[cal$event %in% c("A"),'event']='Storage'
 cal[cal$event %in% c("SWalzC"),'event']='WalzClosed'
@@ -78,28 +80,6 @@ ggsave(filename = '2-figuresTables/calendar.pdf',width = 12,height = 4)
 
 
 # climate -----------------------------------------------------------------
-# mic4_raw=fread('../02-climate/climate_mic4.csv') %>% 
-#   mutate(Date=ymd(str_sub(DateTime,start=1,end=10)),
-#          hms=str_sub(DateTime,12,19)) 
-
-
-# mic4=mic4_raw%>%
-#   mutate(scenar='400ppm')%>% 
-#   rename(`Temperature (°C)`=Ta_measurement,
-#          `Relative humidity (%)`=Rh_measurement,
-#          `PAR (mircomol of CO2 m-2 s-1)`=R_measurement,
-#          `CO2 (ppm)`=CO2_ppm) %>% 
-#   tidyr::gather(key = 'variable','value',`Temperature (°C)`,`Relative humidity (%)`,`PAR (mircomol of CO2 m-2 s-1)`,`CO2 (ppm)`)
-# 
-
-
-# mic4 %>% 
-#   ggplot()+
-#   geom_line(aes(x=hms(hms),y=value,col=scenar,group=Date),alpha=0.2)+
-#   geom_smooth(aes(x=hms(hms),y=value,col=scenar))+
-#   facet_grid(variable~.,scale='free_y')+
-#   scale_color_manual(values =colors_event,name='Scenario')+
-#   myTheme
 
 mic3_raw=fread('../02-climate/climate_mic3.csv') %>% 
   mutate(Date=ymd(str_sub(DateTime,start=1,end=10)),
@@ -135,4 +115,64 @@ ggplot()+
   labs(x='Time of the day',y='')+
   theme(axis.text.x = element_text(angle=90))
 
+
+mic3 %>% 
+  filter(Date==ymd('2021-03-18')) %>% 
+  ggplot()+
+  geom_line(aes(x=hms(hms),y=value,col=scenar,group=Date))+
+  facet_grid(variable~scenar,scale='free_y')+
+  scale_color_manual(values =colors_event,name='Scenario')+
+  scale_x_time()+
+  labs(x='Time of the day',y='')+
+  theme(axis.text.x = element_text(angle=90))
+
 ggsave(filename = '2-figuresTables/Scenarios.pdf',width = 10,height = 8)
+
+
+
+### same with database
+dt_raw=fread('../09-database/database_5min.csv')%>% 
+  mutate(Date=ymd(str_sub(DateTime_start,start=1,end=10)),
+         hms=str_sub(DateTime_start,12,19)) %>% 
+  filter(hms(hms)>=hms('05:00:00') & hms(hms)<=hms('20:00:00') )
+
+
+dt=dt_raw %>% 
+  rename(`Temperature (°C)`=Ta_measurement,
+         `Relative humidity (%)`=Rh_measurement,
+         `PAR (mircomol of CO2 m-2 s-1)`=R_measurement,
+         `CO2 (ppm)`=CO2_ppm) %>% 
+  tidyr::gather(key = 'variable','value',`Temperature (°C)`,`Relative humidity (%)`,`PAR (mircomol of CO2 m-2 s-1)`,`CO2 (ppm)`)
+
+dt_m=dt_raw%>% 
+  group_by(Scenario,hms) %>% 
+  summarize(Ta_measurement=median(Ta_measurement,na.rm=T),
+            Rh_measurement=median(Rh_measurement,na.rm=T),
+            R_measurement=median(R_measurement,na.rm=T),
+            CO2_ppm=median(CO2_ppm,na.rm=T)) %>% 
+  ungroup() %>% 
+  rename(`Temperature (°C)`=Ta_measurement,
+         `Relative humidity (%)`=Rh_measurement,
+         `PAR (mircomol of CO2 m-2 s-1)`=R_measurement,
+         `CO2 (ppm)`=CO2_ppm) %>% 
+  tidyr::gather(key = 'variable','value',`Temperature (°C)`,`Relative humidity (%)`,`PAR (mircomol of CO2 m-2 s-1)`,`CO2 (ppm)`)
+
+dt%>%
+  filter(Scenario=='')%>%
+  group_by(Date) %>% 
+  select(Date,Plant) %>% 
+  distinct()
+
+
+ggplot()+
+  geom_line(data=dt,aes(x=hms(hms),y=value,col=as.factor(Plant),group=Date))+
+  facet_grid(variable~Scenario,scale='free_y')+
+  # scale_color_manual(values =colors_event,name='Scenario')+
+  scale_x_time()+
+  labs(x='Time of the day',y='')+
+  theme(axis.text.x = element_text(angle=90))
+
+
+# thermal camera ----------------------------------------------------------
+
+

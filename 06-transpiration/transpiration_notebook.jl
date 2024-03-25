@@ -212,14 +212,12 @@ We also correct the timestamps of the dates in the file as they were reported us
 """
 
 # ╔═╡ ac08d634-e1b3-4b8f-995e-6c24e2941095
-plant_sequence = let
+plant_sequence_raw = let
     df_ = CSV.read("../00-data/scenario_sequence/SequencePlanteMicro3.csv", DataFrame)
-    transform!(
-        df_,
+    transform!(df_,
         :DateTime_start => ByRow(x -> DateTime(x, dateformat"dd/mm/yyyy HH:MM:SS\'")) => :DateTime_start,
         :DateTime_end => ByRow(x -> DateTime(x, dateformat"dd/mm/yyyy HH:MM:SS\'")) => :DateTime_end
     )
-	filter!(row -> row.Event != "delete transpiration", df_) # This is a day when the scale was at maximum capacity, so there is no measurement of transpiration
     phase1_dates = [first(df_phase_1_delayed.DateTime), last(df_phase_1_delayed.DateTime)]
     delay_phase1 = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
     df_.DateTime_start[df_.DateTime_start.>=phase1_dates[1].&&df_.DateTime_start.<=phase1_dates[2]] .+= Dates.Second(delay_phase1)
@@ -237,6 +235,10 @@ plant_sequence = let
 
     df_
 end
+
+# ╔═╡ 31e9242c-00e2-4012-9425-4ca577ddcfd7
+plant_sequence= filter(row -> row.Event != "delete transpiration", plant_sequence_raw)
+# This is a day when the scale was at maximum capacity, so there is no measurement of transpiration
 
 # ╔═╡ 3ec8ee51-c26f-4771-95ef-f24e1698ea5f
 md"""
@@ -458,7 +460,7 @@ Save the data to disk, and compressing it to save disk space.
 """
 
 # ╔═╡ 47b34ad6-aaa4-481e-b199-47b57c8b230f
-CSV.write("plant_sequence_delayed_corrected.csv", plant_sequence)
+CSV.write("plant_sequence_delayed_corrected.csv", plant_sequence_raw)
 
 # ╔═╡ f4d51d70-b378-44f0-ada2-8f470cd22b6b
 md"""
@@ -2485,6 +2487,7 @@ version = "3.5.0+0"
 # ╟─b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
 # ╟─48187906-42ac-45c7-8736-9d825cd23ce8
 # ╠═ac08d634-e1b3-4b8f-995e-6c24e2941095
+# ╠═31e9242c-00e2-4012-9425-4ca577ddcfd7
 # ╟─3ec8ee51-c26f-4771-95ef-f24e1698ea5f
 # ╠═3fb32c18-bdd2-44bb-a635-ebb5682a5956
 # ╟─f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8

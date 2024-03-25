@@ -351,7 +351,7 @@ Then, unzip the file, and open the directory in VS Code, or just open Julia in a
 ## To do {#to-do}
 
 -   [ ] Check all data
-    -   [ ] For CO2, 2021-03-27 to 30 is `missing` for the plant, but should be plant 5 (as seen in the plant sequence). This is three days where we can't use the H20 data because of a scale failure.
+    -   [x] For CO2, 2021-03-27 to 30 is `missing` for the plant, but should be plant 5 (as seen in the plant sequence). This is three days where we can't use the H20 data because of a scale failure.
     -   [ ] Light is spelled "ligth" in the Walz files, replace.
     -   [ ] Select days that are "clean", i.e. full data for the whole day, no door opening, etc.
     -   [ ] Make sure we have the 3D reconstructions for all plants and days that are clean
@@ -367,3 +367,4 @@ Then, unzip the file, and open the directory in VS Code, or just open Julia in a
     -   [x] Make an OPF for each plant from this collection of leaf meshes, using them as ref. meshes with no transformation
     -   [ ] Add attributes such as SPAD and photosynthetic and conductance parameters.
 -   [ ] Change name of the plant 5 into plant 4
+-   [ ] In the database_notebook.jl the extraction of the file 'surface.csv' from  "reconstruction.zip" is not working

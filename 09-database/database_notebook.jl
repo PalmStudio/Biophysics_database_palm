@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.36
+# v0.19.40
 
 using Markdown
 using InteractiveUtils
@@ -17,7 +17,7 @@ end
 # ╔═╡ 947be178-0b89-46b6-aa74-383e38bf903e
 begin
     using CSV, DataFrames
-    using CodecBzip2, Tar, ZipFile
+    using CodecBzip2, Tar#, ZipFile
     using Dates
     using Statistics
     using PlutoUI
@@ -55,7 +55,7 @@ climate_10min = CSV.read("../02-climate/climate_mic3_10min.csv", DataFrame)
 md"""
 ### Scenario sequence
 
-Each plant was monitored in the microcosm 3 for a sequence of one or more scenario. We have a database of all sequences during the two-months experiment that helps remembering which plant is being measured for a time-step, and which scenario is being done on that day.
+Each plant was monitored in the microcosm 3 for a sequence of one or more scenario. We have a database of all sequences during the two-months experiment that helps remembering which plant is being measured for a time-step, and which scenario is being done on that day. The column "Ref" indicates the date when the data for a specific scenario and plant is most comprehensive.
 
 """
 
@@ -224,6 +224,23 @@ md"""
 md"""
 ### CO2 flux
 """
+
+# ╔═╡ 8b1a5acc-bb4c-40f9-a63a-2b7f4039c983
+# ╠═╡ disabled = true
+#=╠═╡
+pCO2_all = let
+	df_ = dropmissing(db_10min, [:DateTime_end, :CO2_outflux_umol_s,])
+	transform!(
+		groupby(df_, [:Plant, :Scenario, :Sequence]),
+		:DateTime_start => (x -> 1:length(x)) => :time_numeric
+	)
+    #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
+    p = data(df_) *
+        mapping(:DateTime_start => Time => "Time", :CO2_outflux_umol_s, color=:Sequence, row = :Scenario, col = :Plant => string, group = :DateTime_start => Time => "Time") *
+        visual(Lines)
+    draw(p, axis=(width=150, height=200, xticks = datetimeticks(df_.DateTime_start,  Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
+end
+  ╠═╡ =#
 
 # ╔═╡ 248ebaab-c078-4c63-8247-57db235f3401
 md"""
@@ -660,6 +677,22 @@ db_10min = let
     db_
 end
 
+# ╔═╡ bd722b73-66b5-4012-a543-ab6243e93584
+pCO2_all = let
+	df_ = dropmissing(db_10min, [:DateTime_end, :CO2_outflux_umol_s,])
+	df_.Date = Date.(df_.DateTime_start)
+	transform!(
+		groupby(df_, [:Plant, :Scenario, :Sequence]),
+		:DateTime_start => (x -> 1:length(x)) => :time_numeric
+	)
+    #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
+    p = data(df_) *
+        #mapping(:DateTime_start => Time => "Time", :CO2_outflux_umol_s, layout = :Date, color = :Plant => string, group = :DateTime_start => Time => "Time") *
+		mapping(:DateTime_start => Time, :CO2_outflux_umol_s, layout = :Date => string, color = :Plant => string) *
+        visual(Scatter)
+    draw(p, axis=(width=150, height=200))
+end
+
 # ╔═╡ 6d1e495e-edf0-4baa-bd43-affc5ce95bf0
 save("../13-outputs/CO2_fluxes_10min.png", pCO2_all)
 
@@ -685,39 +718,6 @@ end
 # ╔═╡ 1a020b78-f53d-44c8-af1d-e8b007ccb1cd
 TableOfContents(title="📚 Table of Contents", indent=true, depth=4, aside=true)
 
-# ╔═╡ bd722b73-66b5-4012-a543-ab6243e93584
-pCO2_all = let
-	df_ = dropmissing(db_10min, [:DateTime_end, :CO2_outflux_umol_s,])
-	df_.Date = Date.(df_.DateTime_start)
-	transform!(
-		groupby(df_, [:Plant, :Scenario, :Sequence]),
-		:DateTime_start => (x -> 1:length(x)) => :time_numeric
-	)
-    #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
-    p = data(df_) *
-        #mapping(:DateTime_start => Time => "Time", :CO2_outflux_umol_s, layout = :Date, color = :Plant => string, group = :DateTime_start => Time => "Time") *
-		mapping(:DateTime_start => Time, :CO2_outflux_umol_s, layout = :Date => string, color = :Plant => string) *
-        visual(Scatter)
-    draw(p, axis=(width=150, height=200))
-end
-
-# ╔═╡ 8b1a5acc-bb4c-40f9-a63a-2b7f4039c983
-# ╠═╡ disabled = true
-#=╠═╡
-pCO2_all = let
-	df_ = dropmissing(db_10min, [:DateTime_end, :CO2_outflux_umol_s,])
-	transform!(
-		groupby(df_, [:Plant, :Scenario, :Sequence]),
-		:DateTime_start => (x -> 1:length(x)) => :time_numeric
-	)
-    #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
-    p = data(df_) *
-        mapping(:DateTime_start => Time => "Time", :CO2_outflux_umol_s, color=:Sequence, row = :Scenario, col = :Plant => string, group = :DateTime_start => Time => "Time") *
-        visual(Lines)
-    draw(p, axis=(width=150, height=200, xticks = datetimeticks(df_.DateTime_start,  Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
-end
-  ╠═╡ =#
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -730,7 +730,6 @@ Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
 AlgebraOfGraphics = "~0.6.14"
@@ -739,16 +738,15 @@ CairoMakie = "~0.10.2"
 CodecBzip2 = "~0.7.2"
 DataFrames = "~1.5.0"
 PlutoUI = "~0.7.50"
-ZipFile = "~0.10.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.0"
+julia_version = "1.10.1"
 manifest_format = "2.0"
-project_hash = "5229d2c8b48eeaf0265b6bec455b48c94be23390"
+project_hash = "3d1f6640ad7b45a5777c0ef161ebc8f513387300"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -991,7 +989,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.0.5+1"
+version = "1.1.0+0"
 
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
@@ -1784,7 +1782,7 @@ version = "1.3.5+1"
 [[deps.OpenBLAS_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Libdl"]
 uuid = "4536629a-c528-5b80-bd46-f80d51c5b363"
-version = "0.3.23+2"
+version = "0.3.23+4"
 
 [[deps.OpenEXR]]
 deps = ["Colors", "FileIO", "OpenEXR_jll"]
@@ -2431,12 +2429,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "e92a1a012a10506618f10b7047e478403a046c77"
 uuid = "c5fb5394-a638-5e4d-96e5-b29de1b5cf10"
 version = "1.5.0+0"
-
-[[deps.ZipFile]]
-deps = ["Libdl", "Printf", "Zlib_jll"]
-git-tree-sha1 = "f492b7fe1698e623024e873244f10d89c95c340a"
-uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
-version = "0.10.1"
 
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
