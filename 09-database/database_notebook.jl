@@ -521,7 +521,7 @@ $(@bind last_date PlutoUI.Slider(min_date:Day(1):max_date, default = max_date, s
 
 # ╔═╡ 329cd584-2ca0-4bc0-90db-e1f170c6c5b5
 let
-    df_ = dropmissing(db_5min, [:DateTime_end, :CO2_outflux_umol_s,])
+    df_ = dropmissing(db_5min, [:DateTime_end, :CO2_outflux_umol_s,:Scenario,])
     filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
     p = data(df_) *
         mapping(:DateTime_start, :CO2_outflux_umol_s, color=:Scenario => string) *
@@ -531,7 +531,7 @@ end
 
 # ╔═╡ 4088884b-f1de-40e3-82e6-95118def79b7
 let
-    df_ = dropmissing(db_5min, [:DateTime_end, :transpiration_linear_g_s,])
+    df_ = dropmissing(db_5min, [:DateTime_end, :transpiration_linear_g_s,:Scenario,])
     filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
     p = data(df_) *
         mapping(:DateTime_start, :transpiration_linear_g_s, color=:Scenario => string) *
@@ -698,7 +698,7 @@ save("../13-outputs/CO2_fluxes_10min.png", pCO2_all)
 
 # ╔═╡ 688984ea-7c45-4dc8-97f6-94467a3caa83
 pH2O_all = let
-	df_ = dropmissing(db_10min, [:DateTime_end, :transpiration_diff_g_s,])
+	df_ = dropmissing(db_10min, [:DateTime_end, :transpiration_diff_g_s,:Sequence,])
 	transform!(
 		groupby(df_, [:Plant, :Scenario, :Sequence]),
 		:DateTime_start => (x -> 1:length(x)) => :time_numeric

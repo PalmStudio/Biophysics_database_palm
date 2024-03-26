@@ -107,24 +107,25 @@ mic3_m=merge(mic3_raw,cal%>%filter(!is.na(scenar)),all.y=T)%>%
   tidyr::gather(key = 'variable','value',`Temperature (°C)`,`Relative humidity (%)`,`PAR (mircomol of CO2 m-2 s-1)`,`CO2 (ppm)`)
 
 ggplot()+
-  geom_line(data=mic3,aes(x=hms(hms),y=value,col=scenar,group=Date),alpha=0.2)+
+  geom_line(data=mic3 %>% filter(!(scenar%in%c('WalzClose','WalzOpen'))),aes(x=hms(hms),y=value,col=scenar,group=Date),alpha=0.2)+
   geom_line(data=mic3_m,aes(x=hms(hms),y=value,col=scenar))+
   facet_grid(variable~scenar,scale='free_y')+
   scale_color_manual(values =colors_event,name='Scenario')+
   scale_x_time()+
   labs(x='Time of the day',y='')+
+  myTheme+
   theme(axis.text.x = element_text(angle=90))
 
 
-mic3 %>% 
-  filter(Date==ymd('2021-03-18')) %>% 
-  ggplot()+
-  geom_line(aes(x=hms(hms),y=value,col=scenar,group=Date))+
-  facet_grid(variable~scenar,scale='free_y')+
-  scale_color_manual(values =colors_event,name='Scenario')+
-  scale_x_time()+
-  labs(x='Time of the day',y='')+
-  theme(axis.text.x = element_text(angle=90))
+# mic3 %>% 
+#   filter(Date==ymd('2021-03-18')) %>% 
+#   ggplot()+
+#   geom_line(aes(x=hms(hms),y=value,col=scenar,group=Date))+
+#   facet_grid(variable~scenar,scale='free_y')+
+#   scale_color_manual(values =colors_event,name='Scenario')+
+#   scale_x_time()+
+#   labs(x='Time of the day',y='')+
+#   theme(axis.text.x = element_text(angle=90))
 
 ggsave(filename = '2-figuresTables/Scenarios.pdf',width = 10,height = 8)
 
