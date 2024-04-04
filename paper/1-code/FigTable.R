@@ -107,16 +107,32 @@ mic3_m=merge(mic3_raw,cal%>%filter(!is.na(scenar)),all.y=T)%>%
   tidyr::gather(key = 'variable','value',`Temperature (°C)`,`Relative humidity (%)`,`PAR (mircomol of CO2 m-2 s-1)`,`CO2 (ppm)`)
 
 ggplot()+
-  geom_line(data=mic3 %>% filter(!(scenar%in%c('WalzClose','WalzOpen'))),aes(x=hms(hms),y=value,col=scenar,group=Date),alpha=0.2)+
-  geom_line(data=mic3_m,aes(x=hms(hms),y=value,col=scenar))+
+  geom_line(data=mic3 %>% filter(!(scenar%in%c('WalzClosed','WalzOpen'))),aes(x=hms(hms),y=value,col=scenar,group=Date),alpha=0.2)+
+  geom_line(data=mic3_m%>% filter(!(scenar%in%c('WalzClosed','WalzOpen'))),aes(x=hms(hms),y=value,col=scenar))+
   facet_grid(variable~scenar,scale='free_y')+
   scale_color_manual(values =colors_event,name='Scenario')+
   scale_x_time()+
   labs(x='Time of the day',y='')+
-  myTheme+
+  theme_bw()+
   theme(axis.text.x = element_text(angle=90))
 
+ggsave(filename = '2-figuresTables/Scenarios.pdf',width = 12,height =9)
 
+
+
+### tests light
+  merge(mic3_raw,cal%>%filter(!is.na(scenar)),all.y=T) %>% 
+  filter((scenar%in%c('WalzClosed','WalzOpen')))%>% 
+  ggplot()+
+  geom_line(aes(x=hms(hms),y=R_measurement,col=scenar,group=Date))+
+  scale_color_manual(values =c(colors_event,WalzClosed='orange',WalzOpen='yellow'),name='Scenario')+
+  scale_x_time()+
+  labs(x='Time of the day',y='PAR (mircomol of CO2 m-2 s-1)')+
+  myTheme+
+  theme(panel.background = element_rect(fill = 'grey'))
+
+ggsave(filename = '2-figuresTables/SI_LightWalzOpenClose.pdf',width = 8,height =5)
+  
 # mic3 %>% 
 #   filter(Date==ymd('2021-03-18')) %>% 
 #   ggplot()+
@@ -126,8 +142,6 @@ ggplot()+
 #   scale_x_time()+
 #   labs(x='Time of the day',y='')+
 #   theme(axis.text.x = element_text(angle=90))
-
-ggsave(filename = '2-figuresTables/Scenarios.pdf',width = 10,height = 8)
 
 
 
@@ -158,8 +172,10 @@ dt_m=dt_raw%>%
          `CO2 (ppm)`=CO2_ppm) %>% 
   tidyr::gather(key = 'variable','value',`Temperature (°C)`,`Relative humidity (%)`,`PAR (mircomol of CO2 m-2 s-1)`,`CO2 (ppm)`)
 
-dt%>%
-  filter(Scenario=='')%>%
+error=dt%>%
+  filter(Scenario=='')
+
+error%>%
   group_by(Date) %>% 
   select(Date,Plant) %>% 
   distinct()
@@ -175,5 +191,92 @@ ggplot()+
 
 
 # thermal camera ----------------------------------------------------------
+# th=dt_raw %>% 
+#   filter(Plant==1& Date>=ymd('2021/03/15') & Date<=ymd('2021/03/18')) %>% 
+#   select(Plant,Scenario,Sequence,Leaf,Date,DateTime_start,hms,Tl_mean,Tl_min,Tl_max,Tl_std,Ta_measurement) %>% 
+#   filter(!is.na(Leaf))
+# 
+# picTherm=readPNG('2-figuresTables/masksP1.png')
+# 
+# graphLeaf=th %>% 
+#   ggplot(aes(x=hms(hms),y=Tl_mean,col=paste('Leaf',Leaf),group=Leaf))+
+#   geom_point(aes(x=hms(hms),y=Ta_measurement,col='Microcosm'))+
+#   geom_line()+
+#   scale_color_manual(values = c('Leaf 3'="#fee5d9",'Leaf 4'="#fcae91",'Leaf 6'="#fb6a4a",'Leaf 7'="#de2d26","Leaf 8"="#a50f15",'Microcosm'=1))+
+#   scale_x_time()+
+#   labs(y='Temperature (°C)',x='Time of the day')+
+#   theme()+
+#   myTheme
+# 
+# cowplot::plot_grid(ggdraw() +
+#                      draw_image(picTherm),
+#                    graphLeaf,ncol=2,labels=c('A','B'))
+# 
+# 
+# ggsave(filename = '2-figuresTables/LeafTemp.pdf',width = 16,height = 6)
+
+
+th=dt_raw %>% 
+  filter(Plant==5& Date>=ymd('2021/04/06') & Date<=ymd('2021/04/06')) %>% 
+  select(Plant,Scenario,Sequence,Leaf,Date,DateTime_start,hms,Tl_mean,Tl_min,Tl_max,Tl_std,Ta_measurement) %>% 
+  filter(!is.na(Leaf))
+
+picTherm=readPNG('2-figuresTables/maskP4.png')
+
+graphLeaf=th %>% 
+  ggplot(aes(x=hms(hms),y=Tl_mean,col=sprintf(paste('Leaf',sprintf('%02d',Leaf))),group=Leaf))+
+  geom_point(aes(x=hms(hms),y=Ta_measurement,col='Microcosm'))+
+  geom_line()+
+  scale_color_manual(values = c('Leaf 02'="#fee5d9",'Leaf 04'="#fcbba1",'Leaf 06'="#fc9272",'Leaf 07'="#fb6a4a","Leaf 08"="#ef3b2c","Leaf 09"="#cb181d","Leaf 10"="#99000d",'Microcosm'=1))+
+  scale_x_time()+
+  labs(y='Temperature (°C)',x='Time of the day')+
+  theme()+
+  myTheme
+  
+
+cowplot::plot_grid(ggdraw() +
+  draw_image(picTherm),
+  graphLeaf,ncol=2,labels=c('A','B'))
+
+
+ggsave(filename = '2-figuresTables/LeafTempP4.pdf',width = 16,height = 6)
+
+# dt_raw %>% 
+#   filter(is.na(Plant)) %>% 
+#   select(Date,Scenario) %>% 
+#   distinct()
+# 
+# dt_raw %>% 
+#   filter(!is.na(Scenario) &!is.na(Leaf)) %>% 
+#   ggplot(aes(x=hms(hms),y=Tl_mean,col=sprintf(paste('Leaf',sprintf('%02d',Leaf))),group=paste(Date,Leaf,Plant)))+
+#   geom_point(aes(x=hms(hms),y=Ta_measurement,col='Microcosm'))+
+#   geom_line()+
+#   scale_x_time()+
+#   facet_grid(Plant~paste(Scenario))+
+#   labs(y='Temperature (°C)',x='Time of the day')
+
+
+# 3D reconstructions ------------------------------------------------------
+
+picLeafPC=readPNG('2-figuresTables/leafPC.png')
+picLeafMesh=readPNG('2-figuresTables/leafMesh.png')
+picPlantPC=readPNG('2-figuresTables/plantPC.png')
+picPlantMesh=readPNG('2-figuresTables/plantMesh.png')
+
+
+p1=cowplot::plot_grid(ggdraw() +
+                     draw_image(picLeafPC),
+                   ggdraw() +
+                     draw_image(picLeafMesh))
+
+
+p2=cowplot::plot_grid(ggdraw() +
+                     draw_image(picPlantPC),
+                   ggdraw() +
+                     draw_image(picPlantMesh))
+
+cowplot::plot_grid(p1,p2,ncol=1,rel_heights = c(0.405,0.595),labels=c('A','B'))
+
+ggsave(filename = '2-figuresTables/reconstruction.pdf',width = 10,height = 11)
 
 

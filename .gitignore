@@ -57,3 +57,5 @@
 05-thermal_camera_measurements/1-compute_leaf_temperature backup 2.jl
 *.bz2
 06-transpiration/transpiration_10min.csv.bz2
+paper/.Rhistory
+paper/.Rhistory

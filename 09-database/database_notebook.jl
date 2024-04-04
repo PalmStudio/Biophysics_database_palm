@@ -553,7 +553,7 @@ end
 
 # ╔═╡ 6944c705-7959-48c4-a0da-6ddb067dac15
 pTemp_all = let
-	df_ = dropmissing(db_5min, [:DateTime_end, :Tl_mean,])
+	df_ = dropmissing(db_5min, [:DateTime_end, :Tl_mean,:Scenario,:Plant])
 	transform!(
 		groupby(df_, [:Plant, :Scenario, :Sequence]),
 		:DateTime_start => (x -> 1:length(x)) => :time_numeric

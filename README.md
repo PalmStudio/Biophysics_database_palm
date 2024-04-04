@@ -368,3 +368,4 @@ Then, unzip the file, and open the directory in VS Code, or just open Julia in a
     -   [ ] Add attributes such as SPAD and photosynthetic and conductance parameters.
 -   [ ] Change name of the plant 5 into plant 4
 -   [ ] In the database_notebook.jl the extraction of the file 'surface.csv' from  "reconstruction.zip" is not working
+-   [ ] Remove missing scenario or plant in the final data base
