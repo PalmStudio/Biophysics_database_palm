@@ -155,7 +155,7 @@ md"""
 And plot the simulation (lines) against the measurements (points)
 """
 
-# ╔═╡ 92f3d853-90e6-40bb-ac17-67774f24eb9e
+# ╔═╡ 738cc026-6932-43ce-bcf5-75cadad64935
 let
     lay = (:Date, :Leaf) => ((x, y) -> string(x, " leaf: ", y))
     p = data(df_sim_A) *
@@ -2814,7 +2814,7 @@ version = "1.4.1+1"
 # ╟─fd049325-e9c7-4d74-b6b4-2c5ee1c7d204
 # ╠═a6f6430e-3d06-4626-8db8-2bc06384d35b
 # ╟─799cc4b9-d68e-4ff2-b492-7df076044376
-# ╠═92f3d853-90e6-40bb-ac17-67774f24eb9e
+# ╠═738cc026-6932-43ce-bcf5-75cadad64935
 # ╟─aa5fd3d4-2c50-4b3d-a228-dd92af40ce1b
 # ╠═0f338f51-62be-408f-89ae-5c07adcfc4cf
 # ╠═f6e1a928-d645-449f-bdfa-abb9c9eebf0a
