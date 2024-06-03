@@ -32,7 +32,7 @@ Here is an example thermal image of plant 3 with a mask for leaf 3:
 # ╔═╡ efed6b69-6632-4212-aa68-ff0762a7eb36
 let
 	img_file = "../EcotronAnalysis.jl/test/test_data/20210308_180009_R.jpg"
-	mask_file = "../EcotronAnalysis.jl/test/test_data/P3F3-S1-S2-S3-20210308_174136-20210309_140728_XY_Coordinates.csv"
+	mask_file = "../EcotronAnalysis.jl/test/test_data/P1F3-20210427_154213-20210428_080428_XY_Coordinates_V1.csv"
 
 	mask = CSV.read(mask_file, DataFrame)
 	f = Figure()
