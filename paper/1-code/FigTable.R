@@ -79,8 +79,10 @@ cal=merge(cal,tabelEvent,all.x=T)
 
 ggplot()+
   geom_tile(data=cal,aes(x=Date,y=plant,fill=scenar),col=1)+
+  geom_tile(data=cal %>% filter(is.na(scenar)),aes(x=Date,y=plant),fill='white',col=1)+
+  
   geom_point(data=cal%>%filter(event=='Response curves'),aes(x=Date,y=plant,col='Response curves',shape='Response curves'),size=2)+
-  geom_point(data=cal%>%filter(event=='3D'),aes(x=Date,y=plant,col='3D',shape='3D'))+
+  geom_point(data=cal%>%filter(event=='3D'),aes(x=Date,y=plant,col='3D',shape='3D'),size=2)+
   scale_x_date()+
   scale_fill_manual(values =c(colors_event,WalzClosed='orange',WalzOpen='yellow'),name='Scenario')+
   scale_color_manual(name='',values=c('Response curves'=1,'3D'=2))+
@@ -399,6 +401,7 @@ parVid=vid%>%
   filter(Z!=-105.4)%>%
   ggplot(aes(x=X,y=Y,fill=PAR))+
   geom_tile()+
+  coord_equal()+
   facet_grid(paste(sprintf("%03d",-Z),'cm from light')~Conditions)+
   scale_fill_viridis( option ="H")+
   scale_color_viridis(option ="D")+
@@ -424,6 +427,7 @@ parPalm=palm2%>%
   facet_grid(paste(-Z,'cm from light')~'BlackFelt_soil')+
   scale_fill_viridis( option ="H")+
   scale_color_viridis(option ="D")+
+  coord_equal()+
   labs(fill='PAR')
 
 
