@@ -38,7 +38,7 @@ The `delay` is the delay in the camera clock (default: 3512 seconds as for our e
 ```julia
 using EcotronAnalysis, DataFrames, CSV, Dates
 img_file = joinpath(dirname(dirname(pathof(EcotronAnalysis))), "test", "test_data", "20210308_180009_R.jpg")
-mask_file = joinpath(dirname(dirname(pathof(EcotronAnalysis))), "test", "test_data", "P1F3-20210427_154213-20210428_080428_XY_Coordinates_V1.csv")
+mask_file = joinpath(dirname(dirname(pathof(EcotronAnalysis))), "test", "test_data", "P3F3-S1-S2-S3-20210308_174136-20210309_140728_XY_Coordinates.csv")
 mask = CSV.read(mask_file, DataFrame)
 climate = DataFrame(DateTime=DateTime("2023-02-15T13:07:30"), Ta_measurement=25.0, Rh_measurement=0.3)
 
