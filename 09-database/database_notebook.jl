@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.40
+# v0.19.42
 
 using Markdown
 using InteractiveUtils
@@ -190,9 +190,16 @@ We measured the area of each leaf on the plants at the end of the experiment. We
 
 # ╔═╡ 3a26dc05-e3e6-466e-a3eb-bbca0e5b9adf
 surface = let
-    r = ZipFile.Reader("../00-data/LiDAR/reconstructions.zip")
-    surface_file_index = findfirst(x -> x == "surface.csv", [basename(i.name) for i in r.files])
-    df_ = CSV.read(r.files[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy", delim=" ", ignorerepeated=true)
+	reconstruction_dir = "../00-data/LiDAR/reconstructions"
+	if !isdir(reconstruction_dir)
+		open(Bzip2DecompressorStream, "../00-data/LiDAR/reconstructions.tar.bz2") do io
+	    	Tar.extract(io, reconstruction_dir)
+		end
+	end
+
+	f = readdir(reconstruction_dir, join=true)
+    surface_file_index = findfirst(x -> x == "surface.csv", [basename(i) for i in f])
+    df_ = CSV.read(f[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy", delim=" ", ignorerepeated=true)
     select!(
         df_,
         :Date,
@@ -744,7 +751,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.1"
+julia_version = "1.10.3"
 manifest_format = "2.0"
 project_hash = "3d1f6640ad7b45a5777c0ef161ebc8f513387300"
 
@@ -989,7 +996,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.0+0"
+version = "1.1.1+0"
 
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
