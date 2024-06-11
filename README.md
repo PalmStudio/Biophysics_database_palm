@@ -361,7 +361,6 @@ Then, unzip the file, and open the directory in VS Code, or just open Julia in a
   - [ ] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
   - [ ] For the fact that CO2 800ppm is simulated higher than CO2 600ppm when the observation is the opposite, see correction of Medlyn's model in Dewar et al. 2018 (New Phytologist), eq.11 in the paper that is the same model than Medlyn, but removes Gamma\* to Ca in the model.
 - [ ] Make a release of the data on Zenodo
-- [ ] Use <https://github.com/JuliaImages/ExifViewer.jl> now that <https://github.com/JuliaImages/ExifViewer.jl/issues/17> is fixed
 - [ ] Make a zenodo for 00-data/LiDAR/LiDAR_data.tar.bz2
 - [ ] Make a zenodo for 00-data/thermal_camera_images/images.tar.bz2
 - [ ] Reconstruct the plants in 3d:

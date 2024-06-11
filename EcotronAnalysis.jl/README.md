@@ -25,9 +25,3 @@ Measurements included:
 - Leaf temperature, measured with a a FLIR Vue™ Pro R thermal camera. The code to control the camera is available [here](https://github.com/ARCHIMED-platform/FLIR_Vue_Pro-Raspberri_Pi)
 - LiDAR scans of the plants each week, using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
 - Biomass and surface measurements of all organs of the plants were also performed at the end of the experiment.
-
-
-# To do
-
-- [ ] Use ExifViewer.jl instead of a direct call to `exiftool` (does not work on Silicon Macs yet, see this [issue](https://github.com/JuliaImages/ExifViewer.jl/issues/17)). The code is already written, but commented out in `read_FILR.jl` l.26.
-- [ ] [Cite this paper](https://www.sciencedirect.com/science/article/pii/S0168192316303434?via%3Dihub) for the temperature analysis
