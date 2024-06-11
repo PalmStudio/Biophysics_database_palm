@@ -1,53 +1,53 @@
-# Ecotron 2021 {#ecotron-2021}
+# Ecotron 2021
 
--   [Ecotron 2021](#ecotron-2021)
-    -   [Folder structure](#folder-structure)
-    -   [Database](#database)
-    -   [Notebook links](#notebook-links)
-        -   [Climate](#climate)
-        -   [Time synchronization](#time-synchronization)
-        -   [CO₂ fluxes](#co-fluxes)
-        -   [Leaf temperature](#leaf-temperature)
-        -   [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
-        -   [Leaf gas exchange (A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves)](#leaf-gas-exchange-a-cᵢ-and-gs-acₐdₗ-response-curves)
-        -   [SPAD](#spad)
-        -   [Making the database](#making-the-database)
-        -   [3D reconstructions](#3d-reconstructions)
-    -   [Usage](#usage)
-        -   [Pluto](#pluto)
-            -   [Install Pluto](#install-pluto)
-            -   [Open a notebook](#open-a-notebook)
-        -   [Download and instantiate](#download-and-instantiate)
-    -   [To do](#to-do)
+- [Ecotron 2021](#ecotron-2021)
+  - [Folder structure](#folder-structure)
+  - [Database](#database)
+  - [Notebook links](#notebook-links)
+    - [Climate](#climate)
+    - [Time synchronization](#time-synchronization)
+    - [CO₂ fluxes](#co-fluxes)
+    - [Leaf temperature](#leaf-temperature)
+    - [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
+    - [Leaf gas exchange](#leaf-gas-exchange)
+    - [SPAD](#spad)
+    - [Making the database](#making-the-database)
+    - [3D reconstructions](#3d-reconstructions)
+  - [Usage](#usage)
+    - [Pluto](#pluto)
+      - [Install Pluto](#install-pluto)
+      - [Open a notebook](#open-a-notebook)
+    - [Download and instantiate](#download-and-instantiate)
+  - [To do](#to-do)
 
 The Ecotron is a controlled environment facility for plants located in Montpellier, France. In this work, we made an experiment that consisted in investigating the behavior of oil palm (*Elaeis guineensis*) in response to different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day without rain, not too cold, not too hot. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapor pressure deficit.
 
 The height resulting conditions were the following:
 
--   400ppm: the base condition
--   600ppm: 50% more CO2
--   800ppm: 100% more CO2
--   Cloudy: the same as base condition but with the PAR values based on the most cloudy day of our database from Sumatra. The dynamic of the PAR is kept as in the base condition though. The maximum PPFD was 130 µmol m² s⁻¹ at 51cm from the lamps, compared to 300 in the reference scenario.
--   Cold: -30% °C compared to the base condition
--   Hot: +30% °C
--   DryCold: -30% relative humidity and -30% °C
--   DryHot: -30% relative humidity and +30% °C
+- 400ppm: the base condition
+- 600ppm: 50% more CO2
+- 800ppm: 100% more CO2
+- Cloudy: the same as base condition but with the PAR values based on the most cloudy day of our database from Sumatra. The dynamic of the PAR is kept as in the base condition though. The maximum PPFD was 130 µmol m² s⁻¹ at 51cm from the lamps, compared to 300 in the reference scenario.
+- Cold: -30% °C compared to the base condition
+- Hot: +30% °C
+- DryCold: -30% relative humidity and -30% °C
+- DryHot: -30% relative humidity and +30% °C
 
 Two microcosms where used during 2 months to measure each of four plants with each condition. The two microcosms are 114cm (Width) x 113cm (Depth) x 152cm (Height) chambers with a radiation and climate control system that can precisely control the temperature, humidity, and CO2 concentration. The first microcosm was used to store the plants, always following the base conditions, and the second one was used to perform the experiment on different conditions.
 
 Measurements included:
 
--   CO2 fluxes with a Picarro G2101-i, measuring the CO2 concentration in the chamber for 5 minutes, and input CO2 concentration for 5 minutes
--   H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was seeled with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/ARCHIMED-platform/Precision_scale-Raspberry_Pi)
--   Leaf temperature, measured with a thermal camera
--   LiDAR scans of the plants each week, using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
--   Biomass and surface measurements of all organs of the plants were also performed at the end of the experiment.
--   SPAD measurements of each leaf of the plants
--   A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves using a portable gas analyzer (Walz GFS-3000) for model calibration
+- CO2 fluxes with a Picarro G2101-i, measuring the CO2 concentration in the chamber for 5 minutes, and input CO2 concentration for 5 minutes
+- H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was seeled with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/ARCHIMED-platform/Precision_scale-Raspberry_Pi)
+- Leaf temperature, measured with a thermal camera
+- LiDAR scans of the plants each week, using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
+- Biomass and surface measurements of all organs of the plants were also performed at the end of the experiment.
+- SPAD measurements of each leaf of the plants
+- A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves using a portable gas analyzer (Walz GFS-3000) for model calibration
 
 This repository does not contain the raw thermal images and the raw LiDAR data taken during the experiment, because they are too large to be stored on Git (images: 60Go, 24Go when compressed). The data is available on a dedicated repository in Zenodo.
 
-## Folder structure {#folder-structure}
+## Folder structure
 
 ```         
 This folder
@@ -149,7 +149,7 @@ This folder
 └── README.md                      --> This file
 ```
 
-## Database {#database}
+## Database
 
 You can find the database of all processed data in the `09-database` folder, or in the releases of this repository. The database is available in two versions: one aggregated to match the 10min CO2 measurement, and one aggregated to match the 5min output CO2 measurement.
 
@@ -225,17 +225,17 @@ The database has the following columns:
 |                          |                  |                   |                                                                                                                                                                |     |
 |                          |                  |                   |                                                                                                                                                                |     |
 
-## Notebook links {#notebook-links}
+## Notebook links
 
 Here are the commands that you may paste into a terminal to open the Pluto notebooks. Note that you have to install Julia first, and install Pluto on your global environment. See the [Usage](#usage) section for more details.
 
-### Climate {#climate}
+### Climate
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "02-climate/climate_notebook.jl")'
 ```
 
-### Time synchronization {#time-synchronization}
+### Time synchronization
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "03-time-synchronization/time_synchronization_notebook.jl")'
@@ -247,7 +247,7 @@ julia -e 'using Pluto; Pluto.run(notebook = "03-time-synchronization/time_synchr
 julia -e 'using Pluto; Pluto.run(notebook = "04-CO2/CO2_notebook.jl")'
 ```
 
-### Leaf temperature {#leaf-temperature}
+### Leaf temperature
 
 -   Computation:
 
@@ -267,19 +267,21 @@ julia -e 'using Pluto; Pluto.run(notebook = "04-CO2/CO2_notebook.jl")'
 julia -e 'using Pluto; Pluto.run(notebook = "06-transpiration/transpiration_notebook.jl")'
 ```
 
-### Leaf gas exchange (A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves) {#leaf-gas-exchange-a-cᵢ-and-gs-acₐdₗ-response-curves}
+### Leaf gas exchange
+
+These are the A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves.
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "07-walz/notebook_walz.jl")'
 ```
 
-### SPAD {#spad}
+### SPAD
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "08-spad/notebook_spad.jl")'
 ```
 
-### Making the database {#making-the-database}
+### Making the database
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "09-database/database_notebook.jl")'
@@ -295,13 +297,13 @@ The visualization of the 3D reconstructions is done using a Pluto notebook. You 
 Pluto.run(notebook = "10-reconstruction/visualize_plants.jl")
 ```
 
-## Usage {#usage}
+## Usage
 
-### Pluto {#pluto}
+### Pluto
 
 Most of the resources are Pluto reactive notebooks. You know when a julia script (a `.jl` file) is a notebook when it starts with "\### A Pluto.jl notebook \###". In this case, use Pluto to execute the file.
 
-#### Install Pluto {#install-pluto}
+#### Install Pluto
 
 To install Pluto, enter the package manager mode in Julia by pressing `]` in the REPL, and then execute the following code:
 
@@ -315,7 +317,7 @@ Then, each time you want to use Pluto, type the following command in the REPL (i
 using Pluto
 ```
 
-#### Open a notebook {#open-a-notebook}
+#### Open a notebook
 
 There are different ways to open a notebook, but it's always using the same function: `Pluto.run()`.
 
@@ -336,7 +338,7 @@ Pluto.run(notebook = "02-climate/climate_notebook.jl")
 
 Watch [this video](https://www.youtube.com/watch?v=jdEqGOv8ycc&list=PLLiJ249IkzRFxZGALbKy75_ZyHxYCUmuk&index=4) if you need more details about how to use Pluto.
 
-### Download and instantiate {#download-and-instantiate}
+### Download and instantiate
 
 If you want to use the resources from this repository locally, the best way is to download a local copy (or clone it if you know GIT). To do so, click on the green button in this page called "Code":
 
@@ -348,24 +350,24 @@ And choose "Download ZIP":
 
 Then, unzip the file, and open the directory in VS Code, or just open Julia in a command prompt / terminal in this repository and use *e.g.*:
 
-## To do {#to-do}
+## To do
 
--   [ ] Check all data
-    -   [x] For CO2, 2021-03-27 to 30 is `missing` for the plant, but should be plant 5 (as seen in the plant sequence). This is three days where we can't use the H20 data because of a scale failure.
-    -   [ ] Light is spelled "ligth" in the Walz files, replace.
-    -   [ ] Select days that are "clean", i.e. full data for the whole day, no door opening, etc.
-    -   [ ] Make sure we have the 3D reconstructions for all plants and days that are clean
-    -   [ ] Add irrigations to the database (from the transpiration db)
-    -   [ ] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
-    -   [ ] For the fact that CO2 800ppm is simulated higher than CO2 600ppm when the observation is the opposite, see correction of Medlyn's model in Dewar et al. 2018 (New Phytologist), eq.11 in the paper that is the same model than Medlyn, but removes Gamma\* to Ca in the model.
--   [ ] Make a release of the data on Zenodo
--   [ ] Use <https://github.com/JuliaImages/ExifViewer.jl> now that <https://github.com/JuliaImages/ExifViewer.jl/issues/17> is fixed
--   [ ] Make a zenodo for 00-data/LiDAR/LiDAR_data.tar.bz2
--   [ ] Make a zenodo for 00-data/thermal_camera_images/images.tar.bz2
--   [ ] Reconstruct the plants in 3d:
-    -   [x] Separate each leaf and make a mesh for it. Then identify it and name it accordingly.
-    -   [x] Make an OPF for each plant from this collection of leaf meshes, using them as ref. meshes with no transformation
-    -   [ ] Add attributes such as SPAD and photosynthetic and conductance parameters.
--   [ ] Change name of the plant 5 into plant 4
--   [ ] In the database_notebook.jl the extraction of the file 'surface.csv' from  "reconstruction.zip" is not working
--   [ ] Remove missing scenario or plant in the final data base
+- [ ] Check all data
+  - [x] For CO2, 2021-03-27 to 30 is `missing` for the plant, but should be plant 5 (as seen in the plant sequence). This is three days where we can't use the H20 data because of a scale failure.
+  - [ ] Light is spelled "ligth" in the Walz files, replace.
+  - [ ] Select days that are "clean", i.e. full data for the whole day, no door opening, etc.
+  - [ ] Make sure we have the 3D reconstructions for all plants and days that are clean
+  - [ ] Add irrigations to the database (from the transpiration db)
+  - [ ] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
+  - [ ] For the fact that CO2 800ppm is simulated higher than CO2 600ppm when the observation is the opposite, see correction of Medlyn's model in Dewar et al. 2018 (New Phytologist), eq.11 in the paper that is the same model than Medlyn, but removes Gamma\* to Ca in the model.
+- [ ] Make a release of the data on Zenodo
+- [ ] Use <https://github.com/JuliaImages/ExifViewer.jl> now that <https://github.com/JuliaImages/ExifViewer.jl/issues/17> is fixed
+- [ ] Make a zenodo for 00-data/LiDAR/LiDAR_data.tar.bz2
+- [ ] Make a zenodo for 00-data/thermal_camera_images/images.tar.bz2
+- [ ] Reconstruct the plants in 3d:
+  - [x] Separate each leaf and make a mesh for it. Then identify it and name it accordingly.
+  - [x] Make an OPF for each plant from this collection of leaf meshes, using them as ref. meshes with no transformation
+  - [ ] Add attributes such as SPAD and photosynthetic and conductance parameters.
+- [ ] Change name of the plant 5 into plant 4
+- [ ] In the database_notebook.jl the extraction of the file 'surface.csv' from  "reconstruction.zip" is not working
+- [ ] Remove missing scenario or plant in the final data base
