@@ -1,5 +1,5 @@
 """
-    meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=ReferenceFrameRotations.EulerAngleAxis(π, [0, 0, 1]), scale=100.0)
+    meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotations.AngleAxis(π, 0, 0, 1), scale=100.0)
 
 Make an OPF from the meshes of the leaves, spears, bulb and pot.
 
@@ -17,20 +17,20 @@ Make an OPF from the meshes of the leaves, spears, bulb and pot.
 * `opf`: the OPF of the plant.
 * `translationxyz`: the translation that was applied to the mesh to put the center of the pot at the origin.
 """
-function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=ReferenceFrameRotations.EulerAngleAxis(π, [0, 0, 1]), scale=100.0)
+function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotations.AngleAxis(π, 0, 0, 1), scale=100.0)
 
     # Empty reference meshes:
     refmeshes = PlantGeom.RefMeshes(RefMesh[])
 
     # Create the base of the MTG (plant scale + Pot + first stipe):
-    opf = MultiScaleTreeGraph.Node(1, NodeMTG("/", "Plant", 1, 0), Dict())
+    opf = MultiScaleTreeGraph.Node(1, NodeMTG("/", "Plant", 1, 0), Dict{Symbol,Any}())
 
     # Add the pot:
     mesh = readply(pot_file[1])
     # We need to translate the pot to the origin, and scale it to be in cm instead of m (because of OPF...):
     pot_center = Meshes.centroid(mesh)
-    z_min = Meshes.coordinates(Meshes.boundingbox(mesh).min)[3]
-    translationxyz = [-p for p in Meshes.coordinates(pot_center)]
+    z_min = Meshes.coords(Meshes.boundingbox(mesh).min).z
+    translationxyz = [-p for p in Meshes.to(pot_center)]
     translationxyz[3] = -z_min
 
     mesh_tri =
@@ -51,7 +51,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Refer
             :geometry => PlantGeom.geometry(
                 refmeshes.meshes[end],
                 length(refmeshes.meshes),
-                CoordinateTransformations.IdentityTransformation(),
+                TransformsBase.Identity(),
                 1,
                 1,
                 nothing,
@@ -69,7 +69,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Refer
                 Meshes.simplexify(mesh) # Triangulated quad mesh
             )
         )
-    # Add the Pot to the OPF:
+
     prev_stipe = MultiScaleTreeGraph.Node(
         3,
         prev_node,
@@ -78,7 +78,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Refer
             :geometry => PlantGeom.geometry(
                 refmeshes.meshes[end],
                 length(refmeshes.meshes),
-                CoordinateTransformations.IdentityTransformation(),
+                TransformsBase.Identity(),
                 1,
                 1,
                 nothing,
@@ -96,7 +96,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Refer
         mesh_tri = Meshes.simplexify(mesh) # Triangulate the quad mesh for Archimed
         id_leaf = parse(Int, replace(basename(i), ".ply" => "", r"Plant_[0-9]_[0-9][0-9]_[0-9][0-9]_[0-9]{4}_R" => "")) # Get the leaf number
         # Add stipe (no mesh but we want a goof MTG):
-        prev_stipe = MultiScaleTreeGraph.Node(id[1], prev_stipe, NodeMTG("<", "Stipe", 1, 3), Dict())
+        prev_stipe = MultiScaleTreeGraph.Node(id[1], prev_stipe, NodeMTG("<", "Stipe", 1, 3), Dict{Symbol,Any}())
         push!(
             refmeshes.meshes,
             PlantGeom.RefMesh(
@@ -116,7 +116,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Refer
                 :geometry => PlantGeom.geometry(
                     refmeshes.meshes[end],
                     length(refmeshes.meshes),
-                    CoordinateTransformations.IdentityTransformation(),
+                    TransformsBase.Identity(),
                     1,
                     1,
                     nothing
@@ -129,7 +129,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Refer
 
     # Add the spear if any:
     if length(spear_files) > 0
-        prev_stipe = MultiScaleTreeGraph.Node(id[1], prev_stipe, NodeMTG("<", "Stipe", 1, 3), Dict())
+        prev_stipe = MultiScaleTreeGraph.Node(id[1], prev_stipe, NodeMTG("<", "Stipe", 1, 3), Dict{Symbol,Any}())
         id[1] += 1
         mesh = readply(spear_files[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(scale) |> Meshes.Rotate(rot)
         mesh_tri = Meshes.simplexify(mesh) # Triangulate the quad mesh for Archimed
@@ -149,7 +149,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Refer
                 :geometry => PlantGeom.geometry(
                     refmeshes.meshes[end],
                     length(refmeshes.meshes),
-                    CoordinateTransformations.IdentityTransformation(),
+                    TransformsBase.Identity(),
                     1,
                     1,
                     nothing
