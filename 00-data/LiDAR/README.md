@@ -1,6 +1,6 @@
-# LiDAR Data
+# lidar Data
 
-The archive `LiDAR_data.tar.bz2` contains the LiDAR data for the four plants. 
+The archive `lidar_data.tar.bz2` contains the lidar data for the four plants. 
 
 Each folder inside the archive is a measurement session were we scanned all four plants with a Riegl VZ400. The data here are the point clouds extracted from the raw data. The raw data are not included here for disk space reasons (44 Go). The raw data can be sent upon request.
 
@@ -14,20 +14,20 @@ The archive `reconstructions.zip` contains the meshes reconstructed from the poi
 
 There are also three other files:
 
-- `RecapEcotronSelectionDate.xlsx`: the dates of the LiDAR scans (on which the meshes were reconstructed) and dates of the scenarios
+- `RecapEcotronSelectionDate.xlsx`: the dates of the lidar scans (on which the meshes were reconstructed) and dates of the scenarios
 - `surface.csv`: the evolution of the surface of each leaf in the plant over time, computed from the reconstructed meshes
 
 The archives where generated with the following commands:
 
 ```bash
-tar -cjvf LiDAR_data.tar.bz2 -C ./LiDAR_data .
+tar -cjvf lidar.tar.bz2 -C ./lidar .
 tar -cjvf reconstructions.tar.bz2 -C ./reconstructions .
 ```
 
 To decompress the archives, use the following commands:
 
 ```bash
-mkdir -p LiDAR_data && tar -xjvf LiDAR_data.tar.bz2 -C LiDAR_data
+mkdir -p lidar && tar -xjvf lidar.tar.bz2 -C lidar
 mkdir -p reconstruction && tar -xjvf reconstructions.tar.bz2 -C reconstruction
 ```
 
@@ -36,12 +36,12 @@ Or using Julia:
 ```julia
 using CodecBzip2, Tar 
 # Extract the reconstructions from the tar.bz2 file:
-open(Bzip2DecompressorStream, "00-data/LiDAR/reconstructions.tar.bz2") do io
-    Tar.extract(io, "00-data/LiDAR/reconstructions")
+open(Bzip2DecompressorStream, "00-data/lidar/reconstructions.tar.bz2") do io
+    Tar.extract(io, "00-data/lidar/reconstructions")
 end
 
-# Extract the LiDAR point clouds from the tar.bz2 file:
-open(Bzip2DecompressorStream, "00-data/LiDAR/LiDAR_data.tar.bz2") do io
-    Tar.extract(io, "00-data/LiDAR/LiDAR_data")
+# Extract the lidar point clouds from the tar.bz2 file:
+open(Bzip2DecompressorStream, "00-data/lidar/lidar.tar.bz2") do io
+    Tar.extract(io, "00-data/lidar/lidar")
 end
 ```

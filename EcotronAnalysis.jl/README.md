@@ -23,5 +23,5 @@ Measurements included:
 - CO2 fluxes with a Picarro XXX, measuring the CO2 concentration in the chamber for 5 minutes, and input CO2 concentration for 5 minutes
 - H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was seeled with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/ARCHIMED-platform/Precision_scale-Raspberry_Pi)
 - Leaf temperature, measured with a a FLIR Vue™ Pro R thermal camera. The code to control the camera is available [here](https://github.com/ARCHIMED-platform/FLIR_Vue_Pro-Raspberri_Pi)
-- LiDAR scans of the plants each week, using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
+- lidar scans of the plants each week, using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
 - Biomass and surface measurements of all organs of the plants were also performed at the end of the experiment.

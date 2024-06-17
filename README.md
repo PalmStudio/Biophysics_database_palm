@@ -40,21 +40,21 @@ Measurements included:
 - CO2 fluxes with a Picarro G2101-i, measuring the CO2 concentration in the chamber for 5 minutes, and input CO2 concentration for 5 minutes
 - H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was seeled with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/ARCHIMED-platform/Precision_scale-Raspberry_Pi)
 - Leaf temperature, measured with a thermal camera
-- LiDAR scans of the plants each week, using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
+- lidar scans of the plants each week, using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
 - Biomass and surface measurements of all organs of the plants were also performed at the end of the experiment.
 - SPAD measurements of each leaf of the plants
 - A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves using a portable gas analyzer (Walz GFS-3000) for model calibration
 
-This repository does not contain the raw thermal images and the raw LiDAR data taken during the experiment, because they are too large to be stored on Git (images: 60Go, 24Go when compressed). The data is available on a dedicated repository in Zenodo.
+This repository does not contain the raw thermal images and the raw lidar data taken during the experiment, because they are too large to be stored on Git (images: 60Go, 24Go when compressed). The data is available on a dedicated repository in Zenodo.
 
 ## Folder structure
 
 ```         
 This folder
-├── 00-data                         --> Contains raw, unprocessed data
-│   ├── LiDAR                      --> LiDAR data for the 3D reconstruction of the plants
-│   │   ├── LiDAR_data.zip         --> LiDAR point clouds for each plant and session
-│   │   ├── README.md              --> Instructions on how to use the LiDAR data
+├── 00-data                        --> Contains raw, unprocessed data
+│   ├── lidar                      --> lidar data for the 3D reconstruction of the plants
+│   │   ├── lidar.zip              --> lidar point clouds for each plant and session
+│   │   ├── README.md              --> Instructions on how to use the lidar data
 │   │   └── reconstructions.zip    --> 3D reconstructions of the plants
 │   ├── climate                    --> Climatic data from the growth chamber
 │   │   ├── README.md   
@@ -294,7 +294,7 @@ The 3D reconstructions of the plants are done using a script. You'll have to ope
 The visualization of the 3D reconstructions is done using a Pluto notebook. You can open it using the following command:
 
 ``` julia
-Pluto.run(notebook = "10-reconstruction/visualize_plants.jl")
+julia -e 'using Pluto; Pluto.run(notebook = "10-reconstruction/visualize_plants.jl")'
 ```
 
 ## Usage
@@ -361,7 +361,7 @@ Then, unzip the file, and open the directory in VS Code, or just open Julia in a
   - [ ] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
   - [ ] For the fact that CO2 800ppm is simulated higher than CO2 600ppm when the observation is the opposite, see correction of Medlyn's model in Dewar et al. 2018 (New Phytologist), eq.11 in the paper that is the same model than Medlyn, but removes Gamma\* to Ca in the model.
 - [ ] Make a release of the data on Zenodo
-- [ ] Make a zenodo for 00-data/LiDAR/LiDAR_data.tar.bz2
+- [ ] Make a zenodo for 00-data/lidar/lidar_data.tar.bz2
 - [ ] Make a zenodo for 00-data/thermal_camera_images/images.tar.bz2
 - [ ] Reconstruct the plants in 3d:
   - [x] Separate each leaf and make a mesh for it. Then identify it and name it accordingly.
