@@ -7,11 +7,7 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try
-            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-        catch
-            b -> missing
-        end
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -22,7 +18,6 @@ end
 begin
     using JSServe
     Page()
-    #JSServe.configure_server!(listen_url="127.0.0.1", listen_port=1234)
 end
 
 # ╔═╡ a19e5cb1-9154-4f34-ab14-a28e7f0124d5
@@ -73,7 +68,7 @@ end
 
 # ╔═╡ ba76d91a-122b-4062-b69c-6615a9cf2dce
 md"""
-Select the lidar measurement session: $(@bind session Select(sessions))
+Select the LiDAR measurement session: $(@bind session Select(sessions))
 """
 
 # ╔═╡ 130a9ae5-aaf8-43da-9e73-66afb3e19525
@@ -97,14 +92,14 @@ opf = read_opf(files_plant[findfirst(x -> x == session, sessions)])
 
 # ╔═╡ a85e9e05-4e3b-429e-b5a9-57f03183c954
 transl = let
-    f = "../10-reconstruction/translations.csv"
-    !isfile(f) && error("File `translations.csv` not found. please run the `build_opfs.jl` script before running this notebook.")
-    filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read(f, DataFrame))
+	f = "../10-reconstruction/translations.csv"
+	!isfile(f) && error("File `translations.csv` not found. please run the `build_opfs.jl` script before running this notebook.")
+	filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read(f, DataFrame))
 end
 
 # ╔═╡ ed81cdbc-6a4b-48d8-be2f-e2f78862d598
 lidar = let
-    # 1. Find the lidar session corresponding to the reconstruction:
+    # 1. Find the LiDAR session corresponding to the reconstruction:
     folder_session = LiDAR_sessions[findfirst(x -> occursin(Dates.format(session, dateformat"dd_mm_yyyy"), basename(x)), LiDAR_sessions)]
 
     # Grep the plant in the session:
@@ -112,9 +107,9 @@ lidar = let
     plant_file = session_files[findfirst(x -> occursin("Plant$(plant).txt", basename(x)), session_files)]
     df = CSV.read(plant_file, DataFrame, header=["X", "Y", "Z", "Reflectance"], skipto=2)
 
-    rot = Rotations.AngleAxis(π, 0, 0, 1)
-
-    LiDAR_points = Meshes.Point[]
+	rot = Rotations.AngleAxis(π, 0, 0, 1)
+	
+	LiDAR_points = Meshes.Point[]
     LiDAR_reflectance = Float64[]
     for row in eachrow(df)
         p = Meshes.Point.(row.X, row.Y, row.Z) |> Meshes.Translate(transl.x[1], transl.y[1], transl.z[1]) |> Meshes.Scale(100.0) |> Meshes.Rotate(rot)
