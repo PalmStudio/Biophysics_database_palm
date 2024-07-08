@@ -18,7 +18,7 @@
 *.html
 
 1-code_old/
-
+12-simulations/
 # Data to keep:
 !00-data/picarro_flux/data_mean_flux.csv
 !00-data/picarro_flux/outliers.csv
