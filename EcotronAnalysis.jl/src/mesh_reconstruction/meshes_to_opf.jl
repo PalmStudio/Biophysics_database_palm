@@ -39,7 +39,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
             PlantGeom.RefMesh(
                 "Pot",
                 # Triangulated quad mesh:
-                Meshes.simplexify(mesh |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(scale) |> Meshes.Rotate(rot))
+                Meshes.simplexify(mesh |> Meshes.Translate(translationxyz...) |> Meshes.Rotate(rot))
             )
         )
     # Add the Pot to the OPF:
@@ -60,7 +60,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
     )
 
     # Adding the bulb:
-    mesh = readply(bulb_file[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(scale) |> Meshes.Rotate(rot)
+    mesh = readply(bulb_file[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Rotate(rot)
     mesh_tri =
         push!(
             refmeshes.meshes,
@@ -92,7 +92,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
     # Import each leaf mesh, triangulate it and add it as a leaf node after a stipe node
     for i in leaves_files
         # i = leaves_files[1]
-        mesh = readply(i) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(scale) |> Meshes.Rotate(rot)
+        mesh = readply(i) |> Meshes.Translate(translationxyz...) |> Meshes.Rotate(rot)
         mesh_tri = Meshes.simplexify(mesh) # Triangulate the quad mesh for Archimed
         id_leaf = parse(Int, replace(basename(i), ".ply" => "", r"Plant_[0-9]_[0-9][0-9]_[0-9][0-9]_[0-9]{4}_R" => "")) # Get the leaf number
         # Add stipe (no mesh but we want a goof MTG):
@@ -131,7 +131,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
     if length(spear_files) > 0
         prev_stipe = MultiScaleTreeGraph.Node(id[1], prev_stipe, NodeMTG("<", "Stipe", 1, 3), Dict{Symbol,Any}())
         id[1] += 1
-        mesh = readply(spear_files[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Stretch(scale) |> Meshes.Rotate(rot)
+        mesh = readply(spear_files[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Rotate(rot)
         mesh_tri = Meshes.simplexify(mesh) # Triangulate the quad mesh for Archimed
         push!(
             refmeshes.meshes,
