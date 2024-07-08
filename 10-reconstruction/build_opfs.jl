@@ -104,7 +104,7 @@ begin
     ax = LScene(fig[1, 1])
     viz!(ax, lidar.points, color=lidar.Reflectance, markersize=5, alpha=0.5)
     viz!(ax, opf, color=:z, showfacets=true, color_vertex=true, alpha=0.5)
-    # GLMakie.save("12-outputs/Reconstruction_Plant_$(plant)_$(session).png", fig)
+    # GLMakie.save("11-outputs/Reconstruction_Plant_$(plant)_$(session).png", fig)
     fig
 end
 
@@ -178,4 +178,4 @@ for p in [1, 2, 3, 5]
 end
 fig
 
-save("12-outputs/Reconstructions_LiDAR_all.png", fig)
+save("11-outputs/Reconstructions_LiDAR_all.png", fig)
