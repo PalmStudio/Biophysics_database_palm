@@ -64,8 +64,8 @@ walz_df = let
         end) => [:Plant, :Leaf, :Date_file_name]
     )
 
-	# Take only the points where there are measurements for the fluorescence, because this is the last point, and else we can have different number of measurements for one forcing (a step in a Walz) depending on how much time we stay at this step.
-	filter!(row -> !ismissing(row.Yield), df_)
+    # Take only the points where there are measurements for the fluorescence, because this is the last point, and else we can have different number of measurements for one forcing (a step in a Walz) depending on how much time we stay at this step.
+    filter!(row -> !ismissing(row.Yield), df_)
 end
 
 # ╔═╡ c72237f5-6249-4f40-b718-fe500b105079
@@ -89,7 +89,7 @@ We first remove the Rh and light curves for the fitting because temperature vari
 """
 
 # ╔═╡ 552242a4-bd77-4997-8057-cd27ec580e38
-walz_df_CO2 = filter(x -> x.curve != "Rh Curve" && x.curve != "ligth Curve", walz_df)
+walz_df_CO2 = filter(x -> x.curve != "Rh Curve" && x.curve != "light Curve", walz_df)
 
 # ╔═╡ 01c8345e-0cf8-4b59-9c98-e217b5bf877f
 df_fit_CO2 = let
@@ -175,7 +175,7 @@ The conductance parameters are also fitted on each response curve separately.
 """
 
 # ╔═╡ 0f338f51-62be-408f-89ae-5c07adcfc4cf
-walz_df_Gs = filter(x -> x.curve != "ligth Curve" && x.curve != "CO2 Curve", walz_df)
+walz_df_Gs = filter(x -> x.curve != "light Curve" && x.curve != "CO2 Curve", walz_df)
 
 # ╔═╡ f6e1a928-d645-449f-bdfa-abb9c9eebf0a
 df_fit_Gs = let

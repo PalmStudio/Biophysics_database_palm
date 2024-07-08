@@ -358,7 +358,7 @@ Then, unzip the file, and open the directory in VS Code, or just open Julia in a
 
 - [ ] Check all data
   - [x] For CO2, 2021-03-27 to 30 is `missing` for the plant, but should be plant 5 (as seen in the plant sequence). This is three days where we can't use the H20 data because of a scale failure.
-  - [ ] Light is spelled "ligth" in the Walz files, replace.
+  - [x] Light is spelled "ligth" in the Walz files, replace.
   - [ ] Select days that are "clean", i.e. full data for the whole day, no door opening, etc.
   - [ ] Make sure we have the 3D reconstructions for all plants and days that are clean
   - [ ] Add irrigations to the database (from the transpiration db)
