@@ -86,12 +86,12 @@ lidar = let
     folder_session = LiDAR_sessions[findfirst(x -> occursin(Dates.format(session, dateformat"dd_mm_yyyy"), basename(x)), LiDAR_sessions)]
     # Grep the plant in the session:
     session_files = readdir(folder_session, join=true)
-    plant_file = session_files[findfirst(x -> occursin("Plant$(plant).txt", basename(x)), session_files)]
+    plant_file = session_files[findfirst(x -> "Plant$(plant).txt" == basename(x), session_files)]
     df_ = CSV.read(plant_file, DataFrame, header=["X", "Y", "Z", "Reflectance"], skipto=2)
     LiDAR_points = Meshes.Point[]
     LiDAR_reflectance = Float64[]
     for row in eachrow(df_)
-        p = Meshes.Point.(row.X, row.Y, row.Z) |> Meshes.Translate(transl.x[1], transl.y[1], transl.z[1]) |> Meshes.Scale(100.0) |> Meshes.Rotate(rot)
+        p = Meshes.Point.(row.X, row.Y, row.Z) |> Meshes.Translate(transl.x[1], transl.y[1], transl.z[1]) |> Meshes.Rotate(rot)
         push!(LiDAR_points, p)
         push!(LiDAR_reflectance, row.Reflectance)
     end
@@ -99,7 +99,7 @@ lidar = let
 end
 
 begin
-    set_theme!(backgroundcolor="#F7F7F7")
+    # set_theme!(backgroundcolor="#F7F7F7")
     fig = Figure(size=(2400, 1200))
     ax = LScene(fig[1, 1])
     viz!(ax, lidar.points, color=lidar.Reflectance, markersize=5, alpha=0.5)
@@ -107,8 +107,6 @@ begin
     # GLMakie.save("11-outputs/Reconstruction_Plant_$(plant)_$(session).png", fig)
     fig
 end
-
-
 
 
 function plot_opf_and_lidar!(ax, plant, session)
@@ -130,7 +128,7 @@ function plot_opf_and_lidar!(ax, plant, session)
         LiDAR_points = Meshes.Point[]
         LiDAR_reflectance = Float64[]
         for row in eachrow(df_)
-            p = Meshes.Point.(row.X, row.Y, row.Z) |> Meshes.Translate(transl.x[1], transl.y[1], transl.z[1]) |> Meshes.Scale(100.0) |> Meshes.Rotate(rot)
+            p = Meshes.Point.(row.X, row.Y, row.Z) |> Meshes.Translate(transl.x[1], transl.y[1], transl.z[1]) |> Meshes.Rotate(rot)
             push!(LiDAR_points, p)
             push!(LiDAR_reflectance, row.Reflectance)
         end
@@ -151,10 +149,10 @@ end
 
 
 plant = 1
-set_theme!(backgroundcolor="#F7F7F7")
+# set_theme!(backgroundcolor="#F7F7F7")
 fig = Figure(size=(2400, 1200))
 for (i, session) in enumerate(sessions) # i = 1
-    ax = Axis3(fig[1, i], title="Plant $plant session $(Dates.format(session, dateformat"dd/mm/yyyy"))", aspect=(1, 1, 1))
+    ax = Axis3(fig[1, i], title="Plant $plant session $(Dates.format(session, dateformat"dd/mm/yyyy"))", aspect=:data)
     plot_opf_and_lidar!(ax, plant, session)
 end
 fig
@@ -162,8 +160,8 @@ fig
 
 # Over all plants:
 
-set_theme!(backgroundcolor="#F7F7F7")
-fig = Figure(size=(2400, 1200))
+# set_theme!(backgroundcolor="#F7F7F7")
+fig = Figure(size=(800, 1200))
 for p in [1, 2, 3, 5]
     if p == 5
         p = 4
@@ -172,7 +170,7 @@ for p in [1, 2, 3, 5]
     for (i, session) in enumerate(sessions) # i = 1
         plant_title = i == 1 ? "Plant $p\n" : "\n"
         title = string(plant_title, "session $(Dates.format(session, dateformat"dd/mm/yyyy"))")
-        ax = Axis3(fig[p, i], title=title, aspect=(1, 1, 1))
+        ax = Axis3(fig[p, i], title=title, aspect=:data, xticklabelsize=8, yticklabelsize=8, zticklabelsize=8, xlabel="", ylabel="", zlabel="")
         plot_opf_and_lidar!(ax, plant, session)
     end
 end
