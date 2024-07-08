@@ -7,7 +7,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -56,7 +60,7 @@ md"""
 # ╔═╡ 353e6b49-a886-43b0-bf76-3e1173bd66f0
 md"""
 Choose the plant:
-$(@bind plant Select([1,2,3,5]))
+$(@bind plant Select([1,2,3,4]))
 """
 
 # ╔═╡ 57107cea-8ee8-44d9-9885-bf0cc55b194b
@@ -92,9 +96,9 @@ opf = read_opf(files_plant[findfirst(x -> x == session, sessions)])
 
 # ╔═╡ a85e9e05-4e3b-429e-b5a9-57f03183c954
 transl = let
-	f = "../10-reconstruction/translations.csv"
-	!isfile(f) && error("File `translations.csv` not found. please run the `build_opfs.jl` script before running this notebook.")
-	filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read(f, DataFrame))
+    f = "../10-reconstruction/translations.csv"
+    !isfile(f) && error("File `translations.csv` not found. please run the `build_opfs.jl` script before running this notebook.")
+    filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read(f, DataFrame))
 end
 
 # ╔═╡ ed81cdbc-6a4b-48d8-be2f-e2f78862d598
@@ -107,9 +111,9 @@ lidar = let
     plant_file = session_files[findfirst(x -> occursin("Plant$(plant).txt", basename(x)), session_files)]
     df = CSV.read(plant_file, DataFrame, header=["X", "Y", "Z", "Reflectance"], skipto=2)
 
-	rot = Rotations.AngleAxis(π, 0, 0, 1)
-	
-	LiDAR_points = Meshes.Point[]
+    rot = Rotations.AngleAxis(π, 0, 0, 1)
+
+    LiDAR_points = Meshes.Point[]
     LiDAR_reflectance = Float64[]
     for row in eachrow(df)
         p = Meshes.Point.(row.X, row.Y, row.Z) |> Meshes.Translate(transl.x[1], transl.y[1], transl.z[1]) |> Meshes.Scale(100.0) |> Meshes.Rotate(rot)

@@ -125,7 +125,7 @@ end
 
 # ╔═╡ 38f5aaac-88dd-4b94-a0c1-954201c38857
 md"""
-We can see that SPAD values are quite conservative according to the rank of the leaf on the palm. This time, only plant 1 and 5 have oldest leaves with lower values, which is an indicator of nitrogen remobilization.
+We can see that SPAD values are quite conservative according to the rank of the leaf on the palm. This time, only plant 1 and 4 have oldest leaves with lower values, which is an indicator of nitrogen remobilization.
 
 !!! note
 	The rank is the reverse of the leaf number, rank 1 is the youngest leaf (e.g. leaf 10), rank 10 the oldest (*e.g.* leaf 1)
@@ -202,7 +202,7 @@ end
 
 # ╔═╡ ade36dec-d71f-47a8-98d0-b9c9be02b9d3
 md"""
-If we look at the points taken before the ecotron experiment to remove the dynamic, we see that indeed VcMaxRef depends on the rank of the leaf, with young leaves having low values, more mature leaves have the highest values, and decreasing with age (except for plant 5 that has a very high value for its youngest leaf):
+If we look at the points taken before the ecotron experiment to remove the dynamic, we see that indeed VcMaxRef depends on the rank of the leaf, with young leaves having low values, more mature leaves have the highest values, and decreasing with age (except for plant 4 that has a very high value for its youngest leaf):
 """
 
 # ╔═╡ e0018619-7cf4-4b42-a543-5f09fb637066

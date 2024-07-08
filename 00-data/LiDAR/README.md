@@ -17,7 +17,7 @@ There are also three other files:
 - `RecapEcotronSelectionDate.xlsx`: the dates of the lidar scans (on which the meshes were reconstructed) and dates of the scenarios
 - `surface.csv`: the evolution of the surface of each leaf in the plant over time, computed from the reconstructed meshes
 
-The archives where generated with the following commands:
+The archives were generated with the following commands:
 
 ```bash
 tar -cjvf lidar.tar.bz2 -C ./lidar .

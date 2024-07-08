@@ -62,7 +62,7 @@ begin
 end
 
 # Visualize the reconstructions and the lidar point-clouds:
-# Choose a plant (1, 2, 3 or 5):
+# Choose a plant (1, 2, 3 or 4):
 plant = 1
 
 OPFs = readdir("10-reconstruction/reconstructions", join=true)

@@ -8,3 +8,9 @@ Then, masks point coordinates were extracted and saved in the tar `00-data/0-raw
 - P<plant ID>F<leaf ID>-S<session ID>-<start time>-<end time>_XY_Coordinates_V<revision version>.csv
 
 where `<plant ID>` is the plant ID (1-4), `<leaf ID>` is the leaf ID, `<start time>` is the start time of application of the mask, `<end time>` is the end time of application of the mask, and `<revision version>` is the revision version of the mask (it was modified as soon as a leaf moves). So we have in the first case for example `P3F3-S1-S2-S3-20210308_174136-20210309_140728_XY_Coordinates.csv` for the third leaf of the third plant, between 2021-03-08T17:41:36 and 2021-03-09T14:07:28.
+
+The archive was generated with the following command:
+
+```bash
+tar -cjvf coordinates.tar.bz2 -C ./coordinates .
+```
