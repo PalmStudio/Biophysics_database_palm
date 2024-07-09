@@ -47,7 +47,7 @@ Measurements included:
 
 This repository does not contain the raw thermal images and the raw lidar data taken during the experiment, because they are too large to be stored on Git (images: 60Go, 24Go when compressed). The data is available on a dedicated repository in Zenodo.
 
-Here are the reconstructions of the plants over time:
+Here are the reconstructions of the plants on top of the point clouds, over time:
 
 ![](11-outputs/Reconstructions_LiDAR_all.png)
 
