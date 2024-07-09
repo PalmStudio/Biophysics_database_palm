@@ -49,11 +49,11 @@ This repository does not contain the raw thermal images and the raw lidar data t
 
 Here are the reconstructions of the plants on top of the point clouds, over time:
 
-![](11-outputs/Reconstructions_LiDAR_all.png)
+![3d reconstruction](11-outputs/Reconstructions_LiDAR_all.png)
 
 ## Folder structure
 
-```         
+```text
 This folder
 ├── 00-data                        --> Contains raw, unprocessed data
 │   ├── lidar                      --> lidar data for the 3D reconstruction of the plants
@@ -66,7 +66,7 @@ This folder
 │   ├── door_opening               --> Door opening data (when the door of the chamber was opened / closed)
 │   │   ├── Mic3_door_opening.csv  --> Door opening data for the Mic3 chamber (Mic means microcosm)
 │   │   └── Mic4_door_opening.csv  --> Door opening data for the Mic4 chamber
-│   ├── morphology_and_biomass     --> Morphological and biomass data from desctruction at the end (weight, height, etc.)
+│   ├── morphology_and_biomass     --> Morphological and biomass data from destruction at the end (weight, height, etc.)
 │   │   ├── bulbs_weight.csv       --> Bulb weight data
 │   │   ├── leaves_weight.csv      --> Leaves weight data
 │   │   └── roots_weight.csv       --> Roots weight data
@@ -96,13 +96,13 @@ This folder
 │       └── walz.tar.bz2           --> Walz data archive
 ├── 02-climate                      --> Contains processed climatic data
 │   ├── climate_mic3.csv           --> Climatic data for Mic3
-│   ├── climate_mic3_10min.csv     --> Climatic data for Mic3, aggregated to 10 minutes matching CO2 inut/output measurement cycle
+│   ├── climate_mic3_10min.csv     --> Climatic data for Mic3, aggregated to 10 minutes matching CO2 input/output measurement cycle
 │   ├── climate_mic3_5min.csv      --> Climatic data for Mic3, aggregated to 5 minutes matching CO2 output measurement
 │   ├── climate_mic4.csv           --> Climatic data for Mic4
 │   └── climate_notebook.jl        --> Notebook to process climatic data
 ├── 03-time-synchronization         --> Computation of the data to synchronize all sensors to UTC time
 │   ├── README.md
-│   ├── correspondance_scale_camera_time.csv --> Correspondance between the scale and the thermal camera
+│   ├── match_scale_camera_time.csv --> Match between the scale and the thermal camera
 │   ├── time_synchronization.csv             --> Time synchronization data
 │   └── time_synchronization_notebook.jl     --> Notebook to compute time synchronization data
 ├── 04-CO2                          --> Processed CO2 data
@@ -110,7 +110,7 @@ This folder
 │   └── CO2_notebook.jl            --> Notebook to process CO2 data
 ├── 05-thermal_camera_measurements  --> Processed thermal camera data
 │   ├── 1-compute_leaf_temperature.jl --> Script to compute leaf temperature (careful, it takes several hours to process)
-│   ├── 2-vizualise_temperature.jl --> Notebook to vizualise processed leaf temperature
+│   ├── 2-visualize_temperature_notebook.jl --> Notebook to visualize processed leaf temperature
 │   └── leaf_temperature.csv.bz2   --> Leaf temperature data (at 1min time-scale, but with information to match with CO2 fluxes)
 ├── 06-transpiration                --> Processed plant transpiration data
 │   ├── README.md
@@ -185,7 +185,7 @@ The database has the following columns:
 | DateTime_start_CO2_in    | UTC              | ISODateTimeFormat | DateTime of the start of the CO2 input measurement (CO2 was measured for 5min input, then 5min output, end of CO2 output is equal to `DateTime_end`)           |     |
 | DateTime_start_sequence  | UTC              | ISODateTimeFormat | DateTime of the start of the sequence                                                                                                                          |     |
 | DateTime_end_sequence    | UTC              | ISODateTimeFormat | DateTime of the end of the sequence                                                                                                                            |     |
-| CO2_outflux_umol_s       | umol plant-1 s-1 | Float             | CO2 flux measured from the chamber (outflux from the chamber)                                                                                                  |     |
+| CO2_outflux_umol_s       | μmol plant⁻¹ s⁻¹ | Float             | CO2 flux measured from the chamber (outflux from the chamber)                                                                                                  |     |
 | CO2_dry_input            | ppm              | Float             | CO2 concentration of the input flux in the chamber                                                                                                             |     |
 | CO2_dry_output           | ppm              | Float             | CO2 concentration of the output flux of the chamber                                                                                                            |     |
 | Ta_instruction           | Celsius degree   | Float             | Instruction on the air temperature of the chamber                                                                                                              |     |
@@ -193,38 +193,38 @@ The database has the following columns:
 | Rh_instruction           | \%               | Float             | Instruction on the relative humidity in the chamber                                                                                                            |     |
 | Rh_measurement           | \%               | Float             | Effective relative humidity in the chamber (measurement)                                                                                                       |     |
 | R_instruction            | \%               | Float             | Instruction on the radiation in the chamber (0 = turned off, 1 = maximal intensity)                                                                            |     |
-| R_measurement            | umol m-2 s-1     | Float             | Effective radiation in the chamber (measurement)                                                                                                               |     |
+| R_measurement            | μmol m⁻² s⁻¹     | Float             | Effective radiation in the chamber (measurement)                                                                                                               |     |
 | CO2_ppm                  | ppm              | Float             | CO2 concentration in the chamber                                                                                                                               |     |
 | CO2_influx               |                  | Float             | Input CO2 flux of the chamber                                                                                                                                  |     |
 | CO2_instruction          | ppm              | Float             | Instruction for the CO2 concentration in the chamber                                                                                                           |     |
-| transpiration_linear_g_s | g plant-1 s-1    | Float             | Transpiration of the plant, computed from the rate of change within the 5min window using the slope of a linear regression (uses all points)                   |     |
-| transpiration_diff_g_s   | g plant-1 s-1    | Float             | Transpiration of the plant, computed from the difference in weight between the begining and end of the time-step (uses fewer points)                           |     |
+| transpiration_linear_g_s | g plant⁻¹ s⁻¹    | Float             | Transpiration of the plant, computed from the rate of change within the 5min window using the slope of a linear regression (uses all points)                   |     |
+| transpiration_diff_g_s   | g plant⁻¹ s⁻¹    | Float             | Transpiration of the plant, computed from the difference in weight between the beginning and end of the time-step (uses fewer points)                           |     |
 | Tl_mean                  | Celsius degree   | Float             | Average leaf temperature of all pixels in the mask for the leaf                                                                                                |     |
 | Tl_min                   | Celsius degree   | Float             | Minimum leaf temperature of all pixels in the mask for the leaf                                                                                                |     |
 | Tl_max                   | Celsius degree   | Float             | Maximum leaf temperature of all pixels in the mask for the leaf                                                                                                |     |
 | Tl_std                   | Celsius degree   | Float             | Standard deviation of the leaf temperature of all pixels in the mask for the leaf                                                                              |     |
 | Date_walz                | UTC              | ISODateFormat     | Date of measurement of the response curves on which the parameters are fitted on (VcMaxRef, JMaxRef, RdRef, g0 and g1)                                         |     |
 | Leaf_walz                | ID               | Int               | ID of the leaf on which the response curve was measured                                                                                                        |     |
-| VcMaxRef                 | umol m-2 s-1     | Float             | Reference VcMax, fitted on the response curve preceding the plant sequence                                                                                     |     |
-| JMaxRef                  | umol m-2 s-1     | Float             | Reference JMax, fitted on the response curve preceding the plant sequence                                                                                      |     |
-| RdRef                    | umol m-2 s-1     | Float             | Reference Rd, fitted on the response curve preceding the plant sequence                                                                                        |     |
-| TPURef                   | umol m-2 s-1     | Float             | Reference TPU, fitted on the response curve preceding the plant sequence                                                                                       |     |
+| VcMaxRef                 | μmol m⁻² s⁻¹     | Float             | Reference VcMax, fitted on the response curve preceding the plant sequence                                                                                     |     |
+| JMaxRef                  | μmol m⁻² s⁻¹     | Float             | Reference JMax, fitted on the response curve preceding the plant sequence                                                                                      |     |
+| RdRef                    | μmol m⁻² s⁻¹     | Float             | Reference Rd, fitted on the response curve preceding the plant sequence                                                                                        |     |
+| TPURef                   | μmol m⁻² s⁻¹     | Float             | Reference TPU, fitted on the response curve preceding the plant sequence                                                                                       |     |
 | Tr                       | Celsius degree   | Float             | Reference temperature on which the parameters were fitted                                                                                                      |     |
-| g0                       | mol[CO2] m-2 s-1 | Float             | g0, fitted on the response curve preceding the plant sequence                                                                                                  |     |
+| g0                       | mol[CO2] m⁻² s⁻¹ | Float             | g0, fitted on the response curve preceding the plant sequence                                                                                                  |     |
 | g1                       | kPa\^0.5         | Float             | g1, fitted on the response curve preceding the plant sequence                                                                                                  |     |
-| VcMaxRef_mean_leaf       | umol m-2 s-1     | Float             | Reference VcMax, averaged on all measurements of this leaf during the whole experiment                                                                         |     |
-| JMaxRef_mean_leaf        | umol m-2 s-1     | Float             | Reference JMax, averaged on all measurements of this leaf during the whole experiment                                                                          |     |
-| RdRef_mean_leaf          | umol m-2 s-1     | Float             | Reference RdMax, averaged on all measurements of this leaf during the whole experiment                                                                         |     |
-| TPURef_mean_leaf         | umol m-2 s-1     | Float             | Reference TPU, averaged on all measurements of this leaf during the whole experiment                                                                           |     |
-| Tr_mean_leaf             | umol m-2 s-1     | Float             | Reference temperature on which the parameters were fitted, averaged over all measurements on that leaf during the whole experiment                             |     |
-| g0_mean_leaf             | mol[CO2] m-2 s-1 | Float             | g0, averaged on all measurements of this leaf during the whole experiment                                                                                      |     |
+| VcMaxRef_mean_leaf       | μmol m⁻² s⁻¹     | Float             | Reference VcMax, averaged on all measurements of this leaf during the whole experiment                                                                         |     |
+| JMaxRef_mean_leaf        | μmol m⁻² s⁻¹     | Float             | Reference JMax, averaged on all measurements of this leaf during the whole experiment                                                                          |     |
+| RdRef_mean_leaf          | μmol m⁻² s⁻¹     | Float             | Reference RdMax, averaged on all measurements of this leaf during the whole experiment                                                                         |     |
+| TPURef_mean_leaf         | μmol m⁻² s⁻¹     | Float             | Reference TPU, averaged on all measurements of this leaf during the whole experiment                                                                           |     |
+| Tr_mean_leaf             | μmol m⁻² s⁻¹     | Float             | Reference temperature on which the parameters were fitted, averaged over all measurements on that leaf during the whole experiment                             |     |
+| g0_mean_leaf             | mol[CO2] m⁻² s⁻¹ | Float             | g0, averaged on all measurements of this leaf during the whole experiment                                                                                      |     |
 | g1_mean_leaf             | kPa\^0.5         | Float             | g1, averaged on all measurements of this leaf during the whole experiment                                                                                      |     |
-| VcMaxRef_mean_plant      | umol m-2 s-1     | Float             | Reference VcMax, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                    |     |
-| JMaxRef_mean_plant       | umol m-2 s-1     | Float             | Reference JMax, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                     |     |
-| RdRef_mean_plant         | umol m-2 s-1     | Float             | Reference Rd, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                       |     |
-| TPURef_mean_plant        | umol m-2 s-1     | Float             | Reference TPU, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                      |     |
-| Tr_mean_plant            | umol m-2 s-1     | Float             | Reference temperature of the measurements, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                          |     |
-| g0_mean_plant            | mol[CO2] m-2 s-1 | Float             | g0, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                                 |     |
+| VcMaxRef_mean_plant      | μmol m⁻² s⁻¹     | Float             | Reference VcMax, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                    |     |
+| JMaxRef_mean_plant       | μmol m⁻² s⁻¹     | Float             | Reference JMax, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                     |     |
+| RdRef_mean_plant         | μmol m⁻² s⁻¹     | Float             | Reference Rd, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                       |     |
+| TPURef_mean_plant        | μmol m⁻² s⁻¹     | Float             | Reference TPU, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                      |     |
+| Tr_mean_plant            | μmol m⁻² s⁻¹     | Float             | Reference temperature of the measurements, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                          |     |
+| g0_mean_plant            | mol[CO2] m⁻² s⁻¹ | Float             | g0, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                                 |     |
 | g1_mean_plant            | kPa\^0.5         | Float             | g1, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                                 |     |
 |                          |                  |                   |                                                                                                                                                                |     |
 |                          |                  |                   |                                                                                                                                                                |     |
@@ -253,16 +253,15 @@ julia -e 'using Pluto; Pluto.run(notebook = "04-CO2/CO2_notebook.jl")'
 
 ### Leaf temperature
 
--   Computation:
+- Computation: the computation of the leaf temperature is done in a julia script rather than a Pluto notebook, because it takes a long time to process. You can find the script in the `05-thermal_camera_measurements/1-compute_leaf_temperature.jl`.
+
+> [!WARNING]  
+> This notebook takes several hours to process, as it computes the leaf temperature for each leaf of each plant for each image. It is recommended to run it on a powerful computer, and knowing what you're doing.
+
+- Visualization:
 
     ``` bash
-    #julia -e 'using Pluto; Pluto.run(notebook = "05-thermal_camera_measurements/1-compute_leaf_temperature.jl")'
-    ```
-
--   Visualization:
-
-    ``` bash
-    julia -e 'using Pluto; Pluto.run(notebook = "05-thermal_camera_measurements/2-vizualise_temperature_notebook.jl")'
+    julia -e 'using Pluto; Pluto.run(notebook = "05-thermal_camera_measurements/2-visualize_temperature_notebook.jl")'
     ```
 
 ### H₂O fluxes (transpiration)
@@ -346,11 +345,11 @@ Watch [this video](https://www.youtube.com/watch?v=jdEqGOv8ycc&list=PLLiJ249IkzR
 
 If you want to use the resources from this repository locally, the best way is to download a local copy (or clone it if you know GIT). To do so, click on the green button in this page called "Code":
 
-![](www_readme/clone_button.png)
+![clone button](www_readme/clone_button.png)
 
 And choose "Download ZIP":
 
-![](www_readme/Download_ZIP.png)
+![download button](www_readme/Download_ZIP.png)
 
 Then, unzip the file, and open the directory in VS Code, or just open Julia in a command prompt / terminal in this repository and use *e.g.*:
 

@@ -61,7 +61,7 @@ The method presented above was applyied manually, and the resulting data was log
 
 # ╔═╡ c5ca4dca-bda0-462c-8a97-e6dfdff7079d
 df = let
-    data = CSV.read("correspondance_scale_camera_time.csv", DataFrame)
+    data = CSV.read("match_scale_camera_time.csv", DataFrame)
 
     data.thermal_camera = DateTime.(data.thermal_camera, dateformat"yyyymmdd_HHMMSS_R")
     data.door_opening = [ismissing(i) ? missing : DateTime(i, dateformat"yyyy-mm-dd HH:MM:SS") for i in data.door_opening]
