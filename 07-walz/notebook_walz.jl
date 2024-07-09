@@ -8,7 +8,7 @@ using InteractiveUtils
 begin
     using CSV, DataFrames
     using CodecBzip2, Tar # For the compression of the resulting CSV
-    using PlantSimEngine, PlantBiophysics, PlantMeteo
+    using PlantSimEngine, PlantBiophysics
     using Dates
     using Impute # for locf, equivalent of R's fill function
     using PlutoUI
@@ -68,9 +68,6 @@ walz_df = let
     filter!(row -> !ismissing(row.Yield), df_)
 end
 
-# ╔═╡ c72237f5-6249-4f40-b718-fe500b105079
-
-
 # ╔═╡ 53ee1090-5b78-4cce-826a-eb76dd7685e3
 md"""
 ## Fitting
@@ -93,6 +90,7 @@ walz_df_CO2 = filter(x -> x.curve != "Rh Curve" && x.curve != "light Curve", wal
 
 # ╔═╡ 01c8345e-0cf8-4b59-9c98-e217b5bf877f
 df_fit_CO2 = let
+	Tgrowth = Thome = 25.0
     gdf = groupby(walz_df_CO2, [:Date, :Plant, :Leaf])
     res = []
     for group_df in gdf
@@ -100,7 +98,15 @@ df_fit_CO2 = let
             res,
             merge(
                 (Date=unique(group_df.Date)[1], Plant=unique(group_df.Plant)[1], Leaf=unique(group_df.Leaf)[1]),
-                fit(Fvcb, group_df; Tᵣ=25.0)
+                fit(Fvcb, group_df; 				 
+					# From Table 2 in Kumarathunge et al. (2019): 
+					Tᵣ=25.0, 
+                    Eₐᵥ=(42.6 + 1.14 * Tgrowth) * 1e3,
+                    Eₐⱼ=40.71 * 1e3,
+                    Δₛᵥ=645.13 − 0.38 * Tgrowth,
+                    Δₛⱼ=658.77 - 0.84 * Thome - 0.52(Tgrowth - Thome),
+                    # Note: we keep both Hdj and Hdv at 200kJ/mol as in Dreyer et al., 2001 and Medlyn et al., 2002.)
+				)
             )
         )
     end
@@ -113,10 +119,13 @@ Average values:
 """
 
 # ╔═╡ c4e48708-1e9e-46e2-8178-c1e77d3e7e14
+# ╠═╡ disabled = true
+#=╠═╡
 df_mean = combine(
 	df_fit_CO2,
 	[:VcMaxRef, :JMaxRef, :RdRef, :TPURef, :Tᵣ] .=> mean .=> [:VcMaxRef, :JMaxRef, :RdRef, :TPURef, :Tᵣ]
 )
+  ╠═╡ =#
 
 # ╔═╡ 1f4d3984-04a8-4638-89da-4d3bef045601
 md"""
@@ -124,6 +133,7 @@ The values are in par with the ones expected from a tropical plant and compared 
 """
 
 # ╔═╡ 5bf575b6-d687-4af3-85f7-9cd6cc211044
+#=╠═╡
 let
 	Thome = 25.0
 	DataFrame(
@@ -131,6 +141,7 @@ let
 		JMaxRef = only(df_mean.VcMaxRef) * (2.56 - 0.0375 * Thome - 0.0202),
 	)
 end
+  ╠═╡ =#
 
 # ╔═╡ ec8aee54-9c07-454b-9000-1e0c561a9c87
 md"""
@@ -166,7 +177,7 @@ df_sim_A = let
                     Δₛⱼ=658.77 - 0.84 * Thome - 0.52(Tgrowth - Thome),
                     # Note: we keep both Hdj and Hdv at 200kJ/mol as in Dreyer et al., 2001 and Medlyn et al., 2002.
                 ),
-                status=(Tₗ=g.Tₗ, PPFD=g.PPFD, Cᵢ=g.Cᵢ)
+                status=(Tₗ=g.Tₗ, aPPFD=g.aPPFD, Cᵢ=g.Cᵢ)
             )
 
         run!(leaf)
@@ -226,12 +237,22 @@ df_fit_Gs = let
             merge(
                 (Date=unique(group_df.Date)[1], Plant=unique(group_df.Plant)[1], Leaf=unique(group_df.Leaf)[1]),
                 (; g0, g1)
-                #fit(Medlyn, group_df)
             )
         )
     end
     DataFrame(res)
 end
+
+# ╔═╡ 5262ed6a-4d17-4521-858f-04e1f8e3156b
+md"""
+The average results for the stomatal conductance parameters is as follows:
+"""
+
+# ╔═╡ fadbd8a8-ac66-4ef7-be17-7269927d99cf
+df_mean_gs = combine(
+	df_fit_Gs,
+	[:g0, :g1] .=> (x -> mean(skipmissing(x))) .=> [:g0, :g1]
+)
 
 # ╔═╡ 0f475632-0159-46e9-8734-832d948215da
 md"""
@@ -243,9 +264,6 @@ md"""
 md"""
 #### Visualization
 """
-
-# ╔═╡ f8b6cc1b-fc26-4c39-bdf4-38d829615085
-names(walz_df_Gs)
 
 # ╔═╡ a91b82a7-8253-4966-9c02-bf511fa40179
 df_sim_gs = let
@@ -399,7 +417,6 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Impute = "f7bf1975-0170-51b9-8c5f-a992d46b9575"
 PlantBiophysics = "7ae8fcfa-76ad-4ec6-9ea7-5f8f5e2d6ec9"
-PlantMeteo = "4630fe09-e0fb-4da5-a846-781cb73437b6"
 PlantSimEngine = "9a576370-710b-4269-adf9-4f603a9c6423"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
@@ -413,9 +430,8 @@ CairoMakie = "~0.10.2"
 CodecBzip2 = "~0.8.3"
 DataFrames = "~1.6.1"
 Impute = "~0.6.10"
-PlantBiophysics = "~0.9.2"
-PlantMeteo = "~0.3.0"
-PlantSimEngine = "~0.6.1"
+PlantBiophysics = "~0.12.0"
+PlantSimEngine = "~0.10.1"
 Plots = "~1.38.7"
 PlutoUI = "~0.7.50"
 """
@@ -426,7 +442,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "d1dcc1e9766a31482a1a84ce464d641b316ad374"
+project_hash = "f8c1e7c150393751448449074e97bf5215bc81da"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1564,10 +1580,10 @@ uuid = "e6f89c97-d47a-5376-807f-9c37f3926c36"
 version = "1.0.3"
 
 [[deps.LsqFit]]
-deps = ["Distributions", "ForwardDiff", "LinearAlgebra", "NLSolversBase", "OptimBase", "Random", "StatsBase"]
-git-tree-sha1 = "00f475f85c50584b12268675072663dfed5594b2"
+deps = ["Distributions", "ForwardDiff", "LinearAlgebra", "NLSolversBase", "Printf", "StatsAPI"]
+git-tree-sha1 = "40acc20cfb253cf061c1a2a2ea28de85235eeee1"
 uuid = "2fda8390-95c7-5789-9bda-21331edee243"
-version = "0.13.0"
+version = "0.15.0"
 
 [[deps.MIMEs]]
 git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
@@ -1636,9 +1652,9 @@ version = "0.3.2"
 
 [[deps.MetaGraphsNext]]
 deps = ["Graphs", "JLD2", "SimpleTraits"]
-git-tree-sha1 = "500e526a1f76b73ab7522f9580f86abef895de68"
+git-tree-sha1 = "a385fe5aa1384647e55c0c8773457b71e9b08518"
 uuid = "fa8bd995-216d-47f1-8a91-f3b68fbeb377"
-version = "0.5.0"
+version = "0.7.0"
 
 [[deps.MicroCollections]]
 deps = ["BangBang", "InitialValues", "Setfield"]
@@ -1672,9 +1688,9 @@ version = "2023.1.10"
 
 [[deps.MultiScaleTreeGraph]]
 deps = ["AbstractTrees", "DataFrames", "Dates", "DelimitedFiles", "Graphs", "MetaGraphsNext", "MutableNamedTuples", "OrderedCollections", "Printf", "SHA", "XLSX"]
-git-tree-sha1 = "4f848dd8746f72efd92e67c28262a7cbddbfaf62"
+git-tree-sha1 = "7a1e10b3bbfe5f327518e99a0d2d26728eb26718"
 uuid = "dd4a991b-8a45-4075-bede-262ee62d5583"
-version = "0.10.1"
+version = "0.14.1"
 
 [[deps.Multisets]]
 git-tree-sha1 = "8d852646862c96e226367ad10c8af56099b4047e"
@@ -1816,12 +1832,6 @@ version = "1.9.4"
     [deps.Optim.weakdeps]
     MathOptInterface = "b8f27783-ece8-5eb3-8dc8-9495eed66fee"
 
-[[deps.OptimBase]]
-deps = ["NLSolversBase", "Printf", "Reexport"]
-git-tree-sha1 = "9cb1fee807b599b5f803809e85c81b582d2009d6"
-uuid = "87e2bd06-a317-5318-96d9-3ecbac512eee"
-version = "2.0.2"
-
 [[deps.Opus_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "51a08fb14ec28da2ec7a927c4337e4332c2a4720"
@@ -1916,21 +1926,21 @@ version = "0.3.3"
 
 [[deps.PlantBiophysics]]
 deps = ["CSV", "DataFrames", "Dates", "LsqFit", "OrderedCollections", "PlantMeteo", "PlantSimEngine", "RecipesBase", "Statistics", "YAML"]
-git-tree-sha1 = "a3c53ea2f575c82905fbce63df7c4c219518cc48"
+git-tree-sha1 = "3c43a00d6f70ee5f8910fc6488547feaa7ad630e"
 uuid = "7ae8fcfa-76ad-4ec6-9ea7-5f8f5e2d6ec9"
-version = "0.9.2"
+version = "0.12.0"
 
 [[deps.PlantMeteo]]
-deps = ["CSV", "DataAPI", "DataFrames", "Dates", "HTTP", "JSON", "Statistics", "Tables", "Term", "YAML"]
-git-tree-sha1 = "426a28dcbbe2cb59aec71411a75c1c38c87e3f24"
+deps = ["CSV", "Crayons", "DataAPI", "DataFrames", "Dates", "HTTP", "JSON", "PrettyTables", "Statistics", "Tables", "Term", "YAML"]
+git-tree-sha1 = "2abe6662473f25d50e43a0c70d02dfaf48eee661"
 uuid = "4630fe09-e0fb-4da5-a846-781cb73437b6"
-version = "0.3.1"
+version = "0.6.0"
 
 [[deps.PlantSimEngine]]
-deps = ["AbstractTrees", "CSV", "DataFrames", "FLoops", "Markdown", "MultiScaleTreeGraph", "PlantMeteo", "Statistics", "Tables", "Term"]
-git-tree-sha1 = "81254f7e63412cea24faeccbe3047da366b63388"
+deps = ["AbstractTrees", "CSV", "DataAPI", "DataFrames", "FLoops", "Markdown", "MultiScaleTreeGraph", "PlantMeteo", "Statistics", "Tables", "Term"]
+git-tree-sha1 = "e19f42d8c1d91dadd7dccabd7445c77590be3bc0"
 uuid = "9a576370-710b-4269-adf9-4f603a9c6423"
-version = "0.6.1"
+version = "0.10.1"
 
 [[deps.PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
@@ -2318,9 +2328,9 @@ version = "1.7.0"
 
 [[deps.StatsBase]]
 deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "d1bf48bfcc554a3761a133fe3a9bb01488e06916"
+git-tree-sha1 = "5cf7606d6cef84b543b483848d4ae08ad9832b21"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.33.21"
+version = "0.34.3"
 
 [[deps.StatsFuns]]
 deps = ["HypergeometricFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
@@ -2560,9 +2570,9 @@ version = "1.6.1"
 
 [[deps.XLSX]]
 deps = ["Artifacts", "Dates", "EzXML", "Printf", "Tables", "ZipFile"]
-git-tree-sha1 = "d6af50e2e15d32aff416b7e219885976dc3d870f"
+git-tree-sha1 = "319b05e790046f18f12b8eae542546518ef1a88f"
 uuid = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
-version = "0.9.0"
+version = "0.10.1"
 
 [[deps.XML2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Zlib_jll"]
@@ -2875,7 +2885,6 @@ version = "1.4.1+1"
 # ╠═176f994b-12d4-48d0-8c10-bb94b8ec9dcb
 # ╠═b6a20bdf-4e24-45a7-b778-7465954d6ba8
 # ╠═ab0a1dbd-825c-4b69-8f6a-78bc4dc96c68
-# ╠═c72237f5-6249-4f40-b718-fe500b105079
 # ╟─53ee1090-5b78-4cce-826a-eb76dd7685e3
 # ╟─62d95a7e-a6b5-47b9-89f3-0dbdee3d8b6f
 # ╠═552242a4-bd77-4997-8057-cd27ec580e38
@@ -2892,9 +2901,10 @@ version = "1.4.1+1"
 # ╟─aa5fd3d4-2c50-4b3d-a228-dd92af40ce1b
 # ╠═0f338f51-62be-408f-89ae-5c07adcfc4cf
 # ╠═f6e1a928-d645-449f-bdfa-abb9c9eebf0a
+# ╟─5262ed6a-4d17-4521-858f-04e1f8e3156b
+# ╟─fadbd8a8-ac66-4ef7-be17-7269927d99cf
 # ╟─0f475632-0159-46e9-8734-832d948215da
 # ╟─6f2a890e-5210-4685-8e86-1406e6763cdb
-# ╠═f8b6cc1b-fc26-4c39-bdf4-38d829615085
 # ╠═a91b82a7-8253-4966-9c02-bf511fa40179
 # ╠═6570d865-61b6-4708-ae0e-a67da7967bac
 # ╟─53a229b0-0725-4284-9418-8348acfbd492
