@@ -552,8 +552,8 @@ pTemp_all = let
     )
     #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
     p = data(df_) *
-        mapping(:DateTime_start => Time => "Time", :Tl_mean, color=:Leaf, row=:Scenario, col=:Plant => string, marker=:Leaf => string) *
-        visual(Lines)
+        mapping(:DateTime_start => Time => "Time", :Tl_mean, color=:Leaf, row=:Scenario, col=:Plant => string) *
+        visual(Scatter)
     draw(p, axis=(width=150, height=200, xticks=datetimeticks(df_.DateTime_start, Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
 end
 
