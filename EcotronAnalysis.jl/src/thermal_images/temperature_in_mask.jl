@@ -125,7 +125,7 @@ function mask_temperature(temp_mat, mask)
     buffer = []
     push!(vector_mask, vector_mask[1]) # Close the polygon by adding the first point as the last point
     [
-        if inpolygon([x, y], vector_mask) != 0
+        if PolygonOps.inpolygon([x, y], vector_mask) != 0
             push!(buffer, temp_mat[x, y])
         end for x in collect(1:size(temp_mat)[1]), y in collect(1:size(temp_mat)[2])
     ]
