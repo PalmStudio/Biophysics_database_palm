@@ -107,6 +107,31 @@ df_fit_CO2 = let
     DataFrame(res)
 end
 
+# ╔═╡ ff1fbadb-759c-4a7d-9511-798c56d65430
+md"""
+Average values:
+"""
+
+# ╔═╡ c4e48708-1e9e-46e2-8178-c1e77d3e7e14
+df_mean = combine(
+	df_fit_CO2,
+	[:VcMaxRef, :JMaxRef, :RdRef, :TPURef, :Tᵣ] .=> mean .=> [:VcMaxRef, :JMaxRef, :RdRef, :TPURef, :Tᵣ]
+)
+
+# ╔═╡ 1f4d3984-04a8-4638-89da-4d3bef045601
+md"""
+The values are in par with the ones expected from a tropical plant and compared with the values expected from the computations presented in Kumarathunge et al. (2019):
+"""
+
+# ╔═╡ 5bf575b6-d687-4af3-85f7-9cd6cc211044
+let
+	Thome = 25.0
+	DataFrame(
+		VcMaxRef = only(df_mean.VcMaxRef),
+		JMaxRef = only(df_mean.VcMaxRef) * (2.56 - 0.0375 * Thome - 0.0202),
+	)
+end
+
 # ╔═╡ ec8aee54-9c07-454b-9000-1e0c561a9c87
 md"""
 #### Visualization
@@ -124,6 +149,8 @@ df_sim_A = let
     dropmissing!(df_, [:VcMaxRef, :JMaxRef, :RdRef, :TPURef])
     gdf = groupby(df_, [:Date, :Plant, :Leaf])
     dfs = []
+    Tgrowth = 25.0
+    Thome = 25.0
     for g in gdf
         leaf =
             ModelList(
@@ -131,7 +158,13 @@ df_sim_A = let
                     VcMaxRef=unique(g.VcMaxRef)[1],
                     JMaxRef=unique(g.JMaxRef)[1],
                     RdRef=unique(g.RdRef)[1],
-                    TPURef=unique(g.TPURef)[1]
+                    TPURef=unique(g.TPURef)[1],
+                    # From Table 2 in Kumarathunge et al. (2019), New Phytol: https://doi.org/10.1111/nph.15668
+                    Eₐᵥ=(42.6 + 1.14 * Tgrowth) * 1e3,
+                    Eₐⱼ=40.71 * 1e3,
+                    Δₛᵥ=645.13 − 0.38 * Tgrowth,
+                    Δₛⱼ=658.77 - 0.84 * Thome - 0.52(Tgrowth - Thome),
+                    # Note: we keep both Hdj and Hdv at 200kJ/mol as in Dreyer et al., 2001 and Medlyn et al., 2002.
                 ),
                 status=(Tₗ=g.Tₗ, PPFD=g.PPFD, Cᵢ=g.Cᵢ)
             )
@@ -348,6 +381,8 @@ CSV.write("photosynthetic_and_stomatal_parameters.csv", db)
 # ╔═╡ b19ccc25-7265-499f-b09a-9f93db13987d
 md"""
 ## References
+
+Kumarathunge, D.P., Medlyn, B.E., Drake, J.E., et al., (2019), Acclimation and adaptation components of the temperature dependence of plant photosynthesis at the global scale. New Phytol, 222: 768-784. <https://doi.org/10.1111/nph.15668>
 """
 
 # ╔═╡ d55ca10e-f28d-4691-aa99-b4bf0c9e7495
@@ -2845,6 +2880,10 @@ version = "1.4.1+1"
 # ╟─62d95a7e-a6b5-47b9-89f3-0dbdee3d8b6f
 # ╠═552242a4-bd77-4997-8057-cd27ec580e38
 # ╠═01c8345e-0cf8-4b59-9c98-e217b5bf877f
+# ╟─ff1fbadb-759c-4a7d-9511-798c56d65430
+# ╟─c4e48708-1e9e-46e2-8178-c1e77d3e7e14
+# ╟─1f4d3984-04a8-4638-89da-4d3bef045601
+# ╟─5bf575b6-d687-4af3-85f7-9cd6cc211044
 # ╟─ec8aee54-9c07-454b-9000-1e0c561a9c87
 # ╟─fd049325-e9c7-4d74-b6b4-2c5ee1c7d204
 # ╠═a6f6430e-3d06-4626-8db8-2bc06384d35b

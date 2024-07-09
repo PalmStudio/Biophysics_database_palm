@@ -361,7 +361,7 @@ Then, unzip the file, and open the directory in VS Code, or just open Julia in a
   - [x] Select days that are "clean", i.e. full data for the whole day, no door opening, etc.
   - [x] Make sure we have the 3D reconstructions for all plants and days that are clean
   - [x] Add irrigations to the database (from the transpiration db)
-  - [ ] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
+  - [x] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
   - [ ] For the fact that CO2 800ppm is simulated higher than CO2 600ppm when the observation is the opposite, see correction of Medlyn's model in Dewar et al. 2018 (New Phytologist), eq.11 in the paper that is the same model than Medlyn, but removes Gamma\* to Ca in the model.
 - [ ] Make a release of the data on Zenodo
 - [ ] Reconstruct the plants in 3d:
