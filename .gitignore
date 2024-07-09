@@ -59,3 +59,4 @@
 *.bz2
 06-transpiration/transpiration_10min.csv.bz2
 paper/.Rhistory
+.Rhistory
