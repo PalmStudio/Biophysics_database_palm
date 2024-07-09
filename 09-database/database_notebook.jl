@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.42
+# v0.19.43
 
 using Markdown
 using InteractiveUtils
@@ -7,11 +7,7 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try
-            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-        catch
-            b -> missing
-        end
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -235,23 +231,6 @@ md"""
 md"""
 ### CO2 flux
 """
-
-# ╔═╡ 8b1a5acc-bb4c-40f9-a63a-2b7f4039c983
-# ╠═╡ disabled = true
-#=╠═╡
-pCO2_all = let
-	df_ = dropmissing(db_10min, [:DateTime_end, :CO2_outflux_umol_s,])
-	transform!(
-		groupby(df_, [:Plant, :Scenario, :Sequence]),
-		:DateTime_start => (x -> 1:length(x)) => :time_numeric
-	)
-    #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
-    p = data(df_) *
-        mapping(:DateTime_start => Time => "Time", :CO2_outflux_umol_s, color=:Sequence, row = :Scenario, col = :Plant => string, group = :DateTime_start => Time => "Time") *
-        visual(Lines)
-    draw(p, axis=(width=150, height=200, xticks = datetimeticks(df_.DateTime_start,  Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
-end
-  ╠═╡ =#
 
 # ╔═╡ 248ebaab-c078-4c63-8247-57db235f3401
 md"""
@@ -478,6 +457,7 @@ db_5min = let
         :CO2_instruction,
         :transpiration_g_s => :transpiration_linear_g_s,
         :transpiration_diff_g_s,
+		:irrigation,
         :Tl_mean,
         :Tl_min,
         :Tl_max,
@@ -506,12 +486,13 @@ db_5min = let
         db_,
         :DateTime_start,
         :DateTime_end,
-        #:Plant => ByRow(x -> parse(Int, x[2])) => :Plant,
-        :Leaf,
-        :Scenario,
-        :Sequence,
+		:Scenario, :Sequence, 
+		:Plant, :Leaf, 
+		:DateTime_start_sequence, :DateTime_end_sequence,
         :
     )
+
+	filter!(row -> !ismissing(row.Scenario) && !ismissing(row.Plant), db_)
 
     db_
 end
@@ -649,6 +630,7 @@ db_10min = let
         :CO2_instruction,
         :transpiration_g_s => :transpiration_linear_g_s,
         :transpiration_diff_g_s,
+		:irrigation,
         :Tl_mean,
         :Tl_min,
         :Tl_max,
@@ -673,17 +655,18 @@ db_10min = let
         :Tᵣ_mean_plant => :Tr_mean_plant
     )
 
-    # Re-order columns:
+	# Re-order columns:
     select!(
         db_,
         :DateTime_start,
         :DateTime_end,
-        #:Plant => ByRow(x -> parse(Int, x[2])) => :Plant,
-        :Leaf,
-        :Scenario,
-        :Sequence,
+		:Scenario, :Sequence, 
+		:Plant, :Leaf, 
+		:DateTime_start_sequence, :DateTime_end_sequence,
         :
     )
+
+	filter!(row -> !ismissing(row.Scenario) && !ismissing(row.Plant), db_)
 
     db_
 end
@@ -706,7 +689,7 @@ pCO2_all = let
 end
 
 # ╔═╡ 6d1e495e-edf0-4baa-bd43-affc5ce95bf0
-save("../13-outputs/CO2_fluxes_10min.png", pCO2_all)
+save("../11-outputs/CO2_fluxes_10min.png", pCO2_all)
 
 # ╔═╡ 688984ea-7c45-4dc8-97f6-94467a3caa83
 pH2O_all = let
@@ -2556,7 +2539,6 @@ version = "3.5.0+0"
 # ╟─ba1cf5f2-7459-48c5-9016-d7f998634814
 # ╟─7d58aeb1-83fd-42e1-89a8-6a822bdbae26
 # ╠═329cd584-2ca0-4bc0-90db-e1f170c6c5b5
-# ╠═8b1a5acc-bb4c-40f9-a63a-2b7f4039c983
 # ╠═bd722b73-66b5-4012-a543-ab6243e93584
 # ╠═6d1e495e-edf0-4baa-bd43-affc5ce95bf0
 # ╟─248ebaab-c078-4c63-8247-57db235f3401
