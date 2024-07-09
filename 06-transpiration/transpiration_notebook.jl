@@ -237,7 +237,7 @@ plant_sequence_raw = let
 end
 
 # ╔═╡ 31e9242c-00e2-4012-9425-4ca577ddcfd7
-plant_sequence= filter(row -> row.Event != "delete transpiration", plant_sequence_raw)
+plant_sequence = filter(row -> row.Event != "delete transpiration", plant_sequence_raw)
 # This is a day when the scale was at maximum capacity, so there is no measurement of transpiration
 
 # ╔═╡ 3ec8ee51-c26f-4771-95ef-f24e1698ea5f
@@ -393,12 +393,6 @@ mapping(
 visual(Scatter) |>
 draw
 
-# ╔═╡ b13a1652-5fc8-4ffb-821d-0e2b14032806
-transpiration_df_irrig[1000000:1200000,:]
-
-# ╔═╡ a92a4eef-1881-48d1-8bb1-36fbb98d10e2
-size(transpiration_df_irrig)
-
 # ╔═╡ 1bf9b96d-92a5-4c80-9be8-68a115114d1d
 md"""
 ## Matching CO2 time-scale
@@ -535,7 +529,7 @@ transpiration_first_5min = let
         :sequence => unique => :sequence,
         :Plant_id => unique => :Plant,
         [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
-			first_duration = Second(x[1]).value
+            first_duration = Second(x[1]).value
             x = [i.value - first_duration for i in Second.(x)]
             (x' * x) \ x' * (y[1] .- y)
         end
@@ -547,16 +541,16 @@ transpiration_first_5min = let
             else
                 # If enough data points, we take the median of the last 10 points (for the 1s time-step data with high variability)
 
-				# For the duration, we take the average duration of the first "points_mean" points, and the average duration of the last "points_mean" points, because this becomes a moving window instead of jsut a point, so we need the duration between the two moving windows. We take the average window time because the size of the window can vary (the durations vary).
-				duration_cumul_first = mean([Second(i).value for i in first(y, points_mean)])
-				duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
-				
-				return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
+                # For the duration, we take the average duration of the first "points_mean" points, and the average duration of the last "points_mean" points, because this becomes a moving window instead of jsut a point, so we need the duration between the two moving windows. We take the average window time because the size of the window can vary (the durations vary).
+                duration_cumul_first = mean([Second(i).value for i in first(y, points_mean)])
+                duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
+
+                return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
             end
         end) => :transpiration_diff_g_s,
         #:duration_cum => (x -> canonicalize(maximum(x))) => :period_computation,
         nrow,
-		:irrigation => sum,
+        :irrigation => sum => :irrigation,
     )
     rename!(df_, :DateTime_start_output => :DateTime_start)
     # Keep only the time-steps where we have 3 minutes of data to compute Tr:
@@ -606,28 +600,28 @@ transpiration_10min = let
         :sequence => unique => :sequence,
         :Plant_id => unique => :Plant,
         [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
-			first_duration = Second(x[1]).value
+            first_duration = Second(x[1]).value
             x = [i.value - first_duration for i in Second.(x)]
             (x' * x) \ x' * (y[1] .- y)
         end
         ) => :transpiration_g_s, # grammes s-1
-		# To compute as the weight difference between first last time-step(s):
+        # To compute as the weight difference between first last time-step(s):
         [:weight_no_irrig, :duration_cum] => ((x, y) -> begin
             if length(x) < 20
                 return (median(first(x, 1)) - median(last(x, 1))) / (Second(last(y)).value - Second(first(y)).value)
             else
                 # If enough data points, we take the median of the last 10 points (for the 1s time-step data with high variability)
 
-				# For the duration, we take the average duration of the first "points_mean" points, and the average duration of the last "points_mean" points, because this becomes a moving window instead of jsut a point, so we need the duration between the two moving windows. We take the average window time because the size of the window can vary (the durations vary).
-				duration_cumul_first = mean([Second(i).value for i in first(y, points_mean)])
-				duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
-				
-				return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
+                # For the duration, we take the average duration of the first "points_mean" points, and the average duration of the last "points_mean" points, because this becomes a moving window instead of jsut a point, so we need the duration between the two moving windows. We take the average window time because the size of the window can vary (the durations vary).
+                duration_cumul_first = mean([Second(i).value for i in first(y, points_mean)])
+                duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
+
+                return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
             end
         end) => :transpiration_diff_g_s,
         nrow,
-        :irrigation => sum,
-		# :weight => mean,
+        :irrigation => sum => :irrigation,
+        # :weight => mean,
         # :diff_no_irrig => sum,
         # :weight_no_irrig => (x -> [x]) => :weight_no_irrig
     )
@@ -654,16 +648,16 @@ end
 
 # ╔═╡ 505e0783-f20d-45b9-b4ff-b60983cbdb59
 let
-	date_to_plot = Date(date_plot)
-	df_ = filter(row -> row.DateTime_start >= date_to_plot && row.DateTime_start < date_to_plot + Day(1), transpiration_10min)
+    date_to_plot = Date(date_plot)
+    df_ = filter(row -> row.DateTime_start >= date_to_plot && row.DateTime_start < date_to_plot + Day(1), transpiration_10min)
     p = data(df_) *
         mapping(
             :DateTime_start => "Date (UTC)",
             [:transpiration_diff_g_s, :transpiration_g_s] .=> "Instantaneous transpiration (g)",
             color=dims(1) => renamer(["Difference", "Linear reg."]),
-			#layout=:
+            #layout=:
         ) *
-        visual(Lines, title = date_to_plot)
+        visual(Lines, title=date_to_plot)
     draw(p, legend=(position=:bottom,))
 end
 
@@ -2528,8 +2522,6 @@ version = "3.5.0+0"
 # ╠═3aee3153-75f2-49fd-b3d6-3ca75daa9492
 # ╟─a9798fa4-413c-4a68-960f-fc7306a6274b
 # ╠═c0f4f748-cadb-445d-b42d-85dda0b1bc82
-# ╠═b13a1652-5fc8-4ffb-821d-0e2b14032806
-# ╠═a92a4eef-1881-48d1-8bb1-36fbb98d10e2
 # ╟─1bf9b96d-92a5-4c80-9be8-68a115114d1d
 # ╟─9ee350a3-c669-46bf-a44b-415dd5fe3014
 # ╠═58399089-2b2f-4681-aaec-23c3d6d17a60
