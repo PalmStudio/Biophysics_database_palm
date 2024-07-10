@@ -1,5 +1,7 @@
 # Ecotron 2021
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12704284.svg)](https://doi.org/10.5281/zenodo.12704284)
+
 - [Ecotron 2021](#ecotron-2021)
   - [Folder structure](#folder-structure)
   - [Database](#database)
@@ -18,36 +20,35 @@
       - [Install Pluto](#install-pluto)
       - [Open a notebook](#open-a-notebook)
     - [Download and instantiate](#download-and-instantiate)
-  - [To do](#to-do)
 
-The Ecotron is a controlled environment facility for plants located in Montpellier, France. In this work, we made an experiment that consisted in investigating the behavior of oil palm (*Elaeis guineensis*) in response to different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day without rain, not too cold, not too hot. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapor pressure deficit.
+The Ecotron is a controlled environment facility for plants located in Montpellier, France. In this work, we did an experiment that investigated the behaviour of oil palm (*Elaeis guineensis*) in response to different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day with no rainfall and near-average air temperature and humidity. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapour pressure deficit.
 
 The height resulting conditions were the following:
 
 - 400ppm: the base condition
 - 600ppm: 50% more CO2
 - 800ppm: 100% more CO2
-- Cloudy: the same as base condition but with the PAR values based on the most cloudy day of our database from Sumatra. The dynamic of the PAR is kept as in the base condition though. The maximum PPFD was 130 µmol m² s⁻¹ at 51cm from the lamps, compared to 300 in the reference scenario.
+Cloudy: This is the same as the base condition but with the PAR values based on the most cloudy day in our database from Sumatra. The PAR dynamic is kept the same as in the base condition, though. The maximum PPFD was 130 µmol m² s⁻¹ at 51cm from the lamps, compared to 300 in the reference scenario.
 - Cold: -30% °C compared to the base condition
 - Hot: +30% °C
 - DryCold: -30% relative humidity and -30% °C
 - DryHot: -30% relative humidity and +30% °C
 
-Two microcosms where used during 2 months to measure each of four plants with each condition. The two microcosms are 114cm (Width) x 113cm (Depth) x 152cm (Height) chambers with a radiation and climate control system that can precisely control the temperature, humidity, and CO2 concentration. The first microcosm was used to store the plants, always following the base conditions, and the second one was used to perform the experiment on different conditions.
+Two microcosms were used during 2 months to measure each of the four plants with each condition. The two microcosms are 114cm (Width) x 113cm (Depth) x 152cm (Height) chambers with a radiation and climate control system that can precisely control the temperature, humidity, and CO2 concentration. The first microcosm was used to store the plants, always following the base conditions, and the second one was used to experiment on different situations.
 
 Measurements included:
 
 - CO2 fluxes with a Picarro G2101-i, measuring the CO2 concentration in the chamber for 5 minutes, and input CO2 concentration for 5 minutes
-- H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was seeled with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/ARCHIMED-platform/Precision_scale-Raspberry_Pi)
+- H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was sealed with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/ARCHIMED-platform/Precision_scale-Raspberry_Pi)
 - Leaf temperature, measured with a thermal camera
-- lidar scans of the plants each week, using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
-- Biomass and surface measurements of all organs of the plants were also performed at the end of the experiment.
+- Lidar scans of the plants are done each week using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
+- Biomass and surface measurements of all plant organs were also performed at the end of the experiment.
 - SPAD measurements of each leaf of the plants
 - A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves using a portable gas analyzer (Walz GFS-3000) for model calibration
 
-This repository does not contain the raw thermal images and the raw lidar data taken during the experiment, because they are too large to be stored on Git (images: 60Go, 24Go when compressed). The data is available on a dedicated repository in Zenodo.
+This repository does not contain the raw thermal images and the raw lidar data taken during the experiment because they are too large to be stored on Git (images: 60Go, 24Go when compressed). The data is available on a [dedicated repository in Zenodo](https://doi.org/10.5281/zenodo.12704284).
 
-Here are the reconstructions of the plants on top of the point clouds, over time:
+Here are the reconstructions of the plants on top of the point clouds over time:
 
 ![3d reconstruction](11-outputs/Reconstructions_LiDAR_all.png)
 
@@ -63,7 +64,7 @@ This folder
 │   ├── climate                    --> Climatic data from the growth chamber
 │   │   ├── README.md
 │   │   └── climate.zip            --> Climatic data archive
-│   ├── door_opening               --> Door opening data (when the door of the chamber was opened / closed)
+│   ├── door_opening               --> Door opening data (when the door of the chamber was opened/closed)
 │   │   ├── Mic3_door_opening.csv  --> Door opening data for the Mic3 chamber (Mic means microcosm)
 │   │   └── Mic4_door_opening.csv  --> Door opening data for the Mic4 chamber
 │   ├── morphology_and_biomass     --> Morphological and biomass data from destruction at the end (weight, height, etc.)
@@ -100,7 +101,7 @@ This folder
 │   ├── climate_mic3_5min.csv      --> Climatic data for Mic3, aggregated to 5 minutes matching CO2 output measurement
 │   ├── climate_mic4.csv           --> Climatic data for Mic4
 │   └── climate_notebook.jl        --> Notebook to process climatic data
-├── 03-time-synchronization         --> Computation of the data to synchronize all sensors to UTC time
+├── 03-time-synchronization         --> Computation of the data to synchronize all sensors to UTC
 │   ├── README.md
 │   ├── match_scale_camera_time.csv --> Match between the scale and the thermal camera
 │   ├── time_synchronization.csv             --> Time synchronization data
@@ -155,9 +156,9 @@ This folder
 
 ## Database
 
-You can find the database of all processed data in the `09-database` folder, or in the releases of this repository. The database is available in two versions: one aggregated to match the 10min CO2 measurement, and one aggregated to match the 5min output CO2 measurement.
+The database of all processed data is in the `09-database` folder or in the releases of this repository. It is available in two versions: one aggregated to match the 10-minute CO2 measurement and one aggregated to match the 5-minute output CO2 measurement.
 
-The database is a compressed CSV file (`.csv.bz2`), and can be read using the following command:
+The database is a compressed CSV file (`.csv.bz2`) and can be read using the following command:
 
 ``` bash
 bzip2 -d database_5min.csv.bz2
@@ -177,11 +178,11 @@ The database has the following columns:
 | name                     | Unit             | type              | Description                                                                                                                                                    |     |
 |--------------------------|------------------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
 | DateTime_start           | UTC              | ISODateTimeFormat | DateTime of the start of the measurement                                                                                                                       |     |
-| DateTime_end             | UTC              | ISODateTimeFormat | DateTime of the end of the measurement (either the 5-min output measurement window, or the whole 10-min output-input)                                          |     |
-| Plant                    | -                | Int               | Plant ID                                                                                                                                                       |     |
+| DateTime_end             | UTC              | ISODateTimeFormat | DateTime of the end of the measurement (either the 5-min output measurement window or the whole 10-min output-input)                                          |     |
+| Plant                    | \-               | Int               | Plant ID                                                                                                                                                       |     |
 | Leaf                     | ID               | Int               | Leaf ID, leaf ID 1 is the first emitted leaf (the oldest)                                                                                                      |     |
-| Scenario                 | -                | String            | Scenario forcing climatic conditions                                                                                                                           |     |
-| Sequence                 | -                | Int               | Sequence for the scenario. Plants can stay in the chamber for one or several days (one or several scenario). The sequence change value when the plant changes. |     |
+| Scenario                 | \-               | String            | Scenario forcing climatic conditions                                                                                                                           |     |
+| Sequence                 | \-               | Int               | Sequence for the scenario. Plants can stay in the chamber for one or several days (one or several scenarios). The sequence changes value when the plant changes. |     |
 | DateTime_start_CO2_in    | UTC              | ISODateTimeFormat | DateTime of the start of the CO2 input measurement (CO2 was measured for 5min input, then 5min output, end of CO2 output is equal to `DateTime_end`)           |     |
 | DateTime_start_sequence  | UTC              | ISODateTimeFormat | DateTime of the start of the sequence                                                                                                                          |     |
 | DateTime_end_sequence    | UTC              | ISODateTimeFormat | DateTime of the end of the sequence                                                                                                                            |     |
@@ -231,7 +232,7 @@ The database has the following columns:
 
 ## Notebook links
 
-Here are the commands that you may paste into a terminal to open the Pluto notebooks. Note that you have to install Julia first, and install Pluto on your global environment. See the [Usage](#usage) section for more details.
+You may paste the commands into a terminal to open the Pluto notebooks. Note that you must install Julia first and Pluto on your global environment. See the [Usage](#usage) section for more details.
 
 ### Climate
 
@@ -253,10 +254,10 @@ julia -e 'using Pluto; Pluto.run(notebook = "04-CO2/CO2_notebook.jl")'
 
 ### Leaf temperature
 
-- Computation: the computation of the leaf temperature is done in a julia script rather than a Pluto notebook, because it takes a long time to process. You can find the script in the `05-thermal_camera_measurements/1-compute_leaf_temperature.jl`.
+Computation: The leaf temperature is computed in a Julia script rather than a Pluto notebook because it takes a long time to process. You can find the script in the `05-thermal_camera_measurements/1-compute_leaf_temperature.jl`.
 
 > [!WARNING]
-> This notebook takes several hours to process, as it computes the leaf temperature for each leaf of each plant for each image. It is recommended to run it on a powerful computer, and knowing what you're doing.
+> This notebook takes several hours to process as it computes the leaf temperature for each plant leaf for each image. It is recommended to run it on a powerful computer and know what you're doing.
 
 - Visualization:
 
@@ -292,7 +293,7 @@ julia -e 'using Pluto; Pluto.run(notebook = "09-database/database_notebook.jl")'
 
 ### 3D reconstructions
 
-The 3D reconstructions of the plants are done using a script. You'll have to open this repository in VS Code, and then open a Julia REPL in the repository. Then, you can open and run the following script: "10-reconstruction/build_opfs.jl".
+The 3D reconstructions of the plants are done using a script. You'll have to open this repository in VS Code and then open a Julia REPL in the repository. Then, you can open and run the following script: "10-reconstruction/build_opfs.jl".
 
 The visualization of the 3D reconstructions is done using a Pluto notebook. You can open it using the following command:
 
@@ -304,7 +305,7 @@ julia -e 'using Pluto; Pluto.run(notebook = "10-reconstruction/visualize_plants.
 
 ### Pluto
 
-Most of the resources are Pluto reactive notebooks. You know when a julia script (a `.jl` file) is a notebook when it starts with `### A Pluto.jl notebook ###`. In this case, use Pluto to execute the file.
+Most of the resources are Pluto reactive notebooks. You know when a Julia script (a `.jl` file) is a notebook when it starts with "\### A Pluto.jl notebook \###". In this case, Pluto is used to execute the file.
 
 #### Install Pluto
 
@@ -314,7 +315,7 @@ To install Pluto, enter the package manager mode in Julia by pressing `]` in the
 add Pluto
 ```
 
-Then, each time you want to use Pluto, type the following command in the REPL (in julia mode):
+Then, each time you want to use Pluto, type the following command in the REPL (in Julia mode):
 
 ``` julia
 using Pluto
@@ -322,16 +323,16 @@ using Pluto
 
 #### Open a notebook
 
-There are different ways to open a notebook, but it's always using the same function: `Pluto.run()`.
+There are different ways to open a notebook, but the same function is always used: `Pluto.run()`.
 
-The most simple way is to just run it:
+The most straightforward way is just to run it:
 
 ``` julia
 using Pluto
 Pluto.run()
 ```
 
-Then you'll have to navigate manually to your notebook.
+Then, you'll have to navigate manually to your notebook.
 
 A second way is to open a notebook by passing its path, *e.g.*:
 
@@ -351,23 +352,4 @@ And choose "Download ZIP":
 
 ![download button](www_readme/Download_ZIP.png)
 
-Then, unzip the file, and open the directory in VS Code, or just open Julia in a command prompt / terminal in this repository and use *e.g.*:
-
-## To do
-
-- [ ] Check all data
-  - [x] For CO2, 2021-03-27 to 30 is `missing` for the plant, but should be plant 5 (as seen in the plant sequence). This is three days where we can't use the H20 data because of a scale failure.
-  - [x] Light is spelled "ligth" in the Walz files, replace (fixed in 53bdd3a).
-  - [x] Select days that are "clean", i.e. full data for the whole day, no door opening, etc.
-  - [x] Make sure we have the 3D reconstructions for all plants and days that are clean
-  - [x] Add irrigations to the database (from the transpiration db)
-  - [x] For Eₐᵣ, Eₐⱼ, Hdⱼ, take values from the literature that correspond to tropical plants (see Kumarathunge et al. 2019, New Phytologist)
-  - [ ] For the fact that CO2 800ppm is simulated higher than CO2 600ppm when the observation is the opposite, see correction of Medlyn's model in Dewar et al. 2018 (New Phytologist), eq.11 in the paper that is the same model than Medlyn, but removes Gamma\* to Ca in the model.
-- [ ] Make a release of the data on Zenodo
-- [ ] Reconstruct the plants in 3d:
-  - [x] Separate each leaf and make a mesh for it. Then identify it and name it accordingly.
-  - [x] Make an OPF for each plant from this collection of leaf meshes, using them as ref. meshes with no transformation
-  - [ ] Add attributes such as SPAD and photosynthetic and conductance parameters.
-- [x] Change name of the plant 5 into plant 4
-- [x] In the database_notebook.jl the extraction of the file 'surface.csv' from  "reconstruction.zip" is not working
-- [x] Remove missing scenario or plant in the final data base
+Then, unzip the file and open the directory in VS Code, or just open Julia in a command prompt/terminal in this repository.
