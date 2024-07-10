@@ -11,7 +11,7 @@ images dates.
 # Examples
 
 ```julia
-file = joinpath(dirname(dirname(pathof(EcotronAnalysis))), "test", "test_data", "P1F3-20210427_154213-20210428_080428_XY_Coordinates_V1.csv")
+file = joinpath(dirname(dirname(pathof(EcotronAnalysis))), "test", "test_data", "P3F3-S1-S2-S3-20210308_174136-20210309_140728_XY_Coordinates.csv")
 parse_mask_name(file)
 ```
 """

@@ -13,9 +13,9 @@ using CSV, ArchGDAL, DataFrames, Dates, TimeZones, PolygonOps, Images, Statistic
 using PlantGeom
 import PlyIO: load_ply
 import Meshes
-import CoordinateTransformations
+import TransformsBase
 using MultiScaleTreeGraph
-import ReferenceFrameRotations
+import Rotations
 
 include("thermal_images/read_FLIR.jl")
 include("thermal_images/parse_mask_name.jl")

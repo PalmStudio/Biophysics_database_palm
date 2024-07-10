@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.42
+# v0.19.43
 
 using Markdown
 using InteractiveUtils
@@ -121,7 +121,7 @@ The CO2 database provides measurements for CO2 every 10 minutes, with measuremen
 md"""
 We start by computing four new columns inside the one-minute time-scale dataframe: the start and end datetime for every 5 minute window where we have a measurement of the output for the CO2 flux, and the same for every 10-minute window (input and output).
 
-!!! note 
+!!! note
 	The time-windows are taken from the `CO2` dataframe.
 """
 
@@ -143,7 +143,7 @@ We can also perform a similar computation, but keeping all data in the 10-minute
 md"""
 ### Biophysical parameters
 
-Leaf-scale measurements where performed on a reference leaf before each scenario sequence with a portable gas exchange analyser (Walz GFS-3000). 
+Leaf-scale measurements where performed on a reference leaf before each scenario sequence with a portable gas exchange analyser (Walz GFS-3000).
 
 These measurements are used to compute the photosynthetic and stomatal conductance parameters for the model of Farquhar et al. (1980) and Medlyn et al. (2011) respectively (see [this notebook](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/07-walz/notebook_walz.jl))).
 """
@@ -190,10 +190,16 @@ We measured the area of each leaf on the plants at the end of the experiment. We
 
 # ╔═╡ 3a26dc05-e3e6-466e-a3eb-bbca0e5b9adf
 surface = let
-    open(Bzip2DecompressorStream, "../00-data/LiDAR/reconstructions.tar.bz2") do io
-		Tar.extract(io, "00-data/LiDAR/reconstructions")
-    surface_file_index = findfirst(x -> x == "surface.csv", [basename(i.name) for i in r.files])
-    df_ = CSV.read(r.files[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy", delim=" ", ignorerepeated=true)
+    reconstruction_dir = "../00-data/lidar/reconstructions"
+    if !isdir(reconstruction_dir)
+        open(Bzip2DecompressorStream, "../00-data/lidar/reconstructions.tar.bz2") do io
+            Tar.extract(io, reconstruction_dir)
+        end
+    end
+
+    f = readdir(reconstruction_dir, join=true)
+    surface_file_index = findfirst(x -> x == "surface.csv", [basename(i) for i in f])
+    df_ = CSV.read(f[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy", delim=" ", ignorerepeated=true)
     select!(
         df_,
         :Date,
@@ -225,23 +231,6 @@ md"""
 md"""
 ### CO2 flux
 """
-
-# ╔═╡ 8b1a5acc-bb4c-40f9-a63a-2b7f4039c983
-# ╠═╡ disabled = true
-#=╠═╡
-pCO2_all = let
-	df_ = dropmissing(db_10min, [:DateTime_end, :CO2_outflux_umol_s,])
-	transform!(
-		groupby(df_, [:Plant, :Scenario, :Sequence]),
-		:DateTime_start => (x -> 1:length(x)) => :time_numeric
-	)
-    #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
-    p = data(df_) *
-        mapping(:DateTime_start => Time => "Time", :CO2_outflux_umol_s, color=:Sequence, row = :Scenario, col = :Plant => string, group = :DateTime_start => Time => "Time") *
-        visual(Lines)
-    draw(p, axis=(width=150, height=200, xticks = datetimeticks(df_.DateTime_start,  Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
-end
-  ╠═╡ =#
 
 # ╔═╡ 248ebaab-c078-4c63-8247-57db235f3401
 md"""
@@ -356,7 +345,7 @@ function add_timeperiod(x, y)
         ismissing(row.DateTime_start_output) || ismissing(row.DateTime_end_output) && continue
         timestamps_within = findall(row.DateTime_start_output .<= df_.DateTime .< row.DateTime_end_output)
 
-        # Don't compute time-steps that covers two sequences (we are changing plant here):		
+        # Don't compute time-steps that covers two sequences (we are changing plant here):
         if length(timestamps_within) > 0
             df_.DateTime_start_output[timestamps_within] .= row.DateTime_start_output
             df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
@@ -425,9 +414,9 @@ db_5min = let
     db_ = leftjoin(db_, leaf_temperature_5min, on=[:DateTime_start_output => :DateTime_start], makeunique=true)
     transform!(db_, :DateTime_start_output => (x -> Date.(x)) => :Date)
     db_ = leftjoin(db_, df_scenario, on=:Date, makeunique=true)
-	#filter!(row -> !ismissing(row.Plant_1), db_)
+    #filter!(row -> !ismissing(row.Plant_1), db_)
 
-    # Adding the plant sequence: 
+    # Adding the plant sequence:
     y_nrows = nrow(df_sequence_params)
     db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
     db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
@@ -446,7 +435,7 @@ db_5min = let
     select!(
         db_,
         :Scenario,
-		#:Plant_1 => :Plant,
+        #:Plant_1 => :Plant,
         :leaf => :Leaf,
         :DateTime_start_output,
         :DateTime_end_output => :DateTime_end,
@@ -468,6 +457,7 @@ db_5min = let
         :CO2_instruction,
         :transpiration_g_s => :transpiration_linear_g_s,
         :transpiration_diff_g_s,
+		:irrigation,
         :Tl_mean,
         :Tl_min,
         :Tl_max,
@@ -479,7 +469,7 @@ db_5min = let
         db_,
         select(df_sequence_params, Not([:DateTime_end, :Event])),
         on=[:DateTime_start_sequence => :DateTime_start],
-        #makeunique=true, 
+        #makeunique=true,
         matchmissing=:notequal
     )
 
@@ -496,12 +486,13 @@ db_5min = let
         db_,
         :DateTime_start,
         :DateTime_end,
-        #:Plant => ByRow(x -> parse(Int, x[2])) => :Plant,
-        :Leaf,
-        :Scenario,
-        :Sequence,
+		:Scenario, :Sequence,
+		:Plant, :Leaf,
+		:DateTime_start_sequence, :DateTime_end_sequence,
         :
     )
+
+	filter!(row -> !ismissing(row.Scenario) && !ismissing(row.Plant), db_)
 
     db_
 end
@@ -522,7 +513,7 @@ $(@bind last_date PlutoUI.Slider(min_date:Day(1):max_date, default = max_date, s
 
 # ╔═╡ 329cd584-2ca0-4bc0-90db-e1f170c6c5b5
 let
-    df_ = dropmissing(db_5min, [:DateTime_end, :CO2_outflux_umol_s,:Scenario,])
+    df_ = dropmissing(db_5min, [:DateTime_end, :CO2_outflux_umol_s, :Scenario,])
     filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
     p = data(df_) *
         mapping(:DateTime_start, :CO2_outflux_umol_s, color=:Scenario => string) *
@@ -532,7 +523,7 @@ end
 
 # ╔═╡ 4088884b-f1de-40e3-82e6-95118def79b7
 let
-    df_ = dropmissing(db_5min, [:DateTime_end, :transpiration_linear_g_s,:Scenario,])
+    df_ = dropmissing(db_5min, [:DateTime_end, :transpiration_linear_g_s, :Scenario,])
     filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
     p = data(df_) *
         mapping(:DateTime_start, :transpiration_linear_g_s, color=:Scenario => string) *
@@ -554,16 +545,16 @@ end
 
 # ╔═╡ 6944c705-7959-48c4-a0da-6ddb067dac15
 pTemp_all = let
-	df_ = dropmissing(db_5min, [:DateTime_end, :Tl_mean,:Scenario,:Plant])
-	transform!(
-		groupby(df_, [:Plant, :Scenario, :Sequence]),
-		:DateTime_start => (x -> 1:length(x)) => :time_numeric
-	)
+    df_ = dropmissing(db_5min, [:DateTime_end, :Tl_mean, :Scenario, :Plant])
+    transform!(
+        groupby(df_, [:Plant, :Scenario, :Sequence]),
+        :DateTime_start => (x -> 1:length(x)) => :time_numeric
+    )
     #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
     p = data(df_) *
-        mapping(:DateTime_start => Time => "Time", :Tl_mean, color=:Leaf, row = :Scenario, col = :Plant => string, marker = :Leaf => string) *
-        visual(Lines)
-    draw(p, axis=(width=150, height=200, xticks = datetimeticks(df_.DateTime_start,  Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
+        mapping(:DateTime_start => Time => "Time", :Tl_mean, color=:Leaf, row=:Scenario, col=:Plant => string) *
+        visual(Scatter)
+    draw(p, axis=(width=150, height=200, xticks=datetimeticks(df_.DateTime_start, Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
 end
 
 # ╔═╡ eaed2c19-60a9-4fe2-8788-6143df1062d2
@@ -597,9 +588,9 @@ db_10min = let
     db_ = leftjoin(db_, leaf_temperature_10min, on=[:DateTime_start_input => :DateTime_start], makeunique=true)
     transform!(db_, :DateTime_start_input => (x -> Date.(x)) => :Date)
     db_ = leftjoin(db_, df_scenario, on=:Date, makeunique=true)
-	# filter!(row -> !ismissing(row.Plant_1), db_)
+    # filter!(row -> !ismissing(row.Plant_1), db_)
 
-    # Adding the plant sequence: 
+    # Adding the plant sequence:
     y_nrows = nrow(df_sequence_params)
     db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
     db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
@@ -618,11 +609,11 @@ db_10min = let
     select!(
         db_,
         :Scenario,
-		#:Plant_1 => :Plant,
+        #:Plant_1 => :Plant,
         :leaf => :Leaf,
         :DateTime_start_input => :DateTime_start,
         :DateTime_end_output => :DateTime_end,
-		:DateTime_start_output => :DateTime_start_CO2_in,
+        :DateTime_start_output => :DateTime_start_CO2_in,
         :DateTime_start_sequence,
         :DateTime_end_sequence,
         :CO2_flux_umol_s => :CO2_outflux_umol_s,
@@ -639,6 +630,7 @@ db_10min = let
         :CO2_instruction,
         :transpiration_g_s => :transpiration_linear_g_s,
         :transpiration_diff_g_s,
+		:irrigation,
         :Tl_mean,
         :Tl_min,
         :Tl_max,
@@ -651,68 +643,66 @@ db_10min = let
         db_,
         select(df_sequence_params, Not([:DateTime_end, :Event])),
         on=[:DateTime_start_sequence => :DateTime_start],
-		makeunique=true, 
+        makeunique=true,
         matchmissing=:notequal
     )
 
     rename!(db_,
-		#:DateTime_start_output => :DateTime_start,
+        #:DateTime_start_output => :DateTime_start,
         :sequence => :Sequence,
         :Tᵣ => :Tr,
         :Tᵣ_mean_leaf => :Tr_mean_leaf,
         :Tᵣ_mean_plant => :Tr_mean_plant
-	)
+    )
 
-    # Re-order columns:
+	# Re-order columns:
     select!(
         db_,
         :DateTime_start,
         :DateTime_end,
-        #:Plant => ByRow(x -> parse(Int, x[2])) => :Plant,
-        :Leaf,
-        :Scenario,
-        :Sequence,
+		:Scenario, :Sequence,
+		:Plant, :Leaf,
+		:DateTime_start_sequence, :DateTime_end_sequence,
         :
     )
+
+	filter!(row -> !ismissing(row.Scenario) && !ismissing(row.Plant), db_)
 
     db_
 end
 
 # ╔═╡ bd722b73-66b5-4012-a543-ab6243e93584
 pCO2_all = let
-	df_ = dropmissing(db_10min, [:DateTime_end, :CO2_outflux_umol_s,])
-	df_.Date = Date.(df_.DateTime_start)
-	transform!(
-		groupby(df_, [:Plant, :Scenario, :Sequence]),
-		:DateTime_start => (x -> 1:length(x)) => :time_numeric
-	)
+    df_ = dropmissing(db_10min, [:DateTime_end, :CO2_outflux_umol_s,])
+    df_.Date = Date.(df_.DateTime_start)
+    transform!(
+        groupby(df_, [:Plant, :Scenario, :Sequence]),
+        :DateTime_start => (x -> 1:length(x)) => :time_numeric
+    )
     #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
-    p = data(df_) *
+    p =
+        data(df_) *
         #mapping(:DateTime_start => Time => "Time", :CO2_outflux_umol_s, layout = :Date, color = :Plant => string, group = :DateTime_start => Time => "Time") *
-		mapping(:DateTime_start => Time, :CO2_outflux_umol_s, layout = :Date => string, color = :Plant => string) *
+        mapping(:DateTime_start => Time, :CO2_outflux_umol_s, layout=:Date => string, color=:Plant => string) *
         visual(Scatter)
     draw(p, axis=(width=150, height=200))
 end
 
 # ╔═╡ 6d1e495e-edf0-4baa-bd43-affc5ce95bf0
-let
-	outdir = "../13-outputs/"
-	isdir(outdir) || mkdir(outdir)
-	save(joinpath(outdir,"CO2_fluxes_10min.png"), pCO2_all)
-end
+save("../11-outputs/CO2_fluxes_10min.png", pCO2_all)
 
 # ╔═╡ 688984ea-7c45-4dc8-97f6-94467a3caa83
 pH2O_all = let
-	df_ = dropmissing(db_10min, [:DateTime_end, :transpiration_diff_g_s,:Sequence,])
-	transform!(
-		groupby(df_, [:Plant, :Scenario, :Sequence]),
-		:DateTime_start => (x -> 1:length(x)) => :time_numeric
-	)
+    df_ = dropmissing(db_10min, [:DateTime_end, :transpiration_diff_g_s, :Sequence,])
+    transform!(
+        groupby(df_, [:Plant, :Scenario, :Sequence]),
+        :DateTime_start => (x -> 1:length(x)) => :time_numeric
+    )
     #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
     p = data(df_) *
-        mapping(:DateTime_start => Time => "Time", :transpiration_diff_g_s, color=:Sequence, row = :Scenario, col = :Plant => string, group = :DateTime_start => Time => "Time") *
+        mapping(:DateTime_start => Time => "Time", :transpiration_diff_g_s, color=:Sequence, row=:Scenario, col=:Plant => string, group=:DateTime_start => Time => "Time") *
         visual(Scatter)
-    draw(p, axis=(width=150, height=200, xticks = datetimeticks(df_.DateTime_start,  Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
+    draw(p, axis=(width=150, height=200, xticks=datetimeticks(df_.DateTime_start, Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
 end
 
 # ╔═╡ 168c5c96-9252-4a5a-85d2-613b2246cd63
@@ -2549,7 +2539,6 @@ version = "3.5.0+0"
 # ╟─ba1cf5f2-7459-48c5-9016-d7f998634814
 # ╟─7d58aeb1-83fd-42e1-89a8-6a822bdbae26
 # ╠═329cd584-2ca0-4bc0-90db-e1f170c6c5b5
-# ╠═8b1a5acc-bb4c-40f9-a63a-2b7f4039c983
 # ╠═bd722b73-66b5-4012-a543-ab6243e93584
 # ╠═6d1e495e-edf0-4baa-bd43-affc5ce95bf0
 # ╟─248ebaab-c078-4c63-8247-57db235f3401

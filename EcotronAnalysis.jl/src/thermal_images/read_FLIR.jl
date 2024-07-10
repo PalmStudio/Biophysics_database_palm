@@ -24,7 +24,6 @@ function read_FLIR(file)
         println("Original error: $e")
         return nothing
     end
-    # RawThermalImageType = ExifViewer.read_tags(file); read_all=false, tags=["RawThermalImageType"])
 
     if RawThermalImageType != "TIFF"
         error("Image format not compatible, need a TIFF file.")

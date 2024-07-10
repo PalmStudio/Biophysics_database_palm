@@ -9,7 +9,7 @@ The equipments include:
 - the scale data (logged differently along the experiment)
 - the thermal camera
 
-The `correspondance_scale_camera_time.csv` file is a table that gives the time of the thermal camera for each noticeable measurement of the scale, compared to the reference UTC time given by the database about opening and closing of the chamber door. The time of the thermal camera is given as it is given in the image file name, so it includes its delay.
+The `match_scale_camera_time.csv` file is a table that gives the time of the thermal camera for each noticeable measurement of the scale, compared to the reference UTC time given by the database about opening and closing of the chamber door. The time of the thermal camera is given as it is given in the image file name, so it includes its delay.
 
 The columns in the file are:
 
