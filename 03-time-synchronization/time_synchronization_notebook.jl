@@ -1,5 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
+
+#> [frontmatter]
+#> title = "Time synchronization"
+#> layout = "layout.jlhtml"
+#> tags = ["timesync"]
+#> description = "Time synchronization of the different sensors and equipments used in the experiment."
 
 using Markdown
 using InteractiveUtils
@@ -352,9 +358,9 @@ DataFrames = "~1.6.1"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "1de575492d960508e6a1c112092b7e1e16fef652"
+project_hash = "a8b8c8069d3bb4cf18c78e33ed9b93d541254252"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]

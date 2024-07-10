@@ -1,5 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
+
+#> [frontmatter]
+#> title = "CO2 fluxes data"
+#> layout = "layout.jlhtml"
+#> description = "Picaro measurements of the CO2 fluxes in the Ecotron chambers."
+#> tags = ["co2"]
 
 using Markdown
 using InteractiveUtils
@@ -486,7 +492,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "8450c89e808828d0ae2764ba7a72f275ddb4b2b8"
 
