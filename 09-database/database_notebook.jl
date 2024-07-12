@@ -1,11 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.42
+# v0.19.43
 
 #> [frontmatter]
 #> title = "Database of all processed data"
 #> layout = "layout.jlhtml"
-#> description = "Database of all processed data."
 #> tags = ["database"]
+#> description = "Database of all processed data."
 
 using Markdown
 using InteractiveUtils
@@ -745,7 +745,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.4"
+julia_version = "1.10.3"
 manifest_format = "2.0"
 project_hash = "3d1f6640ad7b45a5777c0ef161ebc8f513387300"
 
