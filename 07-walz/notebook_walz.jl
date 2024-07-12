@@ -1,11 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.42
+# v0.19.43
 
 #> [frontmatter]
 #> title = "Walz data"
 #> layout = "layout.jlhtml"
-#> description = "Walz data measurements at leaf level."
 #> tags = ["walz"]
+#> description = "Walz data measurements at leaf level."
 
 using Markdown
 using InteractiveUtils
@@ -125,13 +125,10 @@ Average values:
 """
 
 # ╔═╡ c4e48708-1e9e-46e2-8178-c1e77d3e7e14
-# ╠═╡ disabled = true
-#=╠═╡
-df_mean = combine(
+df_mean_CO2 = combine(
 	df_fit_CO2,
 	[:VcMaxRef, :JMaxRef, :RdRef, :TPURef, :Tᵣ] .=> mean .=> [:VcMaxRef, :JMaxRef, :RdRef, :TPURef, :Tᵣ]
 )
-  ╠═╡ =#
 
 # ╔═╡ 1f4d3984-04a8-4638-89da-4d3bef045601
 md"""
@@ -139,15 +136,13 @@ The values are in par with the ones expected from a tropical plant and compared 
 """
 
 # ╔═╡ 5bf575b6-d687-4af3-85f7-9cd6cc211044
-#=╠═╡
 let
 	Thome = 25.0
 	DataFrame(
-		VcMaxRef = only(df_mean.VcMaxRef),
-		JMaxRef = only(df_mean.VcMaxRef) * (2.56 - 0.0375 * Thome - 0.0202),
+		VcMaxRef = only(df_mean_CO2.VcMaxRef),
+		JMaxRef = only(df_mean_CO2.VcMaxRef) * (2.56 - 0.0375 * Thome - 0.0202),
 	)
 end
-  ╠═╡ =#
 
 # ╔═╡ ec8aee54-9c07-454b-9000-1e0c561a9c87
 md"""
@@ -436,7 +431,7 @@ CairoMakie = "~0.10.2"
 CodecBzip2 = "~0.8.3"
 DataFrames = "~1.6.1"
 Impute = "~0.6.10"
-PlantBiophysics = "~0.12.0"
+PlantBiophysics = "~0.13.0"
 PlantSimEngine = "~0.10.1"
 Plots = "~1.38.7"
 PlutoUI = "~0.7.50"
@@ -446,9 +441,9 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.4"
+julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "f8c1e7c150393751448449074e97bf5215bc81da"
+project_hash = "9ecfe1a556c31de38ccddc6c28fbea0272ecf906"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1932,9 +1927,9 @@ version = "0.3.3"
 
 [[deps.PlantBiophysics]]
 deps = ["CSV", "DataFrames", "Dates", "LsqFit", "OrderedCollections", "PlantMeteo", "PlantSimEngine", "RecipesBase", "Statistics", "YAML"]
-git-tree-sha1 = "3c43a00d6f70ee5f8910fc6488547feaa7ad630e"
+git-tree-sha1 = "b1d51f6d8ab93de04fcbfe65c7d0daa1c9909778"
 uuid = "7ae8fcfa-76ad-4ec6-9ea7-5f8f5e2d6ec9"
-version = "0.12.0"
+version = "0.13.0"
 
 [[deps.PlantMeteo]]
 deps = ["CSV", "Crayons", "DataAPI", "DataFrames", "Dates", "HTTP", "JSON", "PrettyTables", "Statistics", "Tables", "Term", "YAML"]
