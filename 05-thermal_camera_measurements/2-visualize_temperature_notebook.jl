@@ -1,5 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
+
+#> [frontmatter]
+#> title = "Thermal camera data"
+#> layout = "layout.jlhtml"
+#> description = "Measurements and visualization of the leaf temperature in the Ecotron chambers."
+#> tags = ["thermal"]
 
 using Markdown
 using InteractiveUtils
@@ -38,19 +44,19 @@ let
 	mask = CSV.read(mask_file, DataFrame)
 	f = Figure()
 	image(
-		f[1, 1], 
+		f[1, 1],
 		im,
 	    axis = (
-			aspect = DataAspect(), 
+			aspect = DataAspect(),
 			yreversed = true,
-	        title = "Mask for leaf 3 from plant 3", 
+	        title = "Mask for leaf 3 from plant 3",
 			subtitle = "Applicable from 17:41 on the 08/03/2021 to 14:07 on the 09/03/2021",
 		)
 	)
 
 	poly!(
-		f[1, 1], 
-		Polygon([Point(round(i.X), round(i.Y)) for i in eachrow(mask)]), 
+		f[1, 1],
+		Polygon([Point(round(i.X), round(i.Y)) for i in eachrow(mask)]),
 		color = "red"
 	)
 	f
@@ -151,7 +157,7 @@ Makie = "~0.19.12"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "fe1b3a66bcfdd20bb7649864e13f5ea311b78ec1"
 

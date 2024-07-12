@@ -62,7 +62,7 @@ This folder
 │   │   ├── README.md              --> Instructions on how to use the lidar data
 │   │   └── reconstructions.zip    --> 3D reconstructions of the plants
 │   ├── climate                    --> Climatic data from the growth chamber
-│   │   ├── README.md   
+│   │   ├── README.md
 │   │   └── climate.zip            --> Climatic data archive
 │   ├── door_opening               --> Door opening data (when the door of the chamber was opened/closed)
 │   │   ├── Mic3_door_opening.csv  --> Door opening data for the Mic3 chamber (Mic means microcosm)
@@ -75,18 +75,18 @@ This folder
 │   │   ├── data_mean_flux.csv     --> Mean CO2 flux data
 │   │   └── outliers.csv           --> Outliers data identified by hand
 │   ├── scale_weight               --> Weight data from the scale
-│   │   ├── README.md          
+│   │   ├── README.md
 │   │   └── weights.tar.bz2        --> Weight data archive
 │   ├── scenario_sequence          --> Sequence of the scenarios
 │   │   ├── SequencePlanteMicro3.csv  --> Sequence of measurement in Mic3 for the plants
 │   │   └── SequenceScenarioMicro3.csv --> Sequence of the scenarios in Mic3 for each day
 │   ├── smse                       --> Reference meteorological data from Sumatra 2008-2018
-│   │   └── Meteo_hour_SMSE.csv    
+│   │   └── Meteo_hour_SMSE.csv
 │   ├── spad                       --> SPAD measurement data
 │   │   ├── SPAD.csv               --> measured for all leaves in the plant of interest, dynamically throughout experiment.
 │   │   └── SPAD_all_plants.csv    --> measured on all leaves of all plants on the same date, repeated twice (2021-02-16, 2021-02-23).
 │   ├── thermal_camera_images      --> Thermal camera images
-│   │   ├── README.md 
+│   │   ├── README.md
 │   │   └── images.tar.bz2         --> Thermal camera images archive (see Zenodo archive to get it)
 │   ├── thermal_camera_roi_coordinates --> Coordinates of the ROI (Region of Interest) for the thermal camera images
 │   │   ├── README.md
@@ -118,7 +118,7 @@ This folder
 │   ├── plant_sequence_delayed_corrected.csv --> Plant sequence with corrected delay
 │   ├── transpiration_10min.csv.bz2 --> Plant transpiration data aggregated to match the 10 minutes CO2 measurement
 │   ├── transpiration_first_5min.csv.bz2 --> Plant transpiration data aggregated to match the 5min output CO2 measurement
-│   └── transpiration_notebook.jl  --> Notebook to process plant transpiration data 
+│   └── transpiration_notebook.jl  --> Notebook to process plant transpiration data
 ├── 07-walz                         --> Processed Walz data
 │   ├── notebook_walz.jl           --> Notebook to process Walz data
 │   └── photosynthetic_and_stomatal_parameters.csv --> Computed photosynthetic and stomatal parameters data
@@ -256,7 +256,7 @@ julia -e 'using Pluto; Pluto.run(notebook = "04-CO2/CO2_notebook.jl")'
 
 Computation: The leaf temperature is computed in a Julia script rather than a Pluto notebook because it takes a long time to process. You can find the script in the `05-thermal_camera_measurements/1-compute_leaf_temperature.jl`.
 
-> [!WARNING]  
+> [!WARNING]
 > This notebook takes several hours to process as it computes the leaf temperature for each plant leaf for each image. It is recommended to run it on a powerful computer and know what you're doing.
 
 - Visualization:

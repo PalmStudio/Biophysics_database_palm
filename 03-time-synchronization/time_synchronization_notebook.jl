@@ -1,5 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
+
+#> [frontmatter]
+#> title = "Time synchronization"
+#> layout = "layout.jlhtml"
+#> tags = ["timesync"]
+#> description = "Time synchronization of the different sensors and equipments used in the experiment."
 
 using Markdown
 using InteractiveUtils
@@ -11,6 +17,7 @@ begin
     using Statistics
     using CairoMakie
     using AlgebraOfGraphics
+	using PlutoUI
 end
 
 # ╔═╡ d3a87c67-219b-4d8d-9270-4c2d5f2fc079
@@ -19,9 +26,9 @@ md"""
 
 ## Introduction
 
-The different sensors and equipments used in the experiment can deviate from each other for time. This is a problem when we want to merge all measurements into the same database, and compare them alongside. 
+The different sensors and equipments used in the experiment can deviate from each other for time. This is a problem when we want to merge all measurements into the same database, and compare them alongside.
 
-The equipments include: 
+The equipments include:
 
 - the CO2 fluxes, should be at UTC
 - the scale data (logged differently along the experiment)
@@ -33,7 +40,7 @@ The equipment from Ecotron are all in UTC and synchronized, this include the CO2
 
 ### Thermal camera
 
-Then, we can use the timestamps of the door opening/closing to calibrate the thermal images, as we also can see when the door is open/closed from the images itself. This method should have a ~1 minute error at maximum, as the camera was triggered every minute. Of course some data points will not be matched when the door was opened and closed very briefly, *i.e.* between two images. But the applications of this dataset are at the lowest at a 5/10 minute time-step because of the method for the measurement of the CO2 fluxes, so a 1 minute error at maximum is reasonable. 
+Then, we can use the timestamps of the door opening/closing to calibrate the thermal images, as we also can see when the door is open/closed from the images itself. This method should have a ~1 minute error at maximum, as the camera was triggered every minute. Of course some data points will not be matched when the door was opened and closed very briefly, *i.e.* between two images. But the applications of this dataset are at the lowest at a 5/10 minute time-step because of the method for the measurement of the CO2 fluxes, so a 1 minute error at maximum is reasonable.
 
 ### Precision scale
 
@@ -45,7 +52,7 @@ There are five phases of measurement due to changes in the measurement setup:
 
 - phase 0, from 09/03/2021 to 10/03/2021, logged in the file `Weights_1.txt`. In this phase we used a regular computer with a script that read the data from the scale (1000C-3000D) for one minute, and logged its average onto the computer. The DateTime should be close to UTC+1.
 - phase 1, from 2021-03-10T15:08:23 to 2021-03-15T14:49:06, file `weightsPhase1.txt`. We changed computers to use one from the Ecotron, which should be near UTC-4min.
-- phase 2, from 2021-03-15T15:46:13 to 2021-03-27T01:19:27, file `weightsPhase2.txt`. In this measurement phase, we changed the script to log the data every second, without any averaging as we decided it is better to log the raw data and make the average afterward. The DateTime lag was fixed, so it should be in UTC. These data end the day before day-time change. Data is lost for the weekend (after 2021-03-27T01:19:27) because the weight of the plant was above the maximum capacity of the scale. 
+- phase 2, from 2021-03-15T15:46:13 to 2021-03-27T01:19:27, file `weightsPhase2.txt`. In this measurement phase, we changed the script to log the data every second, without any averaging as we decided it is better to log the raw data and make the average afterward. The DateTime lag was fixed, so it should be in UTC. These data end the day before day-time change. Data is lost for the weekend (after 2021-03-27T01:19:27) because the weight of the plant was above the maximum capacity of the scale.
 - phase 3, from 2021-03-30T09:45:01 to 2021-04-08T07:03:59, file `weightsPhase3.txt`. This phase is the same as phase 3, there is just a data gap because we were investigating why data logging was not working anymore (we didn't see any error on the scale).
 - phase 4, from 2021-04-07T10:46:19 to 2021-05-02T06:49:33, file `weightsPhase4.txt`. We received the new precision scale (XB3200C) that we just bought (we borrowed the first one). So in this phase we changed the scale, and also isntalled a Raspberry Pi to log the data. The Raspberry Pi is connected to the scale via USB, and the data is logged every second. The DateTime appears to have a lag of 1 day, 47 minutes and 12 seconds compared to UTC (Raspberry: 2021-04-12T13:02:43 ; Thermal camera: 20210413_144827_R.jpg, with a delay of 3512s, so 2021-04-13T13:49:55 UTC)
 
@@ -243,7 +250,7 @@ md"""
 
 # ╔═╡ 7192d089-549d-464b-9e4d-1d7ca4cfbae3
 md"""
-Computing the average error between the two timestamps shows indeed that the three first phases had an error around 3-4 minutes, but that the fourth phase had an error of  more than a day: 
+Computing the average error between the two timestamps shows indeed that the three first phases had an error around 3-4 minutes, but that the fourth phase had an error of  more than a day:
 """
 
 # ╔═╡ 22fcb933-b939-4c36-904f-d21990c07a23
@@ -326,6 +333,9 @@ df_write = vcat(
 # ╔═╡ 74516f47-6df9-41fd-82ce-53a64a4fb8d3
 CSV.write("time_synchronization.csv", df_write)
 
+# ╔═╡ 279e9fac-d5c4-46bd-8192-8ac42d9ba222
+TableOfContents(title="📚 Table of Contents")
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -334,6 +344,7 @@ CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
@@ -347,9 +358,9 @@ DataFrames = "~1.6.1"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "1de575492d960508e6a1c112092b7e1e16fef652"
+project_hash = "a8b8c8069d3bb4cf18c78e33ed9b93d541254252"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -366,6 +377,12 @@ weakdeps = ["ChainRulesCore", "Test"]
 git-tree-sha1 = "222ee9e50b98f51b5d78feb93dd928880df35f06"
 uuid = "398f06c4-4d28-53ec-89ca-5b2656b7603d"
 version = "0.3.0"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.3.2"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -911,6 +928,24 @@ git-tree-sha1 = "f218fe3736ddf977e0e772bc9a586b2383da2685"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.23"
 
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.5"
+
+[[deps.HypertextLiteral]]
+deps = ["Tricks"]
+git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.5"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "8b72179abc660bfab5e28472e019392b97d0985c"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.4"
+
 [[deps.ImageAxes]]
 deps = ["AxisArrays", "ImageBase", "ImageCore", "Reexport", "SimpleTraits"]
 git-tree-sha1 = "2e4520d67b0cef90865b3ef727594d2a58e0e1f8"
@@ -1222,6 +1257,11 @@ version = "0.3.28"
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
+[[deps.MIMEs]]
+git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
+uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
+version = "0.1.4"
+
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
 git-tree-sha1 = "f046ccd0c6db2832a9f639e2c669c6fe867e5f4f"
@@ -1475,6 +1515,12 @@ deps = ["ColorSchemes", "Colors", "Dates", "PrecompileTools", "Printf", "Random"
 git-tree-sha1 = "7b1a9df27f072ac4c9c7cbe5efb198489258d1f5"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
 version = "1.4.1"
+
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
+git-tree-sha1 = "ab55ee1510ad2af0ff674dbcced5e94921f867a9"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.59"
 
 [[deps.PolygonOps]]
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
@@ -1894,6 +1940,11 @@ weakdeps = ["Random", "Test"]
     [deps.TranscodingStreams.extensions]
     TestExt = ["Test", "Random"]
 
+[[deps.Tricks]]
+git-tree-sha1 = "eae1bb484cd63b36999ee58be2de6c178105112f"
+uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
+version = "0.1.8"
+
 [[deps.TriplotBase]]
 git-tree-sha1 = "4d4ed7f294cda19382ff7de4c137d24d16adc89b"
 uuid = "981d1d27-644d-49a2-9326-4793e63143c3"
@@ -1903,6 +1954,11 @@ version = "0.1.0"
 git-tree-sha1 = "41d61b1c545b06279871ef1a4b5fcb2cac2191cd"
 uuid = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 version = "1.5.0"
+
+[[deps.URIs]]
+git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
+uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+version = "1.5.1"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -2123,5 +2179,6 @@ version = "3.5.0+0"
 # ╟─a38cea8d-4c20-4936-bfc2-a28a87cad259
 # ╟─1d73973d-914a-43a1-8805-8fad8cc69db2
 # ╠═74516f47-6df9-41fd-82ce-53a64a4fb8d3
+# ╠═279e9fac-d5c4-46bd-8192-8ac42d9ba222
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

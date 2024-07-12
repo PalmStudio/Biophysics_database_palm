@@ -1,5 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
+
+#> [frontmatter]
+#> title = "Plant transpiration data"
+#> layout = "layout.jlhtml"
+#> description = "Processing of plant transpiration data."
+#> tags = ["transpiration"]
 
 using Markdown
 using InteractiveUtils
@@ -30,11 +36,11 @@ md"""
 
 The weight of the potted plant inside the measurement chamber (`mic3`) was continuously monitored using a connected precision scale. The pot and soil were isolated using a plastic bag, so any change in the pot weight was due to the plant transpiration (+/- the saturation inside the bag).
 
-The transpiration was measured in five phases due to changes in the measurement setup: 
+The transpiration was measured in five phases due to changes in the measurement setup:
 
 - phase 0, from 09/03/2021 to 10/03/2021, logged in the file `Weights_1.txt`. In this phase we used a regular computer with a script that read the data from the scale (1000C-3000D) for one minute, and logged its average onto the computer. The DateTime is in UTC+1.
 - phase 1, from 2021-03-10T15:08:23 to 2021-03-15T14:49:06, file `weightsPhase1.txt`. We changed computers to use one from the Ecotron, which was arounbd UTC-4min.
-- phase 2, from 2021-03-15T15:46:13 to 2021-03-27T01:19:27, file `weightsPhase2.txt`. In this measurement phase, we changed the script to log the data every second, without any averaging as we decided it is better to log the raw data and make the average afterward. The DateTime should be close to UTC. This data collection end the day before the day-time change. Data is lost for the weekend (after 2021-03-27T01:19:27) because the weight of the plant was above the maximum capacity of the scale. 
+- phase 2, from 2021-03-15T15:46:13 to 2021-03-27T01:19:27, file `weightsPhase2.txt`. In this measurement phase, we changed the script to log the data every second, without any averaging as we decided it is better to log the raw data and make the average afterward. The DateTime should be close to UTC. This data collection end the day before the day-time change. Data is lost for the weekend (after 2021-03-27T01:19:27) because the weight of the plant was above the maximum capacity of the scale.
 - phase 3, from 2021-03-30T09:45:01 to 2021-04-08T07:03:59, file `weightsPhase3.txt`. This phase is the same as phase 3, there is just a data gap because we were investigating why data logging was not working anymore (we didn't see any error on the scale).
 - phase 4, from 2021-04-07T10:46:19 to 2021-05-02T06:49:33, file `weightsPhase4.txt`. We received the new precision scale (XB3200C) that we just bought (we borrowed the first one). So in this phase we changed the scale, and also installed a Raspberry Pi to log the data. The Raspberry Pi is connected to the scale via USB, and the data is logged every second. We measured a lag in the DateTime of around 1 day, 47 minutes and 12 seconds compared to UTC (Raspberry: 2021-04-12T13:02:43 ; Thermal camera: 20210413_144827_R.jpg, with a delay of 3512s, so 2021-04-13T13:49:55 UTC)
 
@@ -307,7 +313,7 @@ draw
 
 # ╔═╡ 7a0cea13-7b32-486d-bbc3-03924609280b
 md"""
-We can see some outliers in the values. These outliers come from three different things: 
+We can see some outliers in the values. These outliers come from three different things:
 
 - We removed the plant from the scale to switch plants
 - The pot was irrigated
@@ -420,7 +426,7 @@ md"""
 
 # ╔═╡ ff960dcc-cdbf-4bd5-8619-613e3633d4bf
 md"""
-In the "difference method", we can use only the first and last points, or if enough data point in the 5 minutes, we can take the median of several first and last points instead. 
+In the "difference method", we can use only the first and last points, or if enough data point in the 5 minutes, we can take the median of several first and last points instead.
 
 We can choose the number of points used in this computation with the following slider:
 """
@@ -480,7 +486,7 @@ function add_timeperiod(x, y)
         ismissing(row.DateTime_start_output) || ismissing(row.DateTime_end_output) && continue
         timestamps_within = findall(row.DateTime_start_output .<= df_.DateTime .< row.DateTime_end_output)
 
-        # Don't compute time-steps that covers two sequences (we are changing plant here):		
+        # Don't compute time-steps that covers two sequences (we are changing plant here):
         if length(timestamps_within) > 0 && length(unique(df_.sequence[timestamps_within])) == 1
             df_.DateTime_start_output[timestamps_within] .= row.DateTime_start_output
             df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
@@ -522,7 +528,7 @@ transpiration_first_5min = let
 
     transform!(gdf, :duration => cumsum => :duration_cum)
 
-    # Compute transpiration as the slope of the linear weight~duration relationship: 
+    # Compute transpiration as the slope of the linear weight~duration relationship:
     df_ = combine(
         gdf,
         :DateTime_end_output => unique => :DateTime_end,
@@ -593,7 +599,7 @@ transpiration_10min = let
     gdf = groupby(df_, :DateTime_start_input)
     transform!(gdf, :duration => cumsum => :duration_cum)
 
-    # Compute transpiration as the slope of the linear weight~duration relationship: 
+    # Compute transpiration as the slope of the linear weight~duration relationship:
     df_ = combine(
         gdf,
         :DateTime_end_output => unique => :DateTime_end,
@@ -694,7 +700,7 @@ ShiftedArrays = "~2.0.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "c84420aad6d25df38645c12100f8121de01b6eac"
 

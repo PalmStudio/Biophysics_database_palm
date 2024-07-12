@@ -1,5 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
+
+#> [frontmatter]
+#> title = "Database of all processed data"
+#> layout = "layout.jlhtml"
+#> description = "Database of all processed data."
+#> tags = ["database"]
 
 using Markdown
 using InteractiveUtils
@@ -17,7 +23,7 @@ end
 # ╔═╡ 947be178-0b89-46b6-aa74-383e38bf903e
 begin
     using CSV, DataFrames
-    using CodecBzip2, Tar#, ZipFile
+    using CodecBzip2, Tar #, ZipFile
     using Dates
     using Statistics
     using PlutoUI
@@ -121,7 +127,7 @@ The CO2 database provides measurements for CO2 every 10 minutes, with measuremen
 md"""
 We start by computing four new columns inside the one-minute time-scale dataframe: the start and end datetime for every 5 minute window where we have a measurement of the output for the CO2 flux, and the same for every 10-minute window (input and output).
 
-!!! note 
+!!! note
 	The time-windows are taken from the `CO2` dataframe.
 """
 
@@ -143,7 +149,7 @@ We can also perform a similar computation, but keeping all data in the 10-minute
 md"""
 ### Biophysical parameters
 
-Leaf-scale measurements where performed on a reference leaf before each scenario sequence with a portable gas exchange analyser (Walz GFS-3000). 
+Leaf-scale measurements where performed on a reference leaf before each scenario sequence with a portable gas exchange analyser (Walz GFS-3000).
 
 These measurements are used to compute the photosynthetic and stomatal conductance parameters for the model of Farquhar et al. (1980) and Medlyn et al. (2011) respectively (see [this notebook](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/07-walz/notebook_walz.jl))).
 """
@@ -345,7 +351,7 @@ function add_timeperiod(x, y)
         ismissing(row.DateTime_start_output) || ismissing(row.DateTime_end_output) && continue
         timestamps_within = findall(row.DateTime_start_output .<= df_.DateTime .< row.DateTime_end_output)
 
-        # Don't compute time-steps that covers two sequences (we are changing plant here):		
+        # Don't compute time-steps that covers two sequences (we are changing plant here):
         if length(timestamps_within) > 0
             df_.DateTime_start_output[timestamps_within] .= row.DateTime_start_output
             df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
@@ -416,7 +422,7 @@ db_5min = let
     db_ = leftjoin(db_, df_scenario, on=:Date, makeunique=true)
     #filter!(row -> !ismissing(row.Plant_1), db_)
 
-    # Adding the plant sequence: 
+    # Adding the plant sequence:
     y_nrows = nrow(df_sequence_params)
     db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
     db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
@@ -469,7 +475,7 @@ db_5min = let
         db_,
         select(df_sequence_params, Not([:DateTime_end, :Event])),
         on=[:DateTime_start_sequence => :DateTime_start],
-        #makeunique=true, 
+        #makeunique=true,
         matchmissing=:notequal
     )
 
@@ -486,8 +492,8 @@ db_5min = let
         db_,
         :DateTime_start,
         :DateTime_end,
-		:Scenario, :Sequence, 
-		:Plant, :Leaf, 
+		:Scenario, :Sequence,
+		:Plant, :Leaf,
 		:DateTime_start_sequence, :DateTime_end_sequence,
         :
     )
@@ -590,7 +596,7 @@ db_10min = let
     db_ = leftjoin(db_, df_scenario, on=:Date, makeunique=true)
     # filter!(row -> !ismissing(row.Plant_1), db_)
 
-    # Adding the plant sequence: 
+    # Adding the plant sequence:
     y_nrows = nrow(df_sequence_params)
     db_.DateTime_start_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
     db_.DateTime_end_sequence = Vector{Union{DateTime,Missing}}(undef, nrow(db_))
@@ -660,8 +666,8 @@ db_10min = let
         db_,
         :DateTime_start,
         :DateTime_end,
-		:Scenario, :Sequence, 
-		:Plant, :Leaf, 
+		:Scenario, :Sequence,
+		:Plant, :Leaf,
 		:DateTime_start_sequence, :DateTime_end_sequence,
         :
     )
@@ -739,7 +745,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "3d1f6640ad7b45a5777c0ef161ebc8f513387300"
 

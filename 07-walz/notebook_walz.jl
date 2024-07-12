@@ -1,5 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
+
+#> [frontmatter]
+#> title = "Walz data"
+#> layout = "layout.jlhtml"
+#> description = "Walz data measurements at leaf level."
+#> tags = ["walz"]
 
 using Markdown
 using InteractiveUtils
@@ -98,9 +104,9 @@ df_fit_CO2 = let
             res,
             merge(
                 (Date=unique(group_df.Date)[1], Plant=unique(group_df.Plant)[1], Leaf=unique(group_df.Leaf)[1]),
-                fit(Fvcb, group_df; 				 
-					# From Table 2 in Kumarathunge et al. (2019): 
-					Tᵣ=25.0, 
+                fit(Fvcb, group_df;
+					# From Table 2 in Kumarathunge et al. (2019):
+					Tᵣ=25.0,
                     Eₐᵥ=(42.6 + 1.14 * Tgrowth) * 1e3,
                     Eₐⱼ=40.71 * 1e3,
                     Δₛᵥ=645.13 − 0.38 * Tgrowth,
@@ -440,7 +446,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "f8c1e7c150393751448449074e97bf5215bc81da"
 

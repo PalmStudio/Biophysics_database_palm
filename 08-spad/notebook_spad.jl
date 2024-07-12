@@ -1,5 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
+
+#> [frontmatter]
+#> title = "Spad data"
+#> layout = "layout.jlhtml"
+#> description = "Plant response to experiments using Spad data in the Ecotron chambers."
+#> tags = ["spad"]
 
 using Markdown
 using InteractiveUtils
@@ -33,7 +39,7 @@ md"""
 
 ### SPAD
 
-Importing the SPAD measurements. We have two different source of data: 
+Importing the SPAD measurements. We have two different source of data:
 
 1. SPAD measured on all leaves of all plants on the same date, repeated on two different dates: 2021-02-16 and 2021-02-23.
 """
@@ -362,7 +368,7 @@ end
 
 # ╔═╡ 1f5490da-618e-4b87-a153-af6401251924
 md"""
-As expected, there is no relationship between the value of RdRef and the leaf age: 
+As expected, there is no relationship between the value of RdRef and the leaf age:
 """
 
 # ╔═╡ f8e0162a-28cb-4e29-9cf6-b9ff121e380a
@@ -547,7 +553,7 @@ end
 Markdown.parse("""
 !!! tip
 	The model is as follows:
-	
+
 	$(lm_VcMaxRef.mf.f.lhs.sym) ≃ $(round(coef(lm_VcMaxRef)[1], digits = 3)) ⋅ $(lm_VcMaxRef.mf.f.rhs.terms[2])
 """)
 
@@ -623,7 +629,7 @@ end
 Markdown.parse("""
 !!! tip
 	The model is as follows:
-	
+
 	$(lm_JMaxRef.mf.f.lhs.sym) ≃ $(round(coef(lm_JMaxRef)[1], digits = 3)) ⋅ $(lm_JMaxRef.mf.f.rhs.terms[2])
 """)
 
@@ -679,7 +685,7 @@ end
 Markdown.parse("""
 !!! tip
 	The model is as follows:
-	
+
 	$(lm_TPURef.mf.f.lhs.sym) ≃ $(round(coef(lm_TPURef)[1], digits = 3)) ⋅ $(lm_TPURef.mf.f.rhs.terms[2])
 """)
 
@@ -793,7 +799,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "2daae58bb7f7883e636518c6fb67a055b9c815c6"
 

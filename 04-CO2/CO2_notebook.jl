@@ -1,5 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
+
+#> [frontmatter]
+#> title = "CO2 fluxes data"
+#> layout = "layout.jlhtml"
+#> description = "Picaro measurements of the CO2 fluxes in the Ecotron chambers."
+#> tags = ["co2"]
 
 using Markdown
 using InteractiveUtils
@@ -29,7 +35,7 @@ md"""
 
 CO2 fluxes were measured at the chamber scale using a Picarro.
 
-The Microcosms platform from the Ecotron includes 13 identical and independent growth chambers. These chambers have a volume of 1.5 m³ with a base area of 1 m². 
+The Microcosms platform from the Ecotron includes 13 identical and independent growth chambers. These chambers have a volume of 1.5 m³ with a base area of 1 m².
 
 The chambers allows for finely controling the radiation in the visible spectrum with four LED lamps, and the climatic conditions, including the temperature (5-50±0.5°C), relative humidity (20-90±3%) and CO2 concentration (10-2000ppm).
 
@@ -37,7 +43,7 @@ In this experiment, we used two microcosms, one for storage (`mic4`) and one for
 
 The CO2 flux of the plant in `mic3` was measured for each scenario by 10 minutes time-steps; measuring the input CO2 concentration to the chamber for 5 minutes, and then the output CO2 concentration for 5 minutes.
 
-The CO2 fluxes are noisy due to several factors: 
+The CO2 fluxes are noisy due to several factors:
 
 - the conditions change rapidly and are not controled anymore when the door of the chamber is opened, and it can take a bit of time to recover the instruction in teh controled conditions
 - the conditions are not at equilibrium in the transition period between two CO2 scenarios, *e.g.* from 400 ppm to 600 ppm.
@@ -179,7 +185,7 @@ Joining the data into the same dataframe. The door data is merged at a 10min res
 
 # ╔═╡ 5cb9bb37-6c9e-46e2-9747-9fbdc580b973
 md"""
-Here we define the number of values that will be removed before a door event or a scenario change: 
+Here we define the number of values that will be removed before a door event or a scenario change:
 
 |Event|Before|After|
 |:--------| ----------- | ----------- |
@@ -486,7 +492,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
 project_hash = "8450c89e808828d0ae2764ba7a72f275ddb4b2b8"
 
