@@ -1,11 +1,11 @@
 ### A Pluto.jl notebook ###
-# v0.19.42
+# v0.19.43
 
 #> [frontmatter]
 #> title = "Spad data"
 #> layout = "layout.jlhtml"
-#> description = "Plant response to experiments using Spad data in the Ecotron chambers."
 #> tags = ["spad"]
+#> description = "Plant response to experiments using Spad data in the Ecotron chambers."
 
 using Markdown
 using InteractiveUtils
@@ -799,7 +799,7 @@ PlutoUI = "~0.7.50"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.4"
+julia_version = "1.10.3"
 manifest_format = "2.0"
 project_hash = "2daae58bb7f7883e636518c6fb67a055b9c815c6"
 
