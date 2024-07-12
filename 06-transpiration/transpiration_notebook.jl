@@ -1,6 +1,12 @@
 ### A Pluto.jl notebook ###
 # v0.19.42
 
+#> [frontmatter]
+#> title = "Plant transpiration data"
+#> layout = "layout.jlhtml"
+#> description = "Processing of plant transpiration data."
+#> tags = ["transpiration"]
+
 using Markdown
 using InteractiveUtils
 

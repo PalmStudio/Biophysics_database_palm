@@ -1,6 +1,12 @@
 ### A Pluto.jl notebook ###
 # v0.19.42
 
+#> [frontmatter]
+#> title = "Database of all processed data"
+#> layout = "layout.jlhtml"
+#> description = "Database of all processed data."
+#> tags = ["database"]
+
 using Markdown
 using InteractiveUtils
 

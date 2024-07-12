@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.42
+# v0.19.27
 
 using Markdown
 using InteractiveUtils
@@ -391,7 +391,6 @@ md"""
 
 # ╔═╡ c52c9786-a25f-11ec-1fdc-9b13922d7ccb
 const dir = joinpath(@__DIR__, "..", "content")
-#const dir = joinpath(@__DIR__, "..", "..")
 
 # ╔═╡ cf27b3d3-1689-4b3a-a8fe-3ad639eb2f82
 md"""
@@ -400,26 +399,6 @@ md"""
 
 # ╔═╡ 7f7f1981-978d-4861-b840-71ab611faf74
 @bind manual_update_trigger Button("Read input files again")
-
-# ╔═╡ 7d9cb939-da6b-4961-9584-a905ad453b5d
-#allfiles = filter(PlutoSliderServer.list_files_recursive(dir)) do p
-	# reference to retrigger when files change
-#	dir_changed_time
-#	manual_update_trigger
-
-#	!ignore(joinpath(dir, p))
-#end
-allfiles = ["_includes/welcome.md",
-			"../../02-climate/climate_notebook.jl",
-			"../../03-time-synchronization/time_synchronization_notebook.jl",
-			"../../04-CO2/CO2_notebook.jl",
-			"basic_syntax.jl",
-			"cheatsheets.md",
-			"installation.md",
-			"search.md",
-			"index.jlmd",
-			#"website/content/sidebar data.jl",
-]
 
 # ╔═╡ e1a87788-2eba-47c9-ab4c-74f3344dce1d
 ignored_dirname(s; allow_special_dirs::Bool=false) =
@@ -462,6 +441,26 @@ dir_changed_time = let
 	end
 
 	valx
+end
+
+# ╔═╡ 3aace512-65d6-4299-8e5e-64ae52b05822
+begin
+	allfiles = [
+	"../../02-climate/climate_notebook.jl",
+	"../../03-time-synchronization/time_synchronization_notebook.jl",
+	"../../04-CO2/CO2_notebook.jl",
+	"../../05-thermal_camera_measurements/2-visualize_temperature_notebook.jl",
+	"../../06-transpiration/transpiration_notebook.jl",
+	"../../07-walz/notebook_walz.jl",
+	"../../08-spad/notebook_spad.jl",
+	"../../09-database/database_notebook.jl",
+	]
+	append!(allfiles, filter(PlutoSliderServer.list_files_recursive(dir)) do p
+		# reference to retrigger when files change
+		dir_changed_time
+		manual_update_trigger
+		!ignore(joinpath(dir, p))
+	end)
 end
 
 # ╔═╡ d314ab46-b866-44c6-bfca-9a413bc06514
@@ -541,6 +540,7 @@ function final_url(input::TemplateInput, output::TemplateOutput)::String
 		#   a/index.jl  ->    a/index.html
 
 		in_dir, in_filename = splitdir(input.relative_path)
+		in_dir = replace(in_dir, "../"=>"")
 		in_name, in_ext = splitext(in_filename)
 
 		if in_name == "index"
@@ -989,8 +989,8 @@ end
 # ╠═725cb996-68ac-4736-95ee-0a9754867bf3
 # ╠═9d996c55-0e37-4ae9-a6a2-8c8761e8c6db
 # ╟─cf27b3d3-1689-4b3a-a8fe-3ad639eb2f82
-# ╟─7f7f1981-978d-4861-b840-71ab611faf74
-# ╠═7d9cb939-da6b-4961-9584-a905ad453b5d
+# ╠═7f7f1981-978d-4861-b840-71ab611faf74
+# ╠═3aace512-65d6-4299-8e5e-64ae52b05822
 # ╠═e1a87788-2eba-47c9-ab4c-74f3344dce1d
 # ╠═d38dc2aa-d5ba-4cf7-9f9e-c4e4611a57ac
 # ╠═485b7956-0774-4b25-a897-3d9232ef8590

@@ -1,6 +1,12 @@
 ### A Pluto.jl notebook ###
 # v0.19.42
 
+#> [frontmatter]
+#> title = "Spad data"
+#> layout = "layout.jlhtml"
+#> description = "Plant response to experiments using Spad data in the Ecotron chambers."
+#> tags = ["spad"]
+
 using Markdown
 using InteractiveUtils
 

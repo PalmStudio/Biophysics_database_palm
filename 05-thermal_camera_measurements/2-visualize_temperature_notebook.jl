@@ -1,6 +1,12 @@
 ### A Pluto.jl notebook ###
 # v0.19.42
 
+#> [frontmatter]
+#> title = "Thermal camera data"
+#> layout = "layout.jlhtml"
+#> description = "Measurements and visualization of the leaf temperature in the Ecotron chambers."
+#> tags = ["thermal"]
+
 using Markdown
 using InteractiveUtils
 

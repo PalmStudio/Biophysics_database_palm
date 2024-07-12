@@ -1,6 +1,12 @@
 ### A Pluto.jl notebook ###
 # v0.19.42
 
+#> [frontmatter]
+#> title = "Walz data"
+#> layout = "layout.jlhtml"
+#> description = "Walz data measurements at leaf level."
+#> tags = ["walz"]
+
 using Markdown
 using InteractiveUtils
 
