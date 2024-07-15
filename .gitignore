@@ -58,6 +58,8 @@ generation_report.html
 !10-reconstruction/translations.csv
 !10-reconstruction/reconstructions.tar.bz2
 !11-outputs/Reconstructions_LiDAR_all.png
+!website/content/assets/github_clone.png
+!website/content/assets/github_download.png
 .Rproj.user
 05-thermal_camera_measurements/1-compute_leaf_temperature backup 2.jl
 *.bz2
