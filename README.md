@@ -295,6 +295,9 @@ julia -e 'using Pluto; Pluto.run(notebook = "09-database/database_notebook.jl")'
 
 The 3D reconstructions of the plants are done using a script. You'll have to open this repository in VS Code and then open a Julia REPL in the repository. Then, you can open and run the following script: "10-reconstruction/build_opfs.jl".
 
+Note that one of the data archive is not included in this repository because it is too large. You can download it from the Zenodo repository.
+It is named `lidar.tar.bz2`, and should be located in `00-data/lidar/lidar.tar.bz2`.
+
 The visualization of the 3D reconstructions is done using a Pluto notebook. You can open it using the following command:
 
 ``` julia
