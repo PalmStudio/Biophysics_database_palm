@@ -1,17 +1,19 @@
 ### A Pluto.jl notebook ###
 # v0.19.42
 
+#> [frontmatter]
+#> title = "Plant visualisation"
+#> layout = "layout.jlhtml"
+#> tags = ["visualisation"]
+#> description = "Plant visualisation"
+
 using Markdown
 using InteractiveUtils
 
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try
-            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
-        catch
-            b -> missing
-        end
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -29,6 +31,7 @@ begin
     using CairoMakie, Meshes, PlantGeom, Rotations
     using Dates, Colors
     using PlutoUI, CSV, DataFrames
+	using CodecBzip2, Tar
 end
 
 # ╔═╡ 54f3d030-c985-11ed-30b9-41f0bdfdae8a
@@ -46,10 +49,18 @@ md"""
 """
 
 # ╔═╡ a8262ba2-81e3-4dcf-89b5-8b19ccec328a
-LiDAR_sessions = filter(x -> startswith(basename(x), "SESSION"), readdir("../00-data/lidar/lidar", join=true))
+LiDAR_sessions = filter(x -> startswith(basename(x), "Plant"), readdir("../00-data/lidar/reconstructions", join=true))
 
 # ╔═╡ c501796d-335c-4625-b44a-136efcfb971d
-OPFs = readdir("./reconstructions", join=true)
+begin
+	reconstruction_dir = "./reconstructions"
+    if !isdir(reconstruction_dir)
+        open(Bzip2DecompressorStream, "./reconstructions.tar.bz2") do io
+            Tar.extract(io, reconstruction_dir)
+        end
+    end
+	OPFs = readdir(reconstruction_dir, join=true)
+end
 
 # ╔═╡ 46ecd169-e3dd-4c79-a505-cf87beecddf0
 md"""
@@ -137,6 +148,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CodecBzip2 = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
 Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
@@ -145,10 +157,12 @@ Meshes = "eacbb407-ea5a-433e-ab97-5258b1ca43fa"
 PlantGeom = "5edaa67e-25db-4eb9-bf81-05d793b2238d"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Rotations = "6038ab10-8711-5258-84ad-4b1120ba62dc"
+Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 
 [compat]
 CSV = "~0.10.14"
 CairoMakie = "~0.12.2"
+CodecBzip2 = "~0.8.3"
 Colors = "~0.12.11"
 DataFrames = "~1.6.1"
 JSServe = "~2.3.1"
@@ -164,7 +178,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "42266e6f6bf9dafb36f979034e2672f14d9ed39b"
+project_hash = "8d058e005574595d4e552df798cf6c05ba6834b0"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -378,6 +392,12 @@ deps = ["OffsetArrays"]
 git-tree-sha1 = "e24a6f390e5563583bb4315c73035b5b3f3e7ab4"
 uuid = "7a955b69-7140-5f4e-a0ed-f168c5e2e749"
 version = "1.4.0"
+
+[[deps.CodecBzip2]]
+deps = ["Bzip2_jll", "Libdl", "TranscodingStreams"]
+git-tree-sha1 = "f8889d1770addf59d0a015c49a473fa2bdb9f809"
+uuid = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
+version = "0.8.3"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -2122,6 +2142,7 @@ version = "3.5.0+0"
 # ╠═130a9ae5-aaf8-43da-9e73-66afb3e19525
 # ╟─6a66bfda-c3a9-44fa-81b8-d199d8a5ba88
 # ╠═a85e9e05-4e3b-429e-b5a9-57f03183c954
+# ╠═d44982f7-bad4-4aac-a367-0b096b198d50
 # ╠═ed81cdbc-6a4b-48d8-be2f-e2f78862d598
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
