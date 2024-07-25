@@ -1,3 +1,5 @@
+using Pkg
+Pkg.develop(path="./EcotronAnalysis.jl")
 using EcotronAnalysis
 using GLMakie
 using CSV, DataFrames, Dates
