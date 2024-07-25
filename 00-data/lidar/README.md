@@ -1,10 +1,10 @@
 # lidar Data
 
-The archive `lidar_data.tar.bz2` contains the lidar data for the four plants. 
+The archive `lidar_data.tar.bz2` contains the lidar data for the four plants.
 
 Each folder inside the archive is a measurement session were we scanned all four plants with a Riegl VZ400. The data here are the point clouds extracted from the raw data. The raw data are not included here for disk space reasons (44 Go). The raw data can be sent upon request.
 
-The archive `reconstructions.zip` contains the meshes reconstructed from the point clouds. There are four folders for each plant, corresponding to the scan of the plant near a sequence of measurement. In each folder, there are several `.ply` files, *e.g.* for the first date of the first plant: 
+The archive `reconstructions.tar.bz2` contains the meshes reconstructed from the point clouds. There are four folders for each plant, corresponding to the scan of the plant near a sequence of measurement. In each folder, there are several `.ply` files, *e.g.* for the first date of the first plant:
 
 - `Plant_1_15_03_2021_bulb.ply`: the mesh of the bulb
 - `Plant_1_15_03_2021_bulb.ply`: the mesh of the bulb
@@ -32,9 +32,9 @@ mkdir -p reconstruction && tar -xjvf reconstructions.tar.bz2 -C reconstruction
 ```
 
 Or using Julia:
-    
+
 ```julia
-using CodecBzip2, Tar 
+using CodecBzip2, Tar
 # Extract the reconstructions from the tar.bz2 file:
 open(Bzip2DecompressorStream, "00-data/lidar/reconstructions.tar.bz2") do io
     Tar.extract(io, "00-data/lidar/reconstructions")

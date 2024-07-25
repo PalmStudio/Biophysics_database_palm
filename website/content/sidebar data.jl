@@ -10,6 +10,7 @@ Dict(
         "Photosynthesis and stomates" => collections["walz"].pages,
         "SPAD" => collections["spad"].pages,
         "Database" => collections["database"].pages,
+        "Visualize" => collections["visualisation"].pages,
         ],
     :about => Dict(
         :authors => [
