@@ -484,3 +484,17 @@ cowplot::plot_grid(parVid,
 )
 
 ggsave(filename = "2-figuresTables/Light.pdf", width = 10, height = 12)
+
+
+
+# light spectrum ----------------------------------------------------------
+
+sp=fread(input = '../00-data/mappingLight/LEDspectrum.csv',dec=',')
+
+sp%>%
+  ggplot(aes(x=`waveLength(nm)`,y=`irradiance(microW/cm2/nm)`))+
+  geom_line()+
+  labs(x='Wave length (nm)',y=expression('Irradiance ('*mu*'W '*cm**-2*nm**-1*')'))+
+  myTheme
+
+ggsave(filename = "2-figuresTables/LightSpectrum.pdf", width = 10, height = 8)
