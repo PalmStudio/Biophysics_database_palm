@@ -26,6 +26,7 @@ begin
     using Dates, Colors
     using PlutoUI, CSV, DataFrames
 	using CodecBzip2, Tar
+	using Unitful
 	using Pkg
 	Pkg.develop(path="../EcotronAnalysis.jl")
 	using EcotronAnalysis
@@ -111,7 +112,7 @@ begin
     	write_opf("./reconstructions/$(basename(i)).opf", opf)
 	end
 	# Save the translations, not that we remove the units for writing:
-	CSV.write("10-reconstruction/translations.csv", transform(translations, [:x, :y, :z] .=> (x -> ustrip.(x)) .=> [:x, :y, :z]))
+	CSV.write("./translations.csv", transform(translations, [:x, :y, :z] .=> (x -> ustrip.(x)) .=> [:x, :y, :z]))
 	
 end
 
@@ -135,13 +136,13 @@ md"""
 # ╔═╡ 353e6b49-a886-43b0-bf76-3e1173bd66f0
 md"""
 Choose the plant:
-$(@bind plant Select([1,2,3,4]))
+$(@bind plant_number Select([1,2,3,4]))
 """
 
 # ╔═╡ 57107cea-8ee8-44d9-9885-bf0cc55b194b
 sessions = begin
-    files_plant = OPFs[findall(x -> startswith(x, "Plant_$(plant)"), basename.(OPFs))]
-    folders_dates = replace.(basename.(files_plant), "Plant_$(plant)_" => "", ".opf" => "")
+    files_plant = OPFs[findall(x -> startswith(x, "Plant_$(plant_number)"), basename.(OPFs))]
+    folders_dates = replace.(basename.(files_plant), "Plant_$(plant_number)_" => "", ".opf" => "")
     Date.(folders_dates, dateformat"yyyy_mm_dd")
 end
 
@@ -155,19 +156,19 @@ opf = read_opf(files_plant[findfirst(x -> x == session, sessions)])
 
 # ╔═╡ a85e9e05-4e3b-429e-b5a9-57f03183c954
 transl = let
-    f = "../10-reconstruction/translations.csv"
+    f = "./translations.csv"
     !isfile(f) && error("File `translations.csv` not found. please run the `build_opfs.jl` script before running this notebook.")
-    filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read(f, DataFrame))
+    filter(x -> x.plant == plant_number && x.date_reconstruction == session, CSV.read(f, DataFrame))
 end
 
 # ╔═╡ ed81cdbc-6a4b-48d8-be2f-e2f78862d598
 lidar = let
     # 1. Find the LiDAR session corresponding to the reconstruction:
-    folder_session = Plant_sessions[findfirst(x -> occursin(Dates.format(session, dateformat"yyyy_mm_dd"), basename(x)), LiDAR_sessions)]
+    folder_session = lidar_sessions[findfirst(x -> occursin(Dates.format(session, dateformat"dd_mm_yyyy"), basename(x)), lidar_sessions)]
 
     # Grep the plant in the session:
     session_files = readdir(folder_session, join=true)
-    plant_file = session_files[findfirst(x -> "Plant$(plant).txt" == basename(x), session_files)]
+    plant_file = session_files[findfirst(x -> "Plant$(plant_number).txt" == basename(x), session_files)]
     df = CSV.read(plant_file, DataFrame, header=["X", "Y", "Z", "Reflectance"], skipto=2)
 
     rot = Rotations.AngleAxis(π, 0, 0, 1)

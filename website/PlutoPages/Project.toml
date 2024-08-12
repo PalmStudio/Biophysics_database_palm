@@ -1,2 +1,4 @@
 [deps]
+EcotronAnalysis = "15d6e983-43c8-42c7-802c-5e0543598720"
+HTTP = "cd3eb016-35fb-5094-929b-558a96fad6f3"
 PlutoPages = "d5dc3dd1-4774-47c7-8860-0a1ad9e34b8c"

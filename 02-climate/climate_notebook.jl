@@ -4,8 +4,8 @@
 #> [frontmatter]
 #> title = "Climate data"
 #> layout = "layout.jlhtml"
-#> description = "Climate data of both chambers in the Ecotron."
 #> tags = ["climate"]
+#> description = "Climate data of both chambers in the Ecotron."
 
 using Markdown
 using InteractiveUtils
@@ -305,7 +305,7 @@ ZipFile = "~0.10.1"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.4"
+julia_version = "1.10.3"
 manifest_format = "2.0"
 project_hash = "90e8f43abb26ae0ba6e3488dffdfce9f24dcd88a"
 
