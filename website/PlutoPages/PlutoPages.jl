@@ -454,7 +454,7 @@ begin
 	"../../07-walz/notebook_walz.jl",
 	"../../08-spad/notebook_spad.jl",
 	"../../09-database/database_notebook.jl",
-	"../../10-reconstruction/visualize_plants.jl"
+	"../../10-reconstruction/visualize_plants_notebook.jl"
 	]
 	append!(allfiles, filter(PlutoSliderServer.list_files_recursive(dir)) do p
 		# reference to retrigger when files change

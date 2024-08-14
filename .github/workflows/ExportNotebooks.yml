@@ -17,15 +17,12 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v2
 
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-          cache: 'pip' # caching pip dependencies
+      - name: Install unzip-http
+        run:
+          pip install unzip-http
 
       - name: Download missing file
         run:
-          pip install unzip-http
           unzip-http -f https://zenodo.org/records/12704284/files/biophysics_database_palm.zip 00-data/lidar/lidar.tar.bz2
 
       - name: 🙌 Install Julia
