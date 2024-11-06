@@ -14,8 +14,16 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Fall 23 source
+      - name: Checkout Project
         uses: actions/checkout@v2
+
+      - name: Install unzip-http
+        run:
+          pip install unzip-http
+
+      - name: Download missing file
+        run:
+          unzip-http -f https://zenodo.org/records/12704284/files/biophysics_database_palm.zip 00-data/lidar/lidar.tar.bz2
 
       - name: 🙌 Install Julia
         uses: julia-actions/setup-julia@v1
