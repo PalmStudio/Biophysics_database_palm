@@ -58,9 +58,9 @@ Here are the reconstructions of the plants on top of the point clouds over time:
 This folder
 ├── 00-data                        --> Contains raw, unprocessed data
 │   ├── lidar                      --> lidar data for the 3D reconstruction of the plants
-│   │   ├── lidar.zip              --> lidar point clouds for each plant and session
+│   │   ├── lidar.tar.bz2          --> lidar point clouds for each plant and session
 │   │   ├── README.md              --> Instructions on how to use the lidar data
-│   │   └── reconstructions.zip    --> 3D reconstructions of the plants
+│   │   └── reconstructions.tar.bz2 -> 3D reconstructions of the plants
 │   ├── climate                    --> Climatic data from the growth chamber
 │   │   ├── README.md
 │   │   └── climate.zip            --> Climatic data archive
@@ -71,15 +71,16 @@ This folder
 │   │   ├── bulbs_weight.csv       --> Bulb weight data
 │   │   ├── leaves_weight.csv      --> Leaves weight data
 │   │   └── roots_weight.csv       --> Roots weight data
-│   ├── picarro_flux               --> CO2 flux data from the Picarro
-│   │   ├── data_mean_flux.csv     --> Mean CO2 flux data
-│   │   └── outliers.csv           --> Outliers data identified by hand
+│   ├── picarro_flux                --> CO2 flux data from the Picarro
+│   │   ├── data_mean_flux.csv      --> Mean CO2 flux data
+│   │   └── data_mean_flux.xlsx     --> Mean CO2 flux data in Excel format (original format)
 │   ├── scale_weight               --> Weight data from the scale
 │   │   ├── README.md
 │   │   └── weights.tar.bz2        --> Weight data archive
 │   ├── scenario_sequence          --> Sequence of the scenarios
-│   │   ├── SequencePlanteMicro3.csv  --> Sequence of measurement in Mic3 for the plants
-│   │   └── SequenceScenarioMicro3.csv --> Sequence of the scenarios in Mic3 for each day
+│   │   ├── README.md              --> Instructions on how to use the scenario sequence data
+│   │   ├── SequencePlanteMicro3.csv -> Sequence of measurement in Mic3 for the plants
+│   │   └── SequenceScenarioMicro3.csv -> Sequence of the scenarios in Mic3 for each day
 │   ├── smse                       --> Reference meteorological data from Sumatra 2008-2018
 │   │   └── Meteo_hour_SMSE.csv
 │   ├── spad                       --> SPAD measurement data
@@ -95,60 +96,51 @@ This folder
 │   └── walz                       --> Walz GFS-3000 portable gas analyzer data
 │       ├── README.md
 │       └── walz.tar.bz2           --> Walz data archive
-├── 02-climate                      --> Contains processed climatic data
+├── 01-climate                     --> Contains processed climatic data
 │   ├── climate_mic3.csv           --> Climatic data for Mic3
 │   ├── climate_mic3_10min.csv     --> Climatic data for Mic3, aggregated to 10 minutes matching CO2 input/output measurement cycle
 │   ├── climate_mic3_5min.csv      --> Climatic data for Mic3, aggregated to 5 minutes matching CO2 output measurement
 │   ├── climate_mic4.csv           --> Climatic data for Mic4
 │   └── climate_notebook.jl        --> Notebook to process climatic data
-├── 03-time-synchronization         --> Computation of the data to synchronize all sensors to UTC
+├── 02-time-synchronization        --> Computation of the data to synchronize all sensors to UTC
 │   ├── README.md
-│   ├── match_scale_camera_time.csv --> Match between the scale and the thermal camera
-│   ├── time_synchronization.csv             --> Time synchronization data
-│   └── time_synchronization_notebook.jl     --> Notebook to compute time synchronization data
-├── 04-CO2                          --> Processed CO2 data
-│   ├── CO2_fluxes.csv             --> CO2 fluxes data
+│   ├── match_scale_camera_time.csv -> Match between the scale and the thermal camera
+│   ├── time_synchronization.csv   --> Time synchronization data
+│   └── time_synchronization_notebook.jl -> Notebook to compute time synchronization data
+├── 03-CO2                         --> Processed CO2 data
+│   ├── CO2_fluxes.csv              --> CO2 fluxes data
 │   └── CO2_notebook.jl            --> Notebook to process CO2 data
-├── 05-thermal_camera_measurements  --> Processed thermal camera data
-│   ├── 1-compute_leaf_temperature.jl --> Script to compute leaf temperature (careful, it takes several hours to process)
-│   ├── 2-visualize_temperature_notebook.jl --> Notebook to visualize processed leaf temperature
+├── 04-thermal_camera_measurements --> Processed thermal camera data
+│   ├── 1-compute_leaf_temperature.jl -> Script to compute leaf temperature (careful, it takes several hours to process)
+│   ├── 2-visualize_temperature_notebook.jl -> Notebook to visualize processed leaf temperature
 │   └── leaf_temperature.csv.bz2   --> Leaf temperature data (at 1min time-scale, but with information to match with CO2 fluxes)
-├── 06-transpiration                --> Processed plant transpiration data
+├── 05-transpiration               --> Processed plant transpiration data
 │   ├── README.md
 │   ├── plant_sequence_delayed_corrected.csv --> Plant sequence with corrected delay
-│   ├── transpiration_10min.csv.bz2 --> Plant transpiration data aggregated to match the 10 minutes CO2 measurement
-│   ├── transpiration_first_5min.csv.bz2 --> Plant transpiration data aggregated to match the 5min output CO2 measurement
+│   ├── transpiration_10min.csv.bz2 -> Plant transpiration data aggregated to match the 10 minutes CO2 measurement
+│   ├── transpiration_first_5min.csv.bz2 -> Plant transpiration data aggregated to match the 5min output CO2 measurement
 │   └── transpiration_notebook.jl  --> Notebook to process plant transpiration data
-├── 07-walz                         --> Processed Walz data
+├── 06-walz                        --> Processed Walz data
 │   ├── notebook_walz.jl           --> Notebook to process Walz data
-│   └── photosynthetic_and_stomatal_parameters.csv --> Computed photosynthetic and stomatal parameters data
-├── 08-spad                         --> Processed SPAD data
+│   └── photosynthetic_and_stomatal_parameters.csv -> Computed photosynthetic and stomatal parameters data
+├── 07-spad                        --> Processed SPAD data
 │   ├── SPAD_models.csv            --> SPAD models
 │   └── notebook_spad.jl           --> Notebook to process SPAD data
-├── 09-database                     --> Database of all processed data
+├── 08-reconstruction
+│   ├── build_opfs.jl              --> Script to make OPF files out of the 3D reconstructions of the plants
+│   ├── reconstructions.tar.bz2    --> 3D reconstructions of the plants, as a list of OPF files
+│   ├── translations.csv           --> Translations to match OPF files and point clouds (OPFs are center the pot to the origin)
+│   └── visualize_plants_notebook.jl -> Notebook to visualize the plants in 3D
+├── 09-database                    --> Database of all processed data
+│   ├── columns.csv                --> Description of the columns in the database
 │   ├── database_10min.csv.bz2     --> Database of all processed data aggregated to match the 10min CO2 measurement
 │   ├── database_5min.csv.bz2      --> Database of all processed data aggregated to match the 5min output CO2 measurement
-│   └── database_notebook.jl       --> Notebook to process the database
+│   ├── database_notebook.jl       --> Notebook to process the database
+│   └── plant_surface.csv          --> Measured plant surfaces
+├── 11-outputs
+│   └── Reconstructions_LiDAR_all.png --> One of the outputs tracked in the repository
 ├── EcotronAnalysis.jl             --> Package to process the thermal camera data
-│   ├── LICENSE
-│   ├── Manifest.toml
-│   ├── Project.toml
-│   ├── README.md
-│   ├── src
-│   │   ├── EcotronAnalysis.jl
-│   │   └── thermal_images
-│   │       ├── compute_all_images.jl
-│   │       ├── compute_jpg_temperature_distributed.jl
-│   │       ├── parse_mask_name.jl
-│   │       ├── plot_mask.jl
-│   │       ├── read_FLIR.jl
-│   │       ├── temperature_from_jpg.jl
-│   │       └── temperature_in_mask.jl
-│   └── test
-│       ├── runtests.jl
-│       └── test_data
-│           ├── 20210308_180009_R.jpg
-│           └── P1F3-20210427_154213-20210428_080428_XY_Coordinates_V1.csv
+│   └── ...
 ├── Manifest.toml                  --> Manifest of the Julia environment (tracks dependencies versions)
 ├── Project.toml                   --> Project of the Julia environment  (tracks dependencies)
 └── README.md                      --> This file
@@ -237,24 +229,24 @@ You may paste the commands into a terminal to open the Pluto notebooks. Note tha
 ### Climate
 
 ``` bash
-julia -e 'using Pluto; Pluto.run(notebook = "02-climate/climate_notebook.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "01-climate/climate_notebook.jl")'
 ```
 
 ### Time synchronization
 
 ``` bash
-julia -e 'using Pluto; Pluto.run(notebook = "03-time-synchronization/time_synchronization_notebook.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "02-time-synchronization/time_synchronization_notebook.jl")'
 ```
 
 ### CO₂ fluxes
 
 ``` bash
-julia -e 'using Pluto; Pluto.run(notebook = "04-CO2/CO2_notebook.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "03-CO2/CO2_notebook.jl")'
 ```
 
 ### Leaf temperature
 
-Computation: The leaf temperature is computed in a Julia script rather than a Pluto notebook because it takes a long time to process. You can find the script in the `05-thermal_camera_measurements/1-compute_leaf_temperature.jl`.
+Computation: The leaf temperature is computed in a Julia script rather than a Pluto notebook because it takes a long time to process. You can find the script in the `04-thermal_camera_measurements/1-compute_leaf_temperature.jl`.
 
 > [!WARNING]
 > This notebook takes several hours to process as it computes the leaf temperature for each plant leaf for each image. It is recommended to run it on a powerful computer and know what you're doing.
@@ -262,13 +254,13 @@ Computation: The leaf temperature is computed in a Julia script rather than a Pl
 - Visualization:
 
     ``` bash
-    julia -e 'using Pluto; Pluto.run(notebook = "05-thermal_camera_measurements/2-visualize_temperature_notebook.jl")'
+    julia -e 'using Pluto; Pluto.run(notebook = "04-thermal_camera_measurements/2-visualize_temperature_notebook.jl")'
     ```
 
 ### H₂O fluxes (transpiration)
 
 ``` bash
-julia -e 'using Pluto; Pluto.run(notebook = "06-transpiration/transpiration_notebook.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "05-transpiration/transpiration_notebook.jl")'
 ```
 
 ### Leaf gas exchange
@@ -276,13 +268,13 @@ julia -e 'using Pluto; Pluto.run(notebook = "06-transpiration/transpiration_note
 These are the A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves.
 
 ``` bash
-julia -e 'using Pluto; Pluto.run(notebook = "07-walz/notebook_walz.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "06-walz/notebook_walz.jl")'
 ```
 
 ### SPAD
 
 ``` bash
-julia -e 'using Pluto; Pluto.run(notebook = "08-spad/notebook_spad.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "07-spad/notebook_spad.jl")'
 ```
 
 ### Making the database
@@ -296,10 +288,10 @@ julia -e 'using Pluto; Pluto.run(notebook = "09-database/database_notebook.jl")'
 The 3D reconstructions and visualization of the plants are done using a Pluto notebook. You can open it using the following command:
 
 ``` julia
-julia -e 'using Pluto; Pluto.run(notebook = "10-reconstruction/visualize_plants_notebook.jl")'
+julia -e 'using Pluto; Pluto.run(notebook = "08-reconstruction/visualize_plants_notebook.jl")'
 ```
 
-Note that if you want to do the 3D reconstructions of the plants alone, it can be done using a script. You'll have to open this repository in VS Code and then open a Julia REPL in the repository. Then, you can open and run the following script: "10-reconstruction/build_opfs.jl".
+Note that if you want to do the 3D reconstructions of the plants alone, it can be done using a script. You'll have to open this repository in VS Code and then open a Julia REPL in the repository. Then, you can open and run the following script: "08-reconstruction/build_opfs.jl".
 
 Also, note that one of the data archive is not included in this repository because it is too large. You can download it from the Zenodo repository.
 It is named `lidar.tar.bz2`, and should be located in `00-data/lidar/lidar.tar.bz2`. We use the [unzip-http](https://github.com/saulpw/unzip-http) tool to extract and download only the necessary files from the whole archive.
@@ -340,7 +332,7 @@ Then, you'll have to navigate manually to your notebook.
 A second way is to open a notebook by passing its path, *e.g.*:
 
 ``` julia
-Pluto.run(notebook = "02-climate/climate_notebook.jl")
+Pluto.run(notebook = "01-climate/climate_notebook.jl")
 ```
 
 Watch [this video](https://www.youtube.com/watch?v=jdEqGOv8ycc&list=PLLiJ249IkzRFxZGALbKy75_ZyHxYCUmuk&index=4) if you need more details about how to use Pluto.

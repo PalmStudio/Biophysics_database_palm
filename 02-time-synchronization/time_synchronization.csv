@@ -1,0 +1,6 @@
+type,phase,delay_seconds
+scale,phase1,212
+scale,phase2,245
+scale,phase3,256
+scale,phase4,89137
+thermal camera,all,-3572

@@ -1,0 +1,4 @@
+variable,predictor,coefficient
+VcMaxref,SPAD,0.7992417265288132
+JMaxRef,VcMaxref,2.0387258150824956
+TPURef,VcMaxref,0.14268293922326028
