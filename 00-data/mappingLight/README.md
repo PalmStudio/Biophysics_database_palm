@@ -1,6 +1,5 @@
 # Light sensors Data
 
-
 This folder includes measurements for mapping the light environment within the chamber using a Sunscan device (Delta-T).
 
 The file ``mapEmptyChamber.csv`` contains data collected when the chamber is empty. The device consists of 64 sensors positioned every 1.6 cm along the Y-axis. Each measurement is taken at a specific distance from the light source (Z=0) and from the left side of the chamber (X=0). The measurements were conducted under two conditions: 

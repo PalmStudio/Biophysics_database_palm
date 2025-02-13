@@ -38,6 +38,7 @@ Two microcosms were used during 2 months to measure each of the four plants with
 
 Measurements included:
 
+- Climate data inside the microcosm
 - CO2 fluxes with a Picarro G2101-i, measuring the CO2 concentration in the chamber for 5 minutes, and input CO2 concentration for 5 minutes
 - H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was sealed with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/PalmStudio/Precision_scale-Raspberry_Pi) [![DOI](https://zenodo.org/badge/385182511.svg)](https://doi.org/10.5281/zenodo.14862493)
 - Leaf temperature, measured with a thermal camera. The code to control the camera is available [here](https://github.com/PalmStudio/FLIR_Vue_Pro-Raspberry_Pi) [![DOI](https://zenodo.org/badge/384170107.svg)](https://doi.org/10.5281/zenodo.14862497)
@@ -45,6 +46,7 @@ Measurements included:
 - Biomass and surface measurements of all plant organs were also performed at the end of the experiment.
 - SPAD measurements of each leaf of the plants
 - A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves using a portable gas analyzer (Walz GFS-3000) for model calibration
+- Light mapping in the microcosm with a Sunscan device (Delta-T)
 
 This repository does not contain the raw thermal images and the raw lidar data taken during the experiment because they are too large to be stored on Git (images: 60Go, 24Go when compressed). The data is available on a [dedicated repository in Zenodo](https://doi.org/10.5281/zenodo.12704284).
 
