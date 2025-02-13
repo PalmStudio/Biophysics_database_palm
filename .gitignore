@@ -26,7 +26,7 @@ generation_report.html
 # Data to keep:
 !00-data/picarro_flux/data_mean_flux.csv
 !00-data/picarro_flux/outliers.csv
-!03-time-synchronization/match_scale_camera_time.csv
+!02-time-synchronization/match_scale_camera_time.csv
 !00-data/door_opening/Mic3_door_opening.csv
 !00-data/climate/climate.zip
 !00-data/scale_weight/weights.tar.bz2
@@ -41,29 +41,29 @@ generation_report.html
 !00-data/morphology_and_biomass/roots_weight.csv
 !00-data/lidar/reconstructions.tar.bz2
 
-!02-climate/climate_mic3_5min.csv
-!02-climate/climate_mic3_10min.csv
-!03-time-synchronization/time_synchronization.csv
-!04-CO2/CO2_fluxes.csv
-!05-thermal_camera_measurements/leaf_temperature.csv.bz2
-!06-transpiration/transpiration_first_5min.csv.bz2
-!06-transpiration/transpiration_10min.csv.bz2
-!06-transpiration/plant_sequence_delayed_corrected.csv
-!07-walz/photosynthetic_and_stomatal_parameters.csv
-!08-spad/SPAD_models.csv
+!01-climate/climate_mic3_5min.csv
+!01-climate/climate_mic3_10min.csv
+!02-time-synchronization/time_synchronization.csv
+!03-CO2/CO2_fluxes.csv
+!04-thermal_camera_measurements/leaf_temperature.csv.bz2
+!05-transpiration/transpiration_first_5min.csv.bz2
+!05-transpiration/transpiration_10min.csv.bz2
+!05-transpiration/plant_sequence_delayed_corrected.csv
+!06-walz/photosynthetic_and_stomatal_parameters.csv
+!07-spad/SPAD_models.csv
 !09-database/database_5min.csv.bz2
 !09-database/database_10min.csv.bz2
 !09-database/columns.csv
 !09-database/plant_surface.csv
-!10-reconstruction/translations.csv
-!10-reconstruction/reconstructions.tar.bz2
+!08-reconstruction/translations.csv
+!08-reconstruction/reconstructions.tar.bz2
 !11-outputs/Reconstructions_LiDAR_all.png
 !website/content/assets/github_clone.png
 !website/content/assets/github_download.png
 .Rproj.user
-05-thermal_camera_measurements/1-compute_leaf_temperature backup 2.jl
+04-thermal_camera_measurements/1-compute_leaf_temperature backup 2.jl
 *.bz2
-06-transpiration/transpiration_10min.csv.bz2
+05-transpiration/transpiration_10min.csv.bz2
 paper/.Rhistory
 .Rhistory
 paper/2-figuresTables/LightSpectrum.pdf
