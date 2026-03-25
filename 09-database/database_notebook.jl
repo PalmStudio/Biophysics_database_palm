@@ -13,7 +13,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -52,10 +56,10 @@ Climatic conditions inside the chamber, at 5 min time-step resolution, only for 
 """
 
 # ╔═╡ 86632c33-1ad9-428e-a5a2-8da77166f515
-climate_5min = CSV.read("../02-climate/climate_mic3_5min.csv", DataFrame)
+climate_5min = CSV.read("../01-climate/climate_mic3_5min.csv", DataFrame)
 
 # ╔═╡ 9311888e-7235-4149-9265-809337086f23
-climate_10min = CSV.read("../02-climate/climate_mic3_10min.csv", DataFrame)
+climate_10min = CSV.read("../01-climate/climate_mic3_10min.csv", DataFrame)
 
 # ╔═╡ b873be15-d214-4a3b-b20b-98868bf0909f
 md"""
@@ -79,7 +83,7 @@ md"""
 
 # ╔═╡ 69f60c67-575d-4e05-8dd0-f75ac5055be3
 df_sequence = let
-    df_ = CSV.read("../06-transpiration/plant_sequence_delayed_corrected.csv", DataFrame)
+    df_ = CSV.read("../05-transpiration/plant_sequence_delayed_corrected.csv", DataFrame)
     transform!(df_, :Plant => ByRow(x -> parse(Int, x[2])) => :Plant)
     df_.sequence .= 1:nrow(df_)
     df_
@@ -93,12 +97,12 @@ Plant transpiration, averaged for the 5-minute time-window of the CO2 output mea
 """
 
 # ╔═╡ aa63bf29-146c-4363-85a1-d692848cd540
-transpiration_5min = open(Bzip2DecompressorStream, "../06-transpiration/transpiration_first_5min.csv.bz2") do io
+transpiration_5min = open(Bzip2DecompressorStream, "../05-transpiration/transpiration_first_5min.csv.bz2") do io
     CSV.read(io, DataFrame)
 end
 
 # ╔═╡ bcf18489-c285-4168-99b8-2cc9be4cbaad
-transpiration_10min = open(Bzip2DecompressorStream, "../06-transpiration/transpiration_10min.csv.bz2") do io
+transpiration_10min = open(Bzip2DecompressorStream, "../05-transpiration/transpiration_10min.csv.bz2") do io
     CSV.read(io, DataFrame)
 end
 
@@ -111,7 +115,7 @@ CO2 fluxes, measured every 10 minutes for 5 minutes. The first five minutes are 
 
 # ╔═╡ 4158de69-29ff-4402-873b-7287e7e74b48
 CO2 = let
-    df_ = CSV.read("../04-CO2/CO2_fluxes.csv", DataFrame)
+    df_ = CSV.read("../03-CO2/CO2_fluxes.csv", DataFrame)
 end
 
 # ╔═╡ 3013d612-b8ff-45be-b159-aaadc19fa86f
@@ -151,12 +155,12 @@ md"""
 
 Leaf-scale measurements where performed on a reference leaf before each scenario sequence with a portable gas exchange analyser (Walz GFS-3000).
 
-These measurements are used to compute the photosynthetic and stomatal conductance parameters for the model of Farquhar et al. (1980) and Medlyn et al. (2011) respectively (see [this notebook](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/07-walz/notebook_walz.jl))).
+These measurements are used to compute the photosynthetic and stomatal conductance parameters for the model of Farquhar et al. (1980) and Medlyn et al. (2011) respectively (see [this notebook](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/06-walz/notebook_walz.jl))).
 """
 
 # ╔═╡ ec8b2c6b-2535-4d12-ac78-46d8940c150c
 df_parameters = let
-    df_ = CSV.read("../07-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
+    df_ = CSV.read("../06-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
     sort!(df_, [:Date, :Plant, :Leaf])
 end
 
@@ -373,7 +377,7 @@ function add_timeperiod(x, y)
 end
 
 # ╔═╡ 3025bd11-bcbf-4fa5-b67a-73be7bb6db07
-leaf_temperature = open(Bzip2DecompressorStream, "../05-thermal_camera_measurements/leaf_temperature.csv.bz2") do io
+leaf_temperature = open(Bzip2DecompressorStream, "../04-thermal_camera_measurements/leaf_temperature.csv.bz2") do io
     df_ = CSV.read(io, DataFrame)
     select!(df_, Not(:mask))
 
@@ -463,7 +467,7 @@ db_5min = let
         :CO2_instruction,
         :transpiration_g_s => :transpiration_linear_g_s,
         :transpiration_diff_g_s,
-		:irrigation,
+        :irrigation,
         :Tl_mean,
         :Tl_min,
         :Tl_max,
@@ -492,13 +496,13 @@ db_5min = let
         db_,
         :DateTime_start,
         :DateTime_end,
-		:Scenario, :Sequence,
-		:Plant, :Leaf,
-		:DateTime_start_sequence, :DateTime_end_sequence,
+        :Scenario, :Sequence,
+        :Plant, :Leaf,
+        :DateTime_start_sequence, :DateTime_end_sequence,
         :
     )
 
-	filter!(row -> !ismissing(row.Scenario) && !ismissing(row.Plant), db_)
+    filter!(row -> !ismissing(row.Scenario) && !ismissing(row.Plant), db_)
 
     db_
 end
@@ -636,7 +640,7 @@ db_10min = let
         :CO2_instruction,
         :transpiration_g_s => :transpiration_linear_g_s,
         :transpiration_diff_g_s,
-		:irrigation,
+        :irrigation,
         :Tl_mean,
         :Tl_min,
         :Tl_max,
@@ -661,18 +665,18 @@ db_10min = let
         :Tᵣ_mean_plant => :Tr_mean_plant
     )
 
-	# Re-order columns:
+    # Re-order columns:
     select!(
         db_,
         :DateTime_start,
         :DateTime_end,
-		:Scenario, :Sequence,
-		:Plant, :Leaf,
-		:DateTime_start_sequence, :DateTime_end_sequence,
+        :Scenario, :Sequence,
+        :Plant, :Leaf,
+        :DateTime_start_sequence, :DateTime_end_sequence,
         :
     )
 
-	filter!(row -> !ismissing(row.Scenario) && !ismissing(row.Plant), db_)
+    filter!(row -> !ismissing(row.Scenario) && !ismissing(row.Plant), db_)
 
     db_
 end

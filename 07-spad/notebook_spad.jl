@@ -2,675 +2,778 @@
 # v0.19.43
 
 #> [frontmatter]
-#> title = "Plant transpiration data"
+#> title = "Spad data"
 #> layout = "layout.jlhtml"
-#> tags = ["transpiration"]
-#> description = "Processing of plant transpiration data."
+#> tags = ["spad"]
+#> description = "Plant response to experiments using Spad data in the Ecotron chambers."
 
 using Markdown
 using InteractiveUtils
 
-# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
-macro bind(def, element)
-    quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
-        local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
-        el
-    end
-end
-
-# ╔═╡ 6685ea8b-7a27-4e62-9ce8-82955a06fd58
+# ╔═╡ 0bba0195-e4d8-44c7-a06d-37b2d0de181c
 begin
-    using Dates
-    using CSV, DataFrames, Statistics
-    using CodecBzip2, Tar # For the compression of the resulting CSV
-    using AlgebraOfGraphics, CairoMakie
-    using ShiftedArrays
+    using CSV, DataFrames, Dates
+    using CairoMakie, AlgebraOfGraphics
     using PlutoUI
+    using GLM
 end
 
-# ╔═╡ 6b8526e4-b297-11ed-1c66-470f26a581c7
+# ╔═╡ e4ff89ea-be9e-11ed-2fc5-27bdaa05a067
 md"""
-# Plant transpiration
+# SPAD
 
-The weight of the potted plant inside the measurement chamber (`mic3`) was continuously monitored using a connected precision scale. The pot and soil were isolated using a plastic bag, so any change in the pot weight was due to the plant transpiration (+/- the saturation inside the bag).
+## Introduction
 
-The transpiration was measured in five phases due to changes in the measurement setup:
+We made two types of SPAD measurements:
 
-- phase 0, from 09/03/2021 to 10/03/2021, logged in the file `Weights_1.txt`. In this phase we used a regular computer with a script that read the data from the scale (1000C-3000D) for one minute, and logged its average onto the computer. The DateTime is in UTC+1.
-- phase 1, from 2021-03-10T15:08:23 to 2021-03-15T14:49:06, file `weightsPhase1.txt`. We changed computers to use one from the Ecotron, which was arounbd UTC-4min.
-- phase 2, from 2021-03-15T15:46:13 to 2021-03-27T01:19:27, file `weightsPhase2.txt`. In this measurement phase, we changed the script to log the data every second, without any averaging as we decided it is better to log the raw data and make the average afterward. The DateTime should be close to UTC. This data collection end the day before the day-time change. Data is lost for the weekend (after 2021-03-27T01:19:27) because the weight of the plant was above the maximum capacity of the scale.
-- phase 3, from 2021-03-30T09:45:01 to 2021-04-08T07:03:59, file `weightsPhase3.txt`. This phase is the same as phase 3, there is just a data gap because we were investigating why data logging was not working anymore (we didn't see any error on the scale).
-- phase 4, from 2021-04-07T10:46:19 to 2021-05-02T06:49:33, file `weightsPhase4.txt`. We received the new precision scale (XB3200C) that we just bought (we borrowed the first one). So in this phase we changed the scale, and also installed a Raspberry Pi to log the data. The Raspberry Pi is connected to the scale via USB, and the data is logged every second. We measured a lag in the DateTime of around 1 day, 47 minutes and 12 seconds compared to UTC (Raspberry: 2021-04-12T13:02:43 ; Thermal camera: 20210413_144827_R.jpg, with a delay of 3512s, so 2021-04-13T13:49:55 UTC)
+1. During the pre-experiment (see 06-walz), where we made response curves at the leaf level for half the leaves of the plant during a week during four weeks (4 plants), we made three SPAD measurements on and around the position of the Walz GFS-3000 head. The objective here is to link SPAD measurements to photosynthetic parameters of a leaf, with the hypothesis that very young leaves have lower photosynthetic efficiency, mature leaves have the highest, and then lowering again with age.
 
-To be sure to get the same time for all the data, we used the time of the thermal camera, which we know have a constant delay of 3512s compared to UTC. The method was to use the thermal images to see when there is a change of plant, because its weight goes down near 0.0 at this time, with a maximum error of 60s, because the images where taken each minute.
+2. During the Ecotron experiment, to be able to recompute the photosynthetic parameters of all leaves in the plant based on their SPAD and a response curve made on the reference leaf.
 
-We use the `time_synchronization.csv` file to synchronize correctly the timestamps.
+## Dependencies
 """
 
-# ╔═╡ 20bf6c44-dabb-41c5-af4a-e766b04d37fc
-TableOfContents(title="📚 Table of Contents", indent=true, depth=4, aside=true)
-
-# ╔═╡ 0f079397-ef9e-4b2d-bedc-6f5c47e9918a
+# ╔═╡ be7ea98f-a802-4213-a946-74cfca9c3652
 md"""
-## Imports
+## Data
 
-### Dependencies
+### SPAD
+
+Importing the SPAD measurements. We have two different source of data:
+
+1. SPAD measured on all leaves of all plants on the same date, repeated on two different dates: 2021-02-16 and 2021-02-23.
 """
 
-# ╔═╡ a7b313b8-2f6f-43c1-a39b-ada77982a31e
+# ╔═╡ d475c313-82ea-4e48-b249-ff179752359e
+SPAD_all_leaves = CSV.read("../00-data/spad/SPAD_all_plants.csv", DataFrame)
+
+# ╔═╡ f703eb8f-7e1d-4a0f-a510-880ab5fc4766
 md"""
-### Data
-
-#### Time correction
-
-Importing the file that tells us the correction to apply on the time measurement of the scale and the plant sequence.
+2. SPAD measured for all leaves in the plant of interest, dependening on the sequence.
 """
 
-# ╔═╡ 7027478e-8ba6-4b17-9448-628114d73816
-time_correction = CSV.read(
-    "../03-time-synchronization/time_synchronization.csv",
-    DataFrame
+# ╔═╡ 85109740-232c-42d3-bb9e-30785a6f5219
+SPAD_sequence = let
+    df_ = CSV.read("../00-data/spad/SPAD.csv", DataFrame)
+    filter!(x -> x.SPAD > 0, df_)
+    transform!(df_, :Date => (x -> Date.(x, dateformat"dd/mm/yyyy")) => :Date)
+end
+
+# ╔═╡ 75ddc948-ef76-4628-8151-c8969d9dad40
+md"""
+!!! note
+	Some measurements of SPAD were at 0 due to a problem in the instrument. We don't keep those values.
+"""
+
+# ╔═╡ d24e6b5a-8132-496d-9487-318992ede474
+md"""
+### Photosynthetic parameters
+
+Importing the results of adjusting the FvCB (Farquhar–von Caemmerer–Berry) model for C3 photosynthesis (Farquhar et al., 1980; von Caemmerer and Farquhar, 1981) and the Medlyn et al. (2011) model of stomatal conductance on response curves taken with a Walz GFS-3000.
+"""
+
+# ╔═╡ 50f1d996-882e-46e6-9e8c-754370d59eb8
+parameters = CSV.read("../06-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
+
+# ╔═╡ ae182b01-751e-41d4-90ab-bd71dc46269f
+md"""
+## Visualizations
+"""
+
+# ╔═╡ aa41e8be-52e3-4daf-8fc0-5e8811e7e6e0
+md"""
+### Comparing SPAD between plants
+"""
+
+# ╔═╡ c7ed5985-7f65-4c16-a09c-dced71bf7b5f
+md"""
+Visualizing SPAD measurement on all leaves of all plants on the same dates:
+"""
+
+# ╔═╡ 3e064ea3-6507-4e14-b87b-d289fb68818a
+data(SPAD_all_leaves) *
+mapping(:Leaf => string, :SPAD, color=:Plant => string, layout=:Date) |> draw
+
+# ╔═╡ 629b0443-85de-41be-ae93-207d7a7279ea
+md"""
+The relationship bewteen SPAD and leaf rank seams quite conservative between plants and date of measurement. Let's look at the data with a different angle, using a layout for each plant and coloring by date, using lines to represent the relationship:
+"""
+
+# ╔═╡ 74073b91-942e-4b2e-8d71-578911409905
+let
+    p = data(SPAD_all_leaves) *
+        mapping(:Leaf => string, :SPAD, color=:Date, layout=:Plant => (x -> string("Plant ", x))) *
+        visual(Lines)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 03ec4f3f-55c9-49f9-ba77-3aca0de104ca
+md"""
+We see that the relationship is not exactly the same between plants, especially for the younger leaf that sometimes present low SPAD values. This is probably related to the age of the first leaf that can differ between plants. We don't know the date of emission of the leaf, so we cannot compute the true effect of age unfortunately.
+
+We can also look at more data using the second data base.
+"""
+
+# ╔═╡ dc338f4b-17c0-45b9-81b3-72fb31868034
+md"""
+### SPAD distribution in plants
+
+Vizualising the SPAD values for each leaf of each plant according to the date of measurement.
+"""
+
+# ╔═╡ 4391896a-bd2d-4be2-8138-533942d03332
+let
+    p = data(SPAD_sequence) *
+        mapping(:Leaf, :SPAD, color=:Date => string, layout=:Plant => (x -> string("Plant ", x))) *
+        visual(Lines)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 38f5aaac-88dd-4b94-a0c1-954201c38857
+md"""
+We can see that SPAD values are quite conservative according to the rank of the leaf on the palm. This time, only plant 1 and 4 have oldest leaves with lower values, which is an indicator of nitrogen remobilization.
+
+!!! note
+	The rank is the reverse of the leaf number, rank 1 is the youngest leaf (e.g. leaf 10), rank 10 the oldest (*e.g.* leaf 1)
+"""
+
+# ╔═╡ 3a16ad79-c50d-4602-976d-73d3cb33a277
+md"""
+## Relating photosynthetic parameters to SPAD
+"""
+
+# ╔═╡ a663fba3-5a8d-44a3-a9dd-878d0474fe7b
+md"""
+### Joining data
+"""
+
+# ╔═╡ f0445fa0-e9b6-4edf-a047-e96b244023ee
+df_all = let
+    leftjoin(parameters, vcat(SPAD_all_leaves, SPAD_sequence), on=[:Date, :Plant, :Leaf])
+end
+
+# ╔═╡ 6cf0f50c-e12c-467d-a104-c0fd20ca92da
+md"""
+### Visualizing SPAD~parameters relationships
+"""
+
+# ╔═╡ e55a93af-1e5a-46d3-b2f2-68045072fb24
+md"""
+### SPAD
+
+The value of the SPAD tends to be higher on the more mature leaves (lower leaf ID, higher rank).:
+"""
+
+# ╔═╡ fb98292e-bcd9-499d-8647-8d46f481efae
+let
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :SPAD, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 5c4cd186-e13b-48a1-a390-76b9f7a6ab01
+md"""
+SPAD also decrease with time when considering the same leaf (look at the points with the same color in a layout):
+"""
+
+# ╔═╡ 4ae7d579-0f79-47cf-a33c-646d1d04edbb
+let
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :SPAD, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ ea6336ce-23e8-4bae-b6d9-2b8e8523a954
+md"""
+#### VcMaxRef
+"""
+
+# ╔═╡ 5f9dbf48-82d6-46c1-a3ac-96d755cbdd0a
+md"""
+We see that the value of VcMaxRef on the same reference leaf decreases with time. This is probably coming from a remobilization of Nitrogen as the leaf becomes older. We also see that leaves have different VcMaxRef values, and that as expected leaf rank seems to explain that variability:
+"""
+
+# ╔═╡ 3f5c7536-0491-4e3e-aa14-9f44b01643ef
+let
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ ade36dec-d71f-47a8-98d0-b9c9be02b9d3
+md"""
+If we look at the points taken before the ecotron experiment to remove the dynamic, we see that indeed VcMaxRef depends on the rank of the leaf, with young leaves having low values, more mature leaves have the highest values, and decreasing with age (except for plant 4 that has a very high value for its youngest leaf):
+"""
+
+# ╔═╡ e0018619-7cf4-4b42-a543-5f09fb637066
+let
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 2deb246d-518a-44a3-bbec-0fb375cda465
+md"""
+We can relate the value of VcMaxRef observed along the leaf rank with the SPAD:
+"""
+
+# ╔═╡ ad2a826a-7e29-4651-a291-46dd77f5d6b8
+let
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ cd22103a-bb7e-4c24-813a-ec845f113c0e
+md"""
+Unfortunately, the relationship we expected is not visible here, the SPAD does not seem to explain VcMaxRef well. Lets look at the dynamic data taken at different times, mostly on the same leaf along the Ecotron experiment:
+"""
+
+# ╔═╡ 2ff74fb7-0008-45cc-b6cf-6566a26e3479
+let
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 210856b4-d6d0-41b7-8a71-ec6eb4793334
+md"""
+That's better! We can see a positive relationship between SPAD and VcMaxRef. Let's look at the same data but for all plants together:
+"""
+
+# ╔═╡ 5608d879-f246-40bc-bd8b-518aecbf1d3f
+let
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :VcMaxRef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ fdaa74a6-77b1-4684-b5b4-a28f832879cf
+md"""
+OK even much better. We can clearly see the effect of SPAD on VcMaxRef here.
+"""
+
+# ╔═╡ 2c83ba81-10a0-4a9a-8b46-d9973b0c3933
+md"""
+#### JMaxRef
+"""
+
+# ╔═╡ 415da816-cae2-47b1-bd3b-179b21f78227
+md"""
+Similarly to VcMaxRef, JmaxRef seems to decrease with time when looking at the same leaf over time:
+"""
+
+# ╔═╡ 3b78c8cf-0246-4ae6-95b3-0ae13b86651b
+let
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ ad53c43a-2efe-4325-a23a-7fb300795991
+md"""
+Again, we observe a similar result when comparing JMaxRef between leaves of the same plant around the same date:
+"""
+
+# ╔═╡ d4babf23-b3b6-45a5-8cef-182727e25342
+let
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 802017f3-d852-4aab-a22e-bf868b86ea90
+md"""
+... and the relationship with SPAD is also not that clear at this time:
+"""
+
+# ╔═╡ f2e8c160-5bcd-4df4-a08c-0db8cc5f97f9
+let
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 89501cb6-4f1e-4b1c-8fb8-a4abb41af63b
+md"""
+But a little bit better looking at the dynamic data:
+"""
+
+# ╔═╡ 4ebfa8ce-0017-41bd-a78a-1561ba418c8a
+let
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ ed1ac430-42ec-4f1c-a792-93d9497605cd
+md"""
+And mixing all plants together shows a relationship:
+"""
+
+# ╔═╡ e7b2d76e-76d4-40f2-a762-d6ded5946988
+let
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :JMaxRef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 3e48e96a-105a-499a-be36-65d1685e245c
+md"""
+Two of the values are very high though.
+"""
+
+# ╔═╡ d3d23f7e-8621-494f-b143-93834c487640
+md"""
+#### RdRef
+"""
+
+# ╔═╡ 8165b48a-2e3b-4a87-90fe-f3af46454d35
+md"""
+RdRef seems more complicated to explain:
+"""
+
+# ╔═╡ 746c2f8a-bd94-4f5b-9813-593807440d2c
+let
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :RdRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 1f5490da-618e-4b87-a153-af6401251924
+md"""
+As expected, there is no relationship between the value of RdRef and the leaf age:
+"""
+
+# ╔═╡ f8e0162a-28cb-4e29-9cf6-b9ff121e380a
+let
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :RdRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 015cdc5d-7541-4254-ad4e-3b7893030bb0
+md"""
+This is confirmed when using all the data:
+"""
+
+# ╔═╡ 338006ee-124d-4739-9b74-37bab45b54e2
+let
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :RdRef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 1fe63420-26af-436a-b50a-9bf0106fbddd
+md"""
+RdRef will not be used to adjust the photosynthetic parameters between leaves.
+"""
+
+# ╔═╡ 739e2b24-0b7d-46bf-a7c5-1da80037d1e0
+md"""
+#### TPURef
+"""
+
+# ╔═╡ 21564d17-e551-4f7b-99d3-191c4697e885
+md"""
+The relationship is not very clear either with TPURef, with the same graphs as before below:
+"""
+
+# ╔═╡ 7399e605-8b46-4d31-a62f-4402b0deb420
+let
+    df_ = dropmissing(df_all, :SPAD)
+    p = data(df_) *
+        mapping(:Date, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ ec76ac76-8a5e-4dec-b72c-816f16ef4e90
+let
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:Leaf, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 53fd254c-00c4-4f3e-bd3f-faa9a487fc82
+let
+    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 6624f95c-b4e4-40b1-9a8e-7ca0ddd6d814
+let
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
+    p = data(df_) *
+        mapping(:SPAD, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 55799b2e-d442-4e22-abba-b7a49408ac12
+md"""
+Looking at plant scale data, we could think there might be a relationship (Plant 3), but when mixing all data the relationship is not clear:
+"""
+
+# ╔═╡ e40a10e4-832c-453d-927f-7016c4472cf4
+let
+    p = data(dropmissing(df_all, :SPAD)) *
+        mapping(:SPAD, :TPURef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 6ae1df90-7b27-4b3b-916b-6c268ac93a5e
+md"""
+We will make further investigation below before including TPURef to model photosynthesis according to leaf rank.
+"""
+
+# ╔═╡ 34d33656-7882-4d22-9330-7a2c0ded8422
+md"""
+#### g0
+"""
+
+# ╔═╡ 411d5fcd-f1b5-403a-8748-fd4f1a2de136
+let
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:SPAD, :g0, layout=:Plant => (x -> string("Plant ", x))) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 44c9a8cf-3657-4eb8-9b28-8d32c06a4711
+let
+    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), [:SPAD, :g0])
+    p = data(df_) *
+        mapping(:SPAD, :g0, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 7cf9c401-b08b-40dd-9091-21786cd583a9
+md"""
+g0 will not be used to adjust the photosynthetic parameters between leaves.
+"""
+
+# ╔═╡ 5fdd6887-37d0-493f-afad-86c74b322334
+md"""
+#### g1
+"""
+
+# ╔═╡ 1c36d0a4-3ee8-439f-83b3-820d5dbb3971
+let
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:SPAD, :g1, layout=:Plant => (x -> string("Plant ", x))) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ cef058f0-6214-42e4-bc27-152c13bdb9b4
+let
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:SPAD, :g1, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ e543ed13-7ec4-4423-a9da-028e4edd21f6
+md"""
+g1 will not be used to adjust the photosynthetic parameters between leaves.
+"""
+
+# ╔═╡ 2934497c-334f-40e5-842a-dcf562d6b9a2
+md"""
+## Modelling
+
+In this section, we make a model that relates SPAD to the VcMaxRef photosynthetic parameter of the leaf. Ideally, we would also correlate the other parameters (*e.g.* JMaxRef) to the SPAD, but they can be highly correlated, so what we do instead is predict VcMaxRef with the SPAD, and then predict the others from VcMaxRef.
+"""
+
+# ╔═╡ 4c553165-e739-45cf-8971-745bc14cead8
+md"""
+### VcMaxRef~SPAD
+"""
+
+# ╔═╡ f3d91518-55b0-4e36-80db-b7afa14263f6
+md"""
+We use a simple linear model to predict the value of VcMaxRef from the SPAD value. We use all the data from all plants because the data is noisy, and the response should be specific, which is confirmed by the figure below.
+"""
+
+# ╔═╡ 6f9ab851-7623-4d4c-869c-a8e21f8e5b1c
+lm_VcMaxRef = lm(@formula(VcMaxRef ~ 0 + SPAD), df_all)
+
+# ╔═╡ 9b70dd59-39af-4b63-8322-13b6f7d209aa
+let
+    df_ = dropmissing(df_all, [:g0, :SPAD])
+    df_.VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
+    p = data(df_) *
+        mapping(:SPAD => "SPAD (-)", :VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter) +
+        data(df_) *
+        mapping(:SPAD => "SPAD (-)", :VcMaxRef_predicted => "VcMaxRef (μmol m⁻² s⁻¹)") *
+        visual(Lines)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ be98fbce-2335-41bb-9c7b-541690b21879
+Markdown.parse("""
+!!! tip
+	The model is as follows:
+
+	$(lm_VcMaxRef.mf.f.lhs.sym) ≃ $(round(coef(lm_VcMaxRef)[1], digits = 3)) ⋅ $(lm_VcMaxRef.mf.f.rhs.terms[2])
+""")
+
+# ╔═╡ cb7e7051-9a6a-4cbc-9a24-abb52253805e
+md"""
+The model fits well the data, and presents an R² of $(round(r2(lm_VcMaxRef), digits = 2)):
+"""
+
+# ╔═╡ bae84990-06e2-48d2-aaae-a6362e010997
+md"""
+If we look at its performance at the plant level, we see that indeed we should use all the data, because some plants have a high variability on the value, and the average fit seems close enough to the per-plant trend (except for Plant 4 that has only 3 points).
+"""
+
+# ╔═╡ 34593fb7-3145-4df0-9bf9-38cb70fc240d
+let
+    df_ = dropmissing(df_all, [:g0, :SPAD])
+    df_.VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
+    p = data(df_) *
+        mapping(:SPAD => "SPAD (-)", :VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", layout=:Plant => string) *
+        visual(Scatter) +
+        data(df_) *
+        mapping(:SPAD => "SPAD (-)", :VcMaxRef_predicted => "VcMaxRef (μmol m⁻² s⁻¹)", layout=:Plant => string) *
+        visual(Lines)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ bfeeddab-a586-4bbc-bb20-6392545c4ad2
+let
+    df_ = dropmissing(df_all, [:SPAD, :VcMaxRef])
+    df_.lm_VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:VcMaxRef => "Observed (μmol m⁻² s⁻¹)", :lm_VcMaxRef_predicted => "Simulated (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+    abline_ = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
+    draw(p_mod + abline_, legend=(position=:bottom,), axis=(title="VcMaxRef",))
+end
+
+# ╔═╡ d5a229c9-f97c-471d-a2d2-3db0de5cabc5
+md"""
+### Correlations between parameters
+
+#### JmaxRef~VcMaxRef
+"""
+
+# ╔═╡ 49d44542-daf4-4c94-8612-92488c7f6328
+md"""
+JMaxRef is highly correlated with VcMaxRef, so we can't really de-couple the value of one from another. We will model its change according to the modeled value of VcMaxRef of the leaf instead of its SPAD, as it helps us take into consideration their correlation.
+"""
+
+# ╔═╡ e9e61850-2934-4e57-99f7-4975ddd56891
+lm_JMaxRef = lm(@formula(JMaxRef ~ 0 + VcMaxRef), df_all)
+
+# ╔═╡ 131b3260-5872-48b8-93a1-cb59389392f9
+let
+    df_ = dropmissing(df_all, [:JMaxRef, :VcMaxRef])
+    p = data(df_) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :JMaxRef => "JMaxRef (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+
+    df_.lm_JMaxRef_predicted = predict(lm_JMaxRef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :lm_JMaxRef_predicted => "JMaxRef (μmol m⁻² s⁻¹)") *
+        visual(Lines)
+
+    draw(p_mod + p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 09374b54-3451-43b5-b8c8-9352941eddb2
+Markdown.parse("""
+!!! tip
+	The model is as follows:
+
+	$(lm_JMaxRef.mf.f.lhs.sym) ≃ $(round(coef(lm_JMaxRef)[1], digits = 3)) ⋅ $(lm_JMaxRef.mf.f.rhs.terms[2])
+""")
+
+# ╔═╡ fdf3a6ed-61b7-4c74-a591-b019d01e25b1
+let
+    df_ = dropmissing(df_all, [:JMaxRef, :VcMaxRef])
+    df_.lm_JMaxRef_predicted = predict(lm_JMaxRef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:JMaxRef => "Observed (μmol m⁻² s⁻¹)", :lm_JMaxRef_predicted => "Simulated (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+    abline_ = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
+    draw(p_mod + abline_, legend=(position=:bottom,), axis=(title="JMaxRef",))
+end
+
+# ╔═╡ 7023c18c-1301-4369-8dac-04294b87d153
+md"""
+#### TPURef~VcMaxRef
+"""
+
+# ╔═╡ 2477e827-54b5-4397-a2e3-1ecfa4402a6f
+md"""
+Similarly, TPURef is also highly correlated with VcMaxRef. We will model its change according to the modeled value of VcMaxRef of the leaf instead of its SPAD, as it helps us take into consideration their correlation.
+"""
+
+# ╔═╡ d44b506f-6237-4606-ba69-da3aa1db111b
+lm_TPURef = lm(@formula(TPURef ~ 0 + VcMaxRef), df_all)
+
+# ╔═╡ 8985210e-07a5-4b64-87f7-85a8ad0a62ab
+let
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:VcMaxRef, :TPURef, color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+
+    df_ = dropmissing(df_all, [:TPURef, :VcMaxRef])
+    p = data(df_) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :TPURef => "TPURef (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+
+    df_.lm_TPURef_predicted = predict(lm_TPURef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :lm_TPURef_predicted => "TPURef (μmol m⁻² s⁻¹)") *
+        visual(Lines)
+
+    draw(p_mod + p, legend=(position=:bottom,))
+end
+
+# ╔═╡ b130b61a-21cc-44ce-988f-b8f127663984
+Markdown.parse("""
+!!! tip
+	The model is as follows:
+
+	$(lm_TPURef.mf.f.lhs.sym) ≃ $(round(coef(lm_TPURef)[1], digits = 3)) ⋅ $(lm_TPURef.mf.f.rhs.terms[2])
+""")
+
+# ╔═╡ 63f5815f-d169-4819-8579-a837314a2496
+md"""
+Comparing observed and simulated TPURef:
+"""
+
+# ╔═╡ 62bb7355-3a4c-4c6f-ada7-84767430dc76
+let
+    df_ = dropmissing(df_all, [:VcMaxRef, :TPURef])
+    df_.lm_TPURef_predicted = predict(lm_TPURef, df_)
+
+    p_mod =
+        data(df_) *
+        mapping(:TPURef => "Observed (μmol m⁻² s⁻¹)", :lm_TPURef_predicted => "Simulated (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+    abline_ = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
+    draw(p_mod + abline_, legend=(position=:bottom,), axis=(title="TPURef",))
+end
+
+# ╔═╡ e3bb4406-0bc2-45ac-ad8d-913a9f2e5d29
+md"""
+#### RdRef~VcMaxRef
+"""
+
+# ╔═╡ 7e19bec8-9e3b-41b2-bed4-d131930db3ac
+let
+    p = data(dropmissing(df_all, [:g0, :SPAD])) *
+        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :RdRef => "RdRef (μmol m⁻² s⁻¹)", color=:Plant => string) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ b6a496a0-eb39-422f-b7ec-9e995d6f44d0
+md"""
+RdRef was not explained by the SPAD, and as we can see it is confirmed when we see that it is not correlated with VcMaxRef.
+"""
+
+# ╔═╡ c728c1e9-d277-4746-a142-07bf72cf06fa
+md"""
+## Summary
+
+We model the effect of leaf age on the photosynthetic parameters using SPAD as a proxy of the chlorophyll content.
+
+The data showed there is a clear relationship between VcMaxRef, JMaxRef, and in a lesser extent TPURef with SPAD. The three parameters are correlated, so we prefer modulating the the values of the parameters according to SPAD by using 1/ a linear model between SPAD and VcMaxRef, and 2/ a relationship between VcMaxRef and JMaxRef or TPURef. This way we control for the correlation between the parameters.
+
+The resulting models are the following:
+
+- VcMaxRef ≃ $(round(coef(lm_VcMaxRef)[1], digits = 3)) ⋅ SPAD
+- JMaxRef ≃ $(round(coef(lm_JMaxRef)[1], digits = 3)) ⋅ VcMaxRef
+- TPURef ≃ $(round(coef(lm_TPURef)[1], digits = 3)) ⋅ VcMaxRef
+
+"""
+
+# ╔═╡ 8d7e0fb1-734a-4156-9d6f-32c712331d3b
+CSV.write(
+    "SPAD_models.csv",
+    DataFrame(
+        :variable => [:VcMaxref, :JMaxRef, :TPURef],
+        :predictor => [:SPAD, :VcMaxref, :VcMaxref],
+        :coefficient => [coef(lm_VcMaxRef)[1], coef(lm_JMaxRef)[1], coef(lm_TPURef)[1]]
+    )
 )
 
-# ╔═╡ d631a6a0-4842-4d28-b6ad-f82093fe8581
-md"""
-#### Decompressing the archive
-"""
-
-# ╔═╡ c8f60ef9-2caa-46de-ab51-11de279a678b
-if !isdir("../00-data/scale_weight/weight")
-    open(Bzip2DecompressorStream, "../00-data/scale_weight/weights.tar.bz2") do io
-        Tar.extract(io, "../00-data/scale_weight/weight")
-    end
-end
-
-# ╔═╡ 71f68fc0-b50e-4a93-b50e-81b4ae37df29
-md"""
-#### Import plant weight
-
-For each phase, we import the data as is (`df_phase_x_delayed`) and then correct it (`df_phase_x`)
-"""
-
-# ╔═╡ 39fbd542-3f1b-4327-b8fb-ab56f8af1682
-md"""
-##### Phase 0
-"""
-
-# ╔═╡ 3ff85909-c02b-471c-b649-fa51c2df7b12
-md"""
-Reading phase 0 data. We know this one is at UTC+1 because it was connected to Rémi's computer, with a well synchrnonized clock. Note that we don't have the possibility to double-check this one with the camera as there is no data close to 0 (it starts when the plant is on, and end before removing it.)
-"""
-
-# ╔═╡ b6766baa-73a3-446a-a531-e20cca27c27e
-df_phase_0_delayed, df_phase_0 = let
-    df_raw = CSV.read("../00-data/scale_weight/weight/weights_1.txt", DataFrame, header=["DateTime", "weight"])
-    df_ = copy(df_raw)
-    df_ = unique(df_, :DateTime)
-    df_.DateTime = df_.DateTime - Dates.Hour(1)
-    df_raw, df_
-end
-
-# ╔═╡ 8ddc6990-6c42-4ba8-9363-9726dc695db0
-md"""
-##### Phase 1
-
-Starting from phase 1 until phase 4 measurements, we double-checked the delays between the scale data logging and UTC using the thermal camera and the time of door opening and closing, which is the reference because it is synchronized to UTC with all other equipments from the Ecotron.
-"""
-
-# ╔═╡ d48b9b43-07e8-464d-949b-40fa6e145c65
-df_phase_1_delayed, df_phase_1 = let
-    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase1.txt", DataFrame, header=["DateTime", "weight"])
-    df_ = copy(df_raw)
-    # Phase 0 is at UTC+1, so we need to correct the time:
-    delay = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
-    df_.DateTime .+= Dates.Second(delay)
-
-    # Some measurements are made twice per second, we only need once
-    df_ = unique(df_, :DateTime)
-
-    df_raw, df_
-end
-
-# ╔═╡ 6b81d83c-e139-46b4-bc4f-2110cdaa42f0
-md"""
-##### Phase 2
-"""
-
-# ╔═╡ c3c56b52-dc31-4528-a84d-e81b322dd3cf
-df_phase_2_delayed, df_phase_2 = let
-    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase2.txt", DataFrame, header=["DateTime", "weight"])
-    df_ = copy(df_raw)
-    # Phase 0 is at UTC+1, so we need to correct the time:
-    delay = filter(x -> x.type == "scale" && x.phase == "phase2", time_correction).delay_seconds[1]
-    df_.DateTime .+= Dates.Second(delay)
-    df_ = unique(df_, :DateTime)
-
-    df_raw, df_
-end
-
-# ╔═╡ a83879cd-1fd5-4306-9bf7-49074229f842
-md"""
-##### Phase 3
-"""
-
-# ╔═╡ ffb69b11-816a-4e37-983d-fd18fdb86b08
-df_phase_3_delayed, df_phase_3 = let
-    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase3.txt", DataFrame, header=["DateTime", "weight"])
-    df_ = copy(df_raw)
-    # Phase 0 is at UTC+1, so we need to correct the time:
-    delay = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
-    df_.DateTime .+= Dates.Second(delay)
-    df_ = unique(df_, :DateTime)
-
-    df_raw, df_
-end
-
-# ╔═╡ 6f1549b9-4bf9-4d09-9ce9-b36aa92ac9f1
-md"""
-##### Phase 4
-"""
-
-# ╔═╡ fd652e98-a33b-491a-b95d-b512165f037d
-df_phase_4_delayed, df_phase_4 = let
-    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase4.txt", DataFrame, header=["DateTime", "weight"])
-    df_ = copy(df_raw)
-    # Phase 0 is at UTC+1, so we need to correct the time:
-    delay = filter(x -> x.type == "scale" && x.phase == "phase4", time_correction).delay_seconds[1]
-    df_.DateTime .+= Dates.Second(delay)
-    df_ = unique(df_, :DateTime)
-
-    df_raw, df_
-end
-
-# ╔═╡ 764dd49c-92b7-4600-8bdd-1e3b5a68c218
-md"""
-#### Importing CO2
-
-Transpiration was measured every minute at the begining, and then every second. The data is noisy, but we integrate the values over the 5 min or 10 min time-window of the CO2 fluxes measurements, which helps reduce the noize (see below). To do that, we need to import the CO2 measurement file that gives us the precise timestamps for each measurement time window:
-"""
-
-# ╔═╡ c26df749-aa82-4815-a27d-516a79efdabe
-CO2 = let
-    df_ = CSV.read("../04-CO2/CO2_fluxes.csv", DataFrame)
-    select!(df_,
-        :DateTime_start_input,
-        :DateTime_end_input,
-        :DateTime_start_output,
-        :DateTime_end_output,
-        :
-    )
-
-    df_
-end
-
-# ╔═╡ b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
-md"""
-#### Importing plant sequence
-"""
-
-# ╔═╡ 48187906-42ac-45c7-8736-9d825cd23ce8
-md"""
-We want to filter out the scale measurements when a plant is moved from the scale or replaced. To do so, we can import the file that reports the plant sequences, because we know the measurement of plant weight is continuous inside a measurement sequence.
-
-We also correct the timestamps of the dates in the file as they were reported using the timestamp from the scale, with a delay that depends on the phase of measurement.
-"""
-
-# ╔═╡ ac08d634-e1b3-4b8f-995e-6c24e2941095
-plant_sequence_raw = let
-    df_ = CSV.read("../00-data/scenario_sequence/SequencePlanteMicro3.csv", DataFrame)
-    transform!(df_,
-        :DateTime_start => ByRow(x -> DateTime(x, dateformat"dd/mm/yyyy HH:MM:SS\'")) => :DateTime_start,
-        :DateTime_end => ByRow(x -> DateTime(x, dateformat"dd/mm/yyyy HH:MM:SS\'")) => :DateTime_end
-    )
-    phase1_dates = [first(df_phase_1_delayed.DateTime), last(df_phase_1_delayed.DateTime)]
-    delay_phase1 = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
-    df_.DateTime_start[df_.DateTime_start.>=phase1_dates[1].&&df_.DateTime_start.<=phase1_dates[2]] .+= Dates.Second(delay_phase1)
-    df_.DateTime_end[df_.DateTime_end.>=phase1_dates[1].&&df_.DateTime_end.<=phase1_dates[2]] .+= Dates.Second(delay_phase1)
-
-    phase2_dates = [first(df_phase_2_delayed.DateTime), last(df_phase_2_delayed.DateTime)]
-    delay_phase2 = filter(x -> x.type == "scale" && x.phase == "phase2", time_correction).delay_seconds[1]
-    df_.DateTime_start[df_.DateTime_start.>=phase2_dates[1].&&df_.DateTime_start.<=phase2_dates[2]] .+= Dates.Second(delay_phase2)
-    df_.DateTime_end[df_.DateTime_end.>=phase2_dates[1].&&df_.DateTime_end.<=phase2_dates[2]] .+= Dates.Second(delay_phase2)
-
-    phase3_dates = [first(df_phase_3_delayed.DateTime), last(df_phase_3_delayed.DateTime)]
-    delay_phase3 = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
-    df_.DateTime_start[df_.DateTime_start.>=phase3_dates[1].&&df_.DateTime_start.<=phase3_dates[2]] .+= Dates.Second(delay_phase3)
-    df_.DateTime_end[df_.DateTime_end.>=phase3_dates[1].&&df_.DateTime_end.<=phase3_dates[2]] .+= Dates.Second(delay_phase3)
-
-    df_
-end
-
-# ╔═╡ 31e9242c-00e2-4012-9425-4ca577ddcfd7
-plant_sequence = filter(row -> row.Event != "delete transpiration", plant_sequence_raw)
-# This is a day when the scale was at maximum capacity, so there is no measurement of transpiration
-
-# ╔═╡ 3ec8ee51-c26f-4771-95ef-f24e1698ea5f
-md"""
-#### Merging the data
-
-Now that we imported the data and corrected the delays to match UTC, we can merge the plant weight data into one single dataframe.
-"""
-
-# ╔═╡ 3fb32c18-bdd2-44bb-a635-ebb5682a5956
-weight_df = sort(vcat(df_phase_0, df_phase_1, df_phase_2, df_phase_3, df_phase_4), :DateTime)
-
-# ╔═╡ f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8
-md"""
-And we can also add the sequence of measurement to the dataframe so we can group by plant sequence then, and sort-out the time window when we are not performing a measurement, or in the process of changing the plant inside the chamber.
-"""
-
-# ╔═╡ cdc58362-6335-4349-8aaa-765e5fba6e34
-transpiration_df_seq = let
-    df_ = copy(weight_df)
-    df_.DateTime_start_seq = Vector{Union{DateTime,Missing}}(missing, nrow(df_))
-    df_.DateTime_end_seq = Vector{Union{DateTime,Missing}}(missing, nrow(df_))
-    df_.Plant = Vector{Union{String,Missing}}(missing, nrow(df_))
-    df_.sequence = Vector{Union{Int,Missing}}(missing, nrow(df_))
-    global gp = 1 # Sequence group
-
-    for row in eachrow(plant_sequence)
-        # 5-min time window:
-        ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
-        timestamps_within = findall(row.DateTime_start .<= df_.DateTime .<= row.DateTime_end)
-
-        if length(timestamps_within) > 0
-            df_.DateTime_start_seq[timestamps_within] .= row.DateTime_start
-            df_.DateTime_end_seq[timestamps_within] .= row.DateTime_end
-            df_.Plant[timestamps_within] .= row.Plant
-            df_.sequence[timestamps_within] .= gp
-            gp += 1 # increment the sequence group whenever we found one
-        end
-    end
-
-    df_
-
-    transform!(df_, :Plant => ByRow(x -> ismissing(x) ? missing : parse(Int, x[2])) => :Plant_id)
-
-    df_
-end
-
-# ╔═╡ 4f002bbb-c3a6-4156-a523-c0bef7868eaa
-md"""
-## Computing the transpiration
-"""
-
-# ╔═╡ ed2e2d47-3d4b-4c82-bfb9-0e75d400fa20
-md"""
-Plotting the plants weight along the whole experiment:
-"""
-
-# ╔═╡ e54d904a-186e-471f-b19d-314e4e26e44e
-data(dropmissing(transpiration_df_seq, :sequence)) *
-mapping(
-    :DateTime => "Date (UTC)",
-    :weight => "Scale weight (g)",
-    color=:Plant_id
-) *
-visual(Scatter) |>
-draw
-
-# ╔═╡ 7a0cea13-7b32-486d-bbc3-03924609280b
-md"""
-We can see some outliers in the values. These outliers come from three different things:
-
-- We removed the plant from the scale to switch plants
-- The pot was irrigated
-- We touched the plot unintentionaly, *e.g.* when entering the chamber to get the camera data
-"""
-
-# ╔═╡ 67bac77f-d15c-4bac-a1e1-71a45749e968
-md"""
-### Removing data below 2000 grammes
-
-Pots where never lighter than that, so values below that are either a change in plant, or no plant on the scale.
-"""
-
-# ╔═╡ 5dcde151-1cbf-4c7d-bf5a-ba6f2aec8926
-transpiration_df_sup2000 = filter(x -> x.weight > 2000.0, transpiration_df_seq);
-
-# ╔═╡ d8ab9636-33a3-41a6-9ca6-e15f282679a4
-md"""
-### Removing irrigation
-
-Plants were automatically watered in mic3. The irrigation events can be retreived by seeing a sharp increase in the plant weight. We can't directly use data points with increased weight as the data can be noisy and small increase in weight can be observed from one second to the other due to measurement error. Instead, we use a threshold that is higher than measurement error, but not too high so we get the irrigation events.
-
-To remove the irrigation effect from the data, we remove the cumulative sum of the irrigation values along each session of measurement (for each plant session).
-"""
-
-# ╔═╡ e0c86db6-5f09-4bb1-8247-3059741e35aa
-@bind threshold PlutoUI.Slider(3:10, default=5.0, show_value=true)
-
-# ╔═╡ c4eaec39-48d2-4b78-989b-ee22344daa7e
-transpiration_df_irrig = let
-    df_ = dropmissing(transpiration_df_sup2000, :DateTime_start_seq)
-    gdf = groupby(df_, :sequence)
-    transform!(gdf, :weight => (x -> first(x) .- x) => :weight_rel)
-    transform!(gdf, :weight_rel => (x -> x .- ShiftedArrays.lag(x)) => :diff)
-
-    transform!(
-        gdf,
-        :diff => ByRow(x -> begin
-            ismissing(x) && return 0.0
-            -x > threshold ? -x : 0.0
-        end
-        ) => :irrigation
-    )
-
-    transform!(gdf, :irrigation => ByRow(x -> x > 0.0) => :irrigation_event)
-    transform!(gdf, :irrigation => cumsum => :irrigation_cum)
-
-    transform!(
-        gdf,
-        [:weight_rel, :irrigation_cum] => ((w, i) -> w .- i) => :weight_rel_no_irrig,
-        [:weight, :irrigation_cum] => ((w, i) -> w .- i) => :weight_no_irrig,
-        [:diff, :irrigation] => ((w, i) -> w .+ i) => :diff_no_irrig,
-    )
-end
-
-# ╔═╡ 11701cca-d05a-4c57-9e28-b209233cc859
-md"""
-Ploting the irrigation events in the scale weights:
-"""
-
-# ╔═╡ 3aee3153-75f2-49fd-b3d6-3ca75daa9492
-data(transpiration_df_irrig) *
-mapping(
-    :DateTime => "Date (UTC)",
-    :weight_rel => "Relative scale weight (g)",
-    color=:irrigation_event
-) *
-visual(Scatter) |>
-draw
-
-# ╔═╡ a9798fa4-413c-4a68-960f-fc7306a6274b
-md"""
-And the plant weight corrected for irrigation:
-"""
-
-# ╔═╡ c0f4f748-cadb-445d-b42d-85dda0b1bc82
-data(transpiration_df_irrig) *
-mapping(
-    :DateTime => "Date (UTC)",
-    :weight_no_irrig => "Weight without irrigation (g)",
-    color=:Plant_id => "Plant ID"
-) *
-visual(Scatter) |>
-draw
-
-# ╔═╡ 1bf9b96d-92a5-4c80-9be8-68a115114d1d
-md"""
-## Matching CO2 time-scale
-"""
-
-# ╔═╡ 9ee350a3-c669-46bf-a44b-415dd5fe3014
-md"""
-We compute the plant transpiration at the same time-scale than the measurement of the CO2 fluxes. These fluxes are measured for 5 minutes every 10 minutes. We make two dataframes, one only with the transpiration during those 5 minutes, and one with the transpiration over the full 10-min window.
-
-The transpiration is computed following two different methods:
-
-- weight difference: the transpiration is computed from the difference in weight between the beginning and the end of the measurement window
-- regression: the transpiration is computed using the slope of the linear regression of the weight against time for all measurement points inside the time window.
-"""
-
-# ╔═╡ aa5fe143-dc0f-4d84-b9f3-e90c1490479a
-md"""
-Note that the weight is highly variable, even in a 5-min time-window, because of the wind inside the chamber that made the leaves move, which in turn made the weight measurement change. For example, here is a measurement for 5-min:
-"""
-
-# ╔═╡ 5fc42118-7938-48ad-99fb-330cc44eaf58
-md"""
-### 5 minute transpiration
-"""
-
-# ╔═╡ ff960dcc-cdbf-4bd5-8619-613e3633d4bf
-md"""
-In the "difference method", we can use only the first and last points, or if enough data point in the 5 minutes, we can take the median of several first and last points instead.
-
-We can choose the number of points used in this computation with the following slider:
-"""
-
-# ╔═╡ 88d95908-a13f-4408-b2a2-35943223e55b
-@bind points_mean PlutoUI.Slider(1:10, default=10, show_value=true)
-
-# ╔═╡ 32447cbe-452a-426f-9a3e-146e27d863ca
-md"""
-Comparing the two methods of computing the transpiration
-"""
-
-# ╔═╡ b5239d02-4898-479b-9078-be7d6365028c
-md"""
-### 10 minute transpiration
-"""
-
-# ╔═╡ 466c8b32-d3aa-47b4-a4b6-f3b986418689
-md"""
-## Analyses of the output
-"""
-
-# ╔═╡ 98667070-9121-42da-92bf-322329d7aff6
-@bind date_plot PlutoUI.Select(["2021-03-12", "2021-04-24"])
-
-# ╔═╡ 8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
-md"""
-## Saving
-
-Save the data to disk, and compressing it to save disk space.
-"""
-
-# ╔═╡ 47b34ad6-aaa4-481e-b199-47b57c8b230f
-CSV.write("plant_sequence_delayed_corrected.csv", plant_sequence_raw)
-
-# ╔═╡ f4d51d70-b378-44f0-ada2-8f470cd22b6b
+# ╔═╡ 99ae2011-ab49-4b4b-b15a-538ac9b0ab88
 md"""
 ## References
 """
 
-# ╔═╡ 1c431080-33c6-4ac4-8409-df1c487a1f54
+# ╔═╡ 746bf356-afa2-4c52-86bb-0c559278afdb
+md"""
+Caemmerer, S. von, et G. D. Farquhar. 1981. « Some Relationships between the Biochemistry of
+Photosynthesis and the Gas Exchange of Leaves ». Planta 153 (4): 376‑87.
+https://doi.org/10.1007/BF00384257.
+
+Farquhar, G. D., S. von von Caemmerer, et J. A. Berry. 1980. « A biochemical model of
+photosynthetic CO2 assimilation in leaves of C3 species ». Planta 149 (1): 78‑90.
+
+Medlyn, B. E., E. Dreyer, D. Ellsworth, M. Forstreuter, P. C. Harley, M. U. F. Kirschbaum,
+X. Le Roux, et al. 2002. « Temperature response of parameters of a biochemically based model
+of photosynthesis. II. A review of experimental data ». Plant, Cell & Environment 25 (9): 1167‑79.
+https://doi.org/10.1046/j.1365-3040.2002.00891.x.
+
 """
-	add_timeperiod(x,y)
 
-Add DateTime_start_input, DateTime_end_input, DateTime_start_output and DateTime_end_output on a copy of dataframe `x`.
-"""
-function add_timeperiod(x, y)
-    df_ = copy(x)
-    df_.DateTime_start_output = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-    df_.DateTime_start_input = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-    df_.DateTime_end_input = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-    df_.DateTime_end_output = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
-
-    y_nrows = nrow(y)
-    for (i, row) in enumerate(eachrow(y))
-        # 5-min time window:
-        ismissing(row.DateTime_start_output) || ismissing(row.DateTime_end_output) && continue
-        timestamps_within = findall(row.DateTime_start_output .<= df_.DateTime .< row.DateTime_end_output)
-
-        # Don't compute time-steps that covers two sequences (we are changing plant here):
-        if length(timestamps_within) > 0 && length(unique(df_.sequence[timestamps_within])) == 1
-            df_.DateTime_start_output[timestamps_within] .= row.DateTime_start_output
-            df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
-        end
-
-        # 10-min time window:
-        timestamps_within = findall(row.DateTime_start_input .<= df_.DateTime .< row.DateTime_end_output)
-
-        if length(timestamps_within) > 0 && length(unique(df_.sequence[timestamps_within])) == 1
-            df_.DateTime_start_input[timestamps_within] .= row.DateTime_start_input
-            df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
-            #NB: we add DateTime_end_output here for the time-steps that are within the input, because we still want to know when the measurement ends
-        end
-    end
-
-    df_.DateTime_end_input = df_.DateTime_start_output
-
-    return df_
-end
-
-# ╔═╡ 58399089-2b2f-4681-aaec-23c3d6d17a60
-transpiration_df = let
-    df_ = add_timeperiod(sort(dropmissing(transpiration_df_irrig, :DateTime), :DateTime), CO2)
-    transform!(
-        df_,
-        :DateTime => (x -> x .- ShiftedArrays.lag(x)) => :duration
-    )
-    df_
-end
-
-# ╔═╡ 380e80a3-34ee-452d-9b37-21c7872e8d10
-data(groupby(dropmissing(transpiration_df, :DateTime_start_output), :DateTime_start_output)[end]) * mapping(:DateTime => "Time (UTC)", :weight_no_irrig => "Plant weight (g)") |> draw
-
-# ╔═╡ 21e399d0-6cfe-4421-ab56-cb36d8643034
-transpiration_first_5min = let
-    df_ = dropmissing(transpiration_df, :DateTime_start_output)
-    # Compute the cumulated duration over each 5-min window:
-    gdf = groupby(df_, :DateTime_start_output)
-
-    transform!(gdf, :duration => cumsum => :duration_cum)
-
-    # Compute transpiration as the slope of the linear weight~duration relationship:
-    df_ = combine(
-        gdf,
-        :DateTime_end_output => unique => :DateTime_end,
-        :sequence => unique => :sequence,
-        :Plant_id => unique => :Plant,
-        [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
-            first_duration = Second(x[1]).value
-            x = [i.value - first_duration for i in Second.(x)]
-            (x' * x) \ x' * (y[1] .- y)
-        end
-        ) => :transpiration_g_s, # grammes s-1
-        # To compute as the weight difference between first last time-step(s):
-        [:weight_no_irrig, :duration_cum] => ((x, y) -> begin
-            if length(x) < 20
-                return (median(first(x, 1)) - median(last(x, 1))) / (Second(last(y)).value - Second(first(y)).value)
-            else
-                # If enough data points, we take the median of the last 10 points (for the 1s time-step data with high variability)
-
-                # For the duration, we take the average duration of the first "points_mean" points, and the average duration of the last "points_mean" points, because this becomes a moving window instead of jsut a point, so we need the duration between the two moving windows. We take the average window time because the size of the window can vary (the durations vary).
-                duration_cumul_first = mean([Second(i).value for i in first(y, points_mean)])
-                duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
-
-                return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
-            end
-        end) => :transpiration_diff_g_s,
-        #:duration_cum => (x -> canonicalize(maximum(x))) => :period_computation,
-        nrow,
-        :irrigation => sum => :irrigation,
-    )
-    rename!(df_, :DateTime_start_output => :DateTime_start)
-    # Keep only the time-steps where we have 3 minutes of data to compute Tr:
-    filter!(x -> x.nrow > 3, df_)
-
-    filter!(x -> x.transpiration_g_s > -0.005, df_)
-    df_
-end
-
-# ╔═╡ 23aee6b7-9256-435a-9378-d74baaaa4771
-let
-    p = data(transpiration_first_5min) *
-        mapping(
-            :DateTime_start => "Date (UTC)",
-            [:transpiration_diff_g_s, :transpiration_g_s] .=> "Instantaneous transpiration (g)",
-            color=dims(1) => renamer(["Difference", "Linear reg."])
-        ) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 307abcd3-4009-4a47-9f7e-a367da754a2f
-begin
-    f = Figure()
-    ax = Axis(f[1, 1], title="Transpiration (g s⁻¹)", xlabel="Difference between two consecutive points", ylabel="Slope of the linear regression")
-    ablines!(ax, [0.0], [1.0], color=:grey, linestyle=:dot)
-    scatter!(ax, transpiration_first_5min.transpiration_diff_g_s, transpiration_first_5min.transpiration_g_s, color=(:grey, 0.5))
-    f
-end
-
-# ╔═╡ 9caab45e-f33b-4b54-a7de-7f7035144f0e
-open(Bzip2CompressorStream, "transpiration_first_5min.csv.bz2", "w") do stream
-    CSV.write(stream, transpiration_first_5min)
-end
-
-# ╔═╡ 6031c01c-ee91-45cc-a8e9-45d77dc1e7e3
-transpiration_10min = let
-    df_ = dropmissing(transpiration_df, [:DateTime_start_input, :duration])
-    # Compute the cumulated duration over each 10-min window:
-    gdf = groupby(df_, :DateTime_start_input)
-    transform!(gdf, :duration => cumsum => :duration_cum)
-
-    # Compute transpiration as the slope of the linear weight~duration relationship:
-    df_ = combine(
-        gdf,
-        :DateTime_end_output => unique => :DateTime_end,
-        :sequence => unique => :sequence,
-        :Plant_id => unique => :Plant,
-        [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
-            first_duration = Second(x[1]).value
-            x = [i.value - first_duration for i in Second.(x)]
-            (x' * x) \ x' * (y[1] .- y)
-        end
-        ) => :transpiration_g_s, # grammes s-1
-        # To compute as the weight difference between first last time-step(s):
-        [:weight_no_irrig, :duration_cum] => ((x, y) -> begin
-            if length(x) < 20
-                return (median(first(x, 1)) - median(last(x, 1))) / (Second(last(y)).value - Second(first(y)).value)
-            else
-                # If enough data points, we take the median of the last 10 points (for the 1s time-step data with high variability)
-
-                # For the duration, we take the average duration of the first "points_mean" points, and the average duration of the last "points_mean" points, because this becomes a moving window instead of jsut a point, so we need the duration between the two moving windows. We take the average window time because the size of the window can vary (the durations vary).
-                duration_cumul_first = mean([Second(i).value for i in first(y, points_mean)])
-                duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
-
-                return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
-            end
-        end) => :transpiration_diff_g_s,
-        nrow,
-        :irrigation => sum => :irrigation,
-        # :weight => mean,
-        # :diff_no_irrig => sum,
-        # :weight_no_irrig => (x -> [x]) => :weight_no_irrig
-    )
-    rename!(df_, :DateTime_start_input => :DateTime_start)
-    # Keep only the time-steps where we have 3 minutes of data to compute Tr:
-    filter!(x -> x.nrow > 3, df_)
-
-    filter!(x -> x.transpiration_g_s > -0.005, df_)
-
-    df_
-end
-
-# ╔═╡ 1ff00740-b298-4df4-ab91-8b5bb7f2bd49
-let
-    p = data(transpiration_10min) *
-        mapping(
-            :DateTime_start => "Date (UTC)",
-            [:transpiration_diff_g_s, :transpiration_g_s] .=> "Instantaneous transpiration (g)",
-            color=dims(1) => renamer(["Difference", "Linear reg."])
-        ) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 505e0783-f20d-45b9-b4ff-b60983cbdb59
-let
-    date_to_plot = Date(date_plot)
-    df_ = filter(row -> row.DateTime_start >= date_to_plot && row.DateTime_start < date_to_plot + Day(1), transpiration_10min)
-    p = data(df_) *
-        mapping(
-            :DateTime_start => "Date (UTC)",
-            [:transpiration_diff_g_s, :transpiration_g_s] .=> "Instantaneous transpiration (g)",
-            color=dims(1) => renamer(["Difference", "Linear reg."]),
-            #layout=:
-        ) *
-        visual(Lines, title=date_to_plot)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ fa15b07f-03b9-4abe-9a40-879d59d62131
-open(Bzip2CompressorStream, "transpiration_10min.csv.bz2", "w") do stream
-    CSV.write(stream, transpiration_10min)
-end
+# ╔═╡ 6bed5212-92e1-4969-9f1e-f65e09e79470
+TableOfContents(title="📚 Table of Contents", indent=true, depth=4, aside=true)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -678,22 +781,18 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-CodecBzip2 = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-ShiftedArrays = "1277b4bf-5013-50f5-be3d-901d8477a67a"
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
-Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 
 [compat]
 AlgebraOfGraphics = "~0.6.14"
 CSV = "~0.10.9"
 CairoMakie = "~0.10.2"
-CodecBzip2 = "~0.8.3"
 DataFrames = "~1.6.1"
+GLM = "~1.8.1"
 PlutoUI = "~0.7.50"
-ShiftedArrays = "~2.0.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -702,7 +801,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "c84420aad6d25df38645c12100f8121de01b6eac"
+project_hash = "2daae58bb7f7883e636518c6fb67a055b9c815c6"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -874,12 +973,6 @@ weakdeps = ["SparseArrays"]
 
     [deps.ChainRulesCore.extensions]
     ChainRulesCoreSparseArraysExt = "SparseArrays"
-
-[[deps.CodecBzip2]]
-deps = ["Bzip2_jll", "Libdl", "TranscodingStreams"]
-git-tree-sha1 = "f8889d1770addf59d0a015c49a473fa2bdb9f809"
-uuid = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
-version = "0.8.3"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -1213,9 +1306,9 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[deps.GLM]]
 deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels"]
-git-tree-sha1 = "273bd1cd30768a2fddfa3fd63bbc746ed7249e5f"
+git-tree-sha1 = "97829cfda0df99ddaeaafb5b370d6cab87b7013e"
 uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.9.0"
+version = "1.8.3"
 
 [[deps.GeoInterface]]
 deps = ["Extents"]
@@ -2485,72 +2578,112 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─6b8526e4-b297-11ed-1c66-470f26a581c7
-# ╟─20bf6c44-dabb-41c5-af4a-e766b04d37fc
-# ╟─0f079397-ef9e-4b2d-bedc-6f5c47e9918a
-# ╠═6685ea8b-7a27-4e62-9ce8-82955a06fd58
-# ╟─a7b313b8-2f6f-43c1-a39b-ada77982a31e
-# ╠═7027478e-8ba6-4b17-9448-628114d73816
-# ╟─d631a6a0-4842-4d28-b6ad-f82093fe8581
-# ╠═c8f60ef9-2caa-46de-ab51-11de279a678b
-# ╟─71f68fc0-b50e-4a93-b50e-81b4ae37df29
-# ╟─39fbd542-3f1b-4327-b8fb-ab56f8af1682
-# ╟─3ff85909-c02b-471c-b649-fa51c2df7b12
-# ╠═b6766baa-73a3-446a-a531-e20cca27c27e
-# ╟─8ddc6990-6c42-4ba8-9363-9726dc695db0
-# ╠═d48b9b43-07e8-464d-949b-40fa6e145c65
-# ╟─6b81d83c-e139-46b4-bc4f-2110cdaa42f0
-# ╠═c3c56b52-dc31-4528-a84d-e81b322dd3cf
-# ╟─a83879cd-1fd5-4306-9bf7-49074229f842
-# ╠═ffb69b11-816a-4e37-983d-fd18fdb86b08
-# ╟─6f1549b9-4bf9-4d09-9ce9-b36aa92ac9f1
-# ╠═fd652e98-a33b-491a-b95d-b512165f037d
-# ╟─764dd49c-92b7-4600-8bdd-1e3b5a68c218
-# ╠═c26df749-aa82-4815-a27d-516a79efdabe
-# ╟─b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
-# ╟─48187906-42ac-45c7-8736-9d825cd23ce8
-# ╠═ac08d634-e1b3-4b8f-995e-6c24e2941095
-# ╠═31e9242c-00e2-4012-9425-4ca577ddcfd7
-# ╟─3ec8ee51-c26f-4771-95ef-f24e1698ea5f
-# ╠═3fb32c18-bdd2-44bb-a635-ebb5682a5956
-# ╟─f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8
-# ╠═cdc58362-6335-4349-8aaa-765e5fba6e34
-# ╟─4f002bbb-c3a6-4156-a523-c0bef7868eaa
-# ╟─ed2e2d47-3d4b-4c82-bfb9-0e75d400fa20
-# ╠═e54d904a-186e-471f-b19d-314e4e26e44e
-# ╟─7a0cea13-7b32-486d-bbc3-03924609280b
-# ╟─67bac77f-d15c-4bac-a1e1-71a45749e968
-# ╠═5dcde151-1cbf-4c7d-bf5a-ba6f2aec8926
-# ╟─d8ab9636-33a3-41a6-9ca6-e15f282679a4
-# ╠═e0c86db6-5f09-4bb1-8247-3059741e35aa
-# ╠═c4eaec39-48d2-4b78-989b-ee22344daa7e
-# ╟─11701cca-d05a-4c57-9e28-b209233cc859
-# ╠═3aee3153-75f2-49fd-b3d6-3ca75daa9492
-# ╟─a9798fa4-413c-4a68-960f-fc7306a6274b
-# ╠═c0f4f748-cadb-445d-b42d-85dda0b1bc82
-# ╟─1bf9b96d-92a5-4c80-9be8-68a115114d1d
-# ╟─9ee350a3-c669-46bf-a44b-415dd5fe3014
-# ╠═58399089-2b2f-4681-aaec-23c3d6d17a60
-# ╟─aa5fe143-dc0f-4d84-b9f3-e90c1490479a
-# ╟─380e80a3-34ee-452d-9b37-21c7872e8d10
-# ╟─5fc42118-7938-48ad-99fb-330cc44eaf58
-# ╠═21e399d0-6cfe-4421-ab56-cb36d8643034
-# ╟─ff960dcc-cdbf-4bd5-8619-613e3633d4bf
-# ╟─88d95908-a13f-4408-b2a2-35943223e55b
-# ╠═23aee6b7-9256-435a-9378-d74baaaa4771
-# ╟─32447cbe-452a-426f-9a3e-146e27d863ca
-# ╟─307abcd3-4009-4a47-9f7e-a367da754a2f
-# ╟─b5239d02-4898-479b-9078-be7d6365028c
-# ╠═6031c01c-ee91-45cc-a8e9-45d77dc1e7e3
-# ╟─1ff00740-b298-4df4-ab91-8b5bb7f2bd49
-# ╟─466c8b32-d3aa-47b4-a4b6-f3b986418689
-# ╟─98667070-9121-42da-92bf-322329d7aff6
-# ╟─505e0783-f20d-45b9-b4ff-b60983cbdb59
-# ╟─8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
-# ╠═9caab45e-f33b-4b54-a7de-7f7035144f0e
-# ╠═fa15b07f-03b9-4abe-9a40-879d59d62131
-# ╠═47b34ad6-aaa4-481e-b199-47b57c8b230f
-# ╟─f4d51d70-b378-44f0-ada2-8f470cd22b6b
-# ╟─1c431080-33c6-4ac4-8409-df1c487a1f54
+# ╟─e4ff89ea-be9e-11ed-2fc5-27bdaa05a067
+# ╠═0bba0195-e4d8-44c7-a06d-37b2d0de181c
+# ╟─be7ea98f-a802-4213-a946-74cfca9c3652
+# ╠═d475c313-82ea-4e48-b249-ff179752359e
+# ╟─f703eb8f-7e1d-4a0f-a510-880ab5fc4766
+# ╠═85109740-232c-42d3-bb9e-30785a6f5219
+# ╟─75ddc948-ef76-4628-8151-c8969d9dad40
+# ╟─d24e6b5a-8132-496d-9487-318992ede474
+# ╠═50f1d996-882e-46e6-9e8c-754370d59eb8
+# ╟─ae182b01-751e-41d4-90ab-bd71dc46269f
+# ╟─aa41e8be-52e3-4daf-8fc0-5e8811e7e6e0
+# ╟─c7ed5985-7f65-4c16-a09c-dced71bf7b5f
+# ╠═3e064ea3-6507-4e14-b87b-d289fb68818a
+# ╟─629b0443-85de-41be-ae93-207d7a7279ea
+# ╠═74073b91-942e-4b2e-8d71-578911409905
+# ╟─03ec4f3f-55c9-49f9-ba77-3aca0de104ca
+# ╟─dc338f4b-17c0-45b9-81b3-72fb31868034
+# ╠═4391896a-bd2d-4be2-8138-533942d03332
+# ╟─38f5aaac-88dd-4b94-a0c1-954201c38857
+# ╟─3a16ad79-c50d-4602-976d-73d3cb33a277
+# ╟─a663fba3-5a8d-44a3-a9dd-878d0474fe7b
+# ╠═f0445fa0-e9b6-4edf-a047-e96b244023ee
+# ╟─6cf0f50c-e12c-467d-a104-c0fd20ca92da
+# ╟─e55a93af-1e5a-46d3-b2f2-68045072fb24
+# ╠═fb98292e-bcd9-499d-8647-8d46f481efae
+# ╟─5c4cd186-e13b-48a1-a390-76b9f7a6ab01
+# ╟─4ae7d579-0f79-47cf-a33c-646d1d04edbb
+# ╟─ea6336ce-23e8-4bae-b6d9-2b8e8523a954
+# ╟─5f9dbf48-82d6-46c1-a3ac-96d755cbdd0a
+# ╟─3f5c7536-0491-4e3e-aa14-9f44b01643ef
+# ╟─ade36dec-d71f-47a8-98d0-b9c9be02b9d3
+# ╟─e0018619-7cf4-4b42-a543-5f09fb637066
+# ╟─2deb246d-518a-44a3-bbec-0fb375cda465
+# ╟─ad2a826a-7e29-4651-a291-46dd77f5d6b8
+# ╟─cd22103a-bb7e-4c24-813a-ec845f113c0e
+# ╟─2ff74fb7-0008-45cc-b6cf-6566a26e3479
+# ╟─210856b4-d6d0-41b7-8a71-ec6eb4793334
+# ╟─5608d879-f246-40bc-bd8b-518aecbf1d3f
+# ╟─fdaa74a6-77b1-4684-b5b4-a28f832879cf
+# ╟─2c83ba81-10a0-4a9a-8b46-d9973b0c3933
+# ╟─415da816-cae2-47b1-bd3b-179b21f78227
+# ╟─3b78c8cf-0246-4ae6-95b3-0ae13b86651b
+# ╟─ad53c43a-2efe-4325-a23a-7fb300795991
+# ╟─d4babf23-b3b6-45a5-8cef-182727e25342
+# ╟─802017f3-d852-4aab-a22e-bf868b86ea90
+# ╟─f2e8c160-5bcd-4df4-a08c-0db8cc5f97f9
+# ╟─89501cb6-4f1e-4b1c-8fb8-a4abb41af63b
+# ╟─4ebfa8ce-0017-41bd-a78a-1561ba418c8a
+# ╟─ed1ac430-42ec-4f1c-a792-93d9497605cd
+# ╟─e7b2d76e-76d4-40f2-a762-d6ded5946988
+# ╟─3e48e96a-105a-499a-be36-65d1685e245c
+# ╟─d3d23f7e-8621-494f-b143-93834c487640
+# ╟─8165b48a-2e3b-4a87-90fe-f3af46454d35
+# ╟─746c2f8a-bd94-4f5b-9813-593807440d2c
+# ╟─1f5490da-618e-4b87-a153-af6401251924
+# ╟─f8e0162a-28cb-4e29-9cf6-b9ff121e380a
+# ╟─015cdc5d-7541-4254-ad4e-3b7893030bb0
+# ╟─338006ee-124d-4739-9b74-37bab45b54e2
+# ╟─1fe63420-26af-436a-b50a-9bf0106fbddd
+# ╟─739e2b24-0b7d-46bf-a7c5-1da80037d1e0
+# ╟─21564d17-e551-4f7b-99d3-191c4697e885
+# ╟─7399e605-8b46-4d31-a62f-4402b0deb420
+# ╟─ec76ac76-8a5e-4dec-b72c-816f16ef4e90
+# ╟─53fd254c-00c4-4f3e-bd3f-faa9a487fc82
+# ╟─6624f95c-b4e4-40b1-9a8e-7ca0ddd6d814
+# ╟─55799b2e-d442-4e22-abba-b7a49408ac12
+# ╟─e40a10e4-832c-453d-927f-7016c4472cf4
+# ╟─6ae1df90-7b27-4b3b-916b-6c268ac93a5e
+# ╟─34d33656-7882-4d22-9330-7a2c0ded8422
+# ╠═411d5fcd-f1b5-403a-8748-fd4f1a2de136
+# ╠═44c9a8cf-3657-4eb8-9b28-8d32c06a4711
+# ╟─7cf9c401-b08b-40dd-9091-21786cd583a9
+# ╟─5fdd6887-37d0-493f-afad-86c74b322334
+# ╠═1c36d0a4-3ee8-439f-83b3-820d5dbb3971
+# ╟─cef058f0-6214-42e4-bc27-152c13bdb9b4
+# ╟─e543ed13-7ec4-4423-a9da-028e4edd21f6
+# ╟─2934497c-334f-40e5-842a-dcf562d6b9a2
+# ╟─4c553165-e739-45cf-8971-745bc14cead8
+# ╟─f3d91518-55b0-4e36-80db-b7afa14263f6
+# ╟─9b70dd59-39af-4b63-8322-13b6f7d209aa
+# ╠═6f9ab851-7623-4d4c-869c-a8e21f8e5b1c
+# ╟─be98fbce-2335-41bb-9c7b-541690b21879
+# ╟─cb7e7051-9a6a-4cbc-9a24-abb52253805e
+# ╟─bae84990-06e2-48d2-aaae-a6362e010997
+# ╟─34593fb7-3145-4df0-9bf9-38cb70fc240d
+# ╠═bfeeddab-a586-4bbc-bb20-6392545c4ad2
+# ╟─d5a229c9-f97c-471d-a2d2-3db0de5cabc5
+# ╠═131b3260-5872-48b8-93a1-cb59389392f9
+# ╟─49d44542-daf4-4c94-8612-92488c7f6328
+# ╠═e9e61850-2934-4e57-99f7-4975ddd56891
+# ╟─09374b54-3451-43b5-b8c8-9352941eddb2
+# ╠═fdf3a6ed-61b7-4c74-a591-b019d01e25b1
+# ╟─7023c18c-1301-4369-8dac-04294b87d153
+# ╟─8985210e-07a5-4b64-87f7-85a8ad0a62ab
+# ╟─2477e827-54b5-4397-a2e3-1ecfa4402a6f
+# ╠═d44b506f-6237-4606-ba69-da3aa1db111b
+# ╟─b130b61a-21cc-44ce-988f-b8f127663984
+# ╟─63f5815f-d169-4819-8579-a837314a2496
+# ╠═62bb7355-3a4c-4c6f-ada7-84767430dc76
+# ╟─e3bb4406-0bc2-45ac-ad8d-913a9f2e5d29
+# ╠═7e19bec8-9e3b-41b2-bed4-d131930db3ac
+# ╟─b6a496a0-eb39-422f-b7ec-9e995d6f44d0
+# ╟─c728c1e9-d277-4746-a142-07bf72cf06fa
+# ╠═8d7e0fb1-734a-4156-9d6f-32c712331d3b
+# ╟─99ae2011-ab49-4b4b-b15a-538ac9b0ab88
+# ╟─746bf356-afa2-4c52-86bb-0c559278afdb
+# ╟─6bed5212-92e1-4969-9f1e-f65e09e79470
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

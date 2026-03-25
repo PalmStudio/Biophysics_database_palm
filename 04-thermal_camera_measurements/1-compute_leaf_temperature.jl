@@ -36,9 +36,9 @@ mask_dir = "00-data/thermal_camera_roi_coordinates/coordinates"
 out_dir = @__DIR__
 
 # Climate data (for correcting the leaf temperature from air temperature and humidity):
-climate = CSV.read("02-climate/climate_mic3.csv", DataFrame)
+climate = CSV.read("01-climate/climate_mic3.csv", DataFrame)
 # There was a delay in the camera clock of -59m32s (name of the file VS UTC)::
-delay_df = CSV.read("03-time-synchronization/time_synchronization.csv", DataFrame)
+delay_df = CSV.read("02-time-synchronization/time_synchronization.csv", DataFrame)
 delay = Second(filter(x -> x.type == "thermal camera", delay_df).delay_seconds[1])
 
 # Date format of the image file names:

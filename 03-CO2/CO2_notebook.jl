@@ -13,7 +13,11 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
-        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
         local el = $(esc(element))
         global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
@@ -108,7 +112,7 @@ md"""
 
 # ╔═╡ 5005c489-7123-4620-8a2a-83fc7bee0b1a
 climate_5min = let
-    df = CSV.read("../02-climate/climate_mic3_5min.csv", DataFrame)
+    df = CSV.read("../01-climate/climate_mic3_5min.csv", DataFrame)
     rename!(df,
         :DateTime_start => :DateTime_start_output,
         :DateTime_end => :DateTime_end_output

@@ -1,134 +1,680 @@
 ### A Pluto.jl notebook ###
-# v0.19.42
+# v0.19.43
 
 #> [frontmatter]
-#> title = "Thermal camera data"
+#> title = "Plant transpiration data"
 #> layout = "layout.jlhtml"
-#> description = "Measurements and visualization of the leaf temperature in the Ecotron chambers."
-#> tags = ["thermal"]
+#> tags = ["transpiration"]
+#> description = "Processing of plant transpiration data."
 
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 3090d002-8236-46d1-8add-5a8921cbe835
-begin
-    using CSV
-    using DataFrames
-    using CairoMakie
-    using AlgebraOfGraphics
-    using CodecBzip2
-    using Colors
-	using Images
-	using Makie.GeometryBasics
-end
-
-# ╔═╡ 7b224c6c-b28a-11ed-1e13-cd4c9ebd2f85
-md"""
-# Leaf Temperature
-
-Leaf temperature was measured with a a FLIR Vue™ Pro R thermal camera that took one image every second. The camera was placed on the farthest top left corner of the chamber, pointing down towards the center of the chamber to ensure the best visibility of the plant leaves.
-
-The image database was compresses using `tar` with the `bzip2` algorithm, which reduced significantly disk space from ~60Go to ~23Go.
-
-The images were then processed in the script [1-compute_leaf_temperature.jl](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/05-thermal_camera_measurements/1-compute_leaf_temperature.jl), resulting in a new file `leaf_temperature.csv.bz2`, a compressed CSV file.
-
-Here is an example thermal image of plant 3 with a mask for leaf 3:
-"""
-
-# ╔═╡ efed6b69-6632-4212-aa68-ff0762a7eb36
-let
-	img_file = "../EcotronAnalysis.jl/test/test_data/20210308_180009_R.jpg"
-	mask_file = "../EcotronAnalysis.jl/test/test_data/P3F3-S1-S2-S3-20210308_174136-20210309_140728_XY_Coordinates.csv"
-
-	im = Images.load(img_file)'
-	mask = CSV.read(mask_file, DataFrame)
-	f = Figure()
-	image(
-		f[1, 1],
-		im,
-	    axis = (
-			aspect = DataAspect(),
-			yreversed = true,
-	        title = "Mask for leaf 3 from plant 3",
-			subtitle = "Applicable from 17:41 on the 08/03/2021 to 14:07 on the 09/03/2021",
-		)
-	)
-
-	poly!(
-		f[1, 1],
-		Polygon([Point(round(i.X), round(i.Y)) for i in eachrow(mask)]),
-		color = "red"
-	)
-	f
-end
-
-# ╔═╡ 28792394-5038-4640-9e45-f3bfa3bd96e1
-md"""
-## Import
-
-Importing the dependencies:
-"""
-
-# ╔═╡ 8d49c5bc-5d82-4b88-9893-64d6056a3c24
-md"""
-Reading the leaf temperature data:
-"""
-
-# ╔═╡ 64f9959f-6843-4f0c-8b62-f6c7479fd090
-leaf_temperature_df = let
-    df = open(Bzip2DecompressorStream, "leaf_temperature.csv.bz2") do io
-        CSV.read(io, DataFrame)
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try
+            Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value
+        catch
+            b -> missing
+        end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
     end
-    climate = CSV.read("../02-climate/climate_mic3.csv", DataFrame)
-    leftjoin(df, climate, on=:DateTime)
 end
 
-# ╔═╡ 78d82a70-d719-4fff-a0bd-fc25ed1ec1ca
-md"""
-## Plotting
-"""
-
-# ╔═╡ 90d29494-0965-44ac-a703-50e86f9bfd5c
+# ╔═╡ 6685ea8b-7a27-4e62-9ce8-82955a06fd58
 begin
-    abline = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
-    p =
-        abline +
-        AlgebraOfGraphics.data(dropmissing(leaf_temperature_df, :Ta_measurement)) *
-        mapping(
-            :Ta_measurement => "Air temperature (°C)",
-            :Tl_mean => "Leaf temperature (°C)",
-            color=:leaf => "Leaf Number",
-            layout=:plant => string => "Plant",
-        ) *
-        visual(Scatter, markersize=3) |>
-        draw
+    using Dates
+    using CSV, DataFrames, Statistics
+    using CodecBzip2, Tar # For the compression of the resulting CSV
+    using AlgebraOfGraphics, CairoMakie
+    using ShiftedArrays
+    using PlutoUI
 end
 
-# ╔═╡ 4cfbaa1a-a052-4dc0-a504-aaa9a064a55d
+# ╔═╡ 6b8526e4-b297-11ed-1c66-470f26a581c7
 md"""
-*Figure 1. Simulated leaf temperature (y) and measured air temperature (x) for the four plants, colored according to the leaf number.*
+# Plant transpiration
+
+The weight of the potted plant inside the measurement chamber (`mic3`) was continuously monitored using a connected precision scale. The pot and soil were isolated using a plastic bag, so any change in the pot weight was due to the plant transpiration (+/- the saturation inside the bag).
+
+The transpiration was measured in five phases due to changes in the measurement setup:
+
+- phase 0, from 09/03/2021 to 10/03/2021, logged in the file `Weights_1.txt`. In this phase we used a regular computer with a script that read the data from the scale (1000C-3000D) for one minute, and logged its average onto the computer. The DateTime is in UTC+1.
+- phase 1, from 2021-03-10T15:08:23 to 2021-03-15T14:49:06, file `weightsPhase1.txt`. We changed computers to use one from the Ecotron, which was arounbd UTC-4min.
+- phase 2, from 2021-03-15T15:46:13 to 2021-03-27T01:19:27, file `weightsPhase2.txt`. In this measurement phase, we changed the script to log the data every second, without any averaging as we decided it is better to log the raw data and make the average afterward. The DateTime should be close to UTC. This data collection end the day before the day-time change. Data is lost for the weekend (after 2021-03-27T01:19:27) because the weight of the plant was above the maximum capacity of the scale.
+- phase 3, from 2021-03-30T09:45:01 to 2021-04-08T07:03:59, file `weightsPhase3.txt`. This phase is the same as phase 3, there is just a data gap because we were investigating why data logging was not working anymore (we didn't see any error on the scale).
+- phase 4, from 2021-04-07T10:46:19 to 2021-05-02T06:49:33, file `weightsPhase4.txt`. We received the new precision scale (XB3200C) that we just bought (we borrowed the first one). So in this phase we changed the scale, and also installed a Raspberry Pi to log the data. The Raspberry Pi is connected to the scale via USB, and the data is logged every second. We measured a lag in the DateTime of around 1 day, 47 minutes and 12 seconds compared to UTC (Raspberry: 2021-04-12T13:02:43 ; Thermal camera: 20210413_144827_R.jpg, with a delay of 3512s, so 2021-04-13T13:49:55 UTC)
+
+To be sure to get the same time for all the data, we used the time of the thermal camera, which we know have a constant delay of 3512s compared to UTC. The method was to use the thermal images to see when there is a change of plant, because its weight goes down near 0.0 at this time, with a maximum error of 60s, because the images where taken each minute.
+
+We use the `time_synchronization.csv` file to synchronize correctly the timestamps.
 """
 
-# ╔═╡ e5227295-12eb-40a3-b4d0-291532b81fbe
-data(dropmissing(leaf_temperature_df, :Ta_measurement)) *
+# ╔═╡ 20bf6c44-dabb-41c5-af4a-e766b04d37fc
+TableOfContents(title="📚 Table of Contents", indent=true, depth=4, aside=true)
+
+# ╔═╡ 0f079397-ef9e-4b2d-bedc-6f5c47e9918a
+md"""
+## Imports
+
+### Dependencies
+"""
+
+# ╔═╡ a7b313b8-2f6f-43c1-a39b-ada77982a31e
+md"""
+### Data
+
+#### Time correction
+
+Importing the file that tells us the correction to apply on the time measurement of the scale and the plant sequence.
+"""
+
+# ╔═╡ 7027478e-8ba6-4b17-9448-628114d73816
+time_correction = CSV.read(
+    "../02-time-synchronization/time_synchronization.csv",
+    DataFrame
+)
+
+# ╔═╡ d631a6a0-4842-4d28-b6ad-f82093fe8581
+md"""
+#### Decompressing the archive
+"""
+
+# ╔═╡ c8f60ef9-2caa-46de-ab51-11de279a678b
+if !isdir("../00-data/scale_weight/weight")
+    open(Bzip2DecompressorStream, "../00-data/scale_weight/weights.tar.bz2") do io
+        Tar.extract(io, "../00-data/scale_weight/weight")
+    end
+end
+
+# ╔═╡ 71f68fc0-b50e-4a93-b50e-81b4ae37df29
+md"""
+#### Import plant weight
+
+For each phase, we import the data as is (`df_phase_x_delayed`) and then correct it (`df_phase_x`)
+"""
+
+# ╔═╡ 39fbd542-3f1b-4327-b8fb-ab56f8af1682
+md"""
+##### Phase 0
+"""
+
+# ╔═╡ 3ff85909-c02b-471c-b649-fa51c2df7b12
+md"""
+Reading phase 0 data. We know this one is at UTC+1 because it was connected to Rémi's computer, with a well synchrnonized clock. Note that we don't have the possibility to double-check this one with the camera as there is no data close to 0 (it starts when the plant is on, and end before removing it.)
+"""
+
+# ╔═╡ b6766baa-73a3-446a-a531-e20cca27c27e
+df_phase_0_delayed, df_phase_0 = let
+    df_raw = CSV.read("../00-data/scale_weight/weight/weights_1.txt", DataFrame, header=["DateTime", "weight"])
+    df_ = copy(df_raw)
+    df_ = unique(df_, :DateTime)
+    df_.DateTime = df_.DateTime - Dates.Hour(1)
+    df_raw, df_
+end
+
+# ╔═╡ 8ddc6990-6c42-4ba8-9363-9726dc695db0
+md"""
+##### Phase 1
+
+Starting from phase 1 until phase 4 measurements, we double-checked the delays between the scale data logging and UTC using the thermal camera and the time of door opening and closing, which is the reference because it is synchronized to UTC with all other equipments from the Ecotron.
+"""
+
+# ╔═╡ d48b9b43-07e8-464d-949b-40fa6e145c65
+df_phase_1_delayed, df_phase_1 = let
+    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase1.txt", DataFrame, header=["DateTime", "weight"])
+    df_ = copy(df_raw)
+    # Phase 0 is at UTC+1, so we need to correct the time:
+    delay = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
+    df_.DateTime .+= Dates.Second(delay)
+
+    # Some measurements are made twice per second, we only need once
+    df_ = unique(df_, :DateTime)
+
+    df_raw, df_
+end
+
+# ╔═╡ 6b81d83c-e139-46b4-bc4f-2110cdaa42f0
+md"""
+##### Phase 2
+"""
+
+# ╔═╡ c3c56b52-dc31-4528-a84d-e81b322dd3cf
+df_phase_2_delayed, df_phase_2 = let
+    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase2.txt", DataFrame, header=["DateTime", "weight"])
+    df_ = copy(df_raw)
+    # Phase 0 is at UTC+1, so we need to correct the time:
+    delay = filter(x -> x.type == "scale" && x.phase == "phase2", time_correction).delay_seconds[1]
+    df_.DateTime .+= Dates.Second(delay)
+    df_ = unique(df_, :DateTime)
+
+    df_raw, df_
+end
+
+# ╔═╡ a83879cd-1fd5-4306-9bf7-49074229f842
+md"""
+##### Phase 3
+"""
+
+# ╔═╡ ffb69b11-816a-4e37-983d-fd18fdb86b08
+df_phase_3_delayed, df_phase_3 = let
+    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase3.txt", DataFrame, header=["DateTime", "weight"])
+    df_ = copy(df_raw)
+    # Phase 0 is at UTC+1, so we need to correct the time:
+    delay = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
+    df_.DateTime .+= Dates.Second(delay)
+    df_ = unique(df_, :DateTime)
+
+    df_raw, df_
+end
+
+# ╔═╡ 6f1549b9-4bf9-4d09-9ce9-b36aa92ac9f1
+md"""
+##### Phase 4
+"""
+
+# ╔═╡ fd652e98-a33b-491a-b95d-b512165f037d
+df_phase_4_delayed, df_phase_4 = let
+    df_raw = CSV.read("../00-data/scale_weight/weight/weightsPhase4.txt", DataFrame, header=["DateTime", "weight"])
+    df_ = copy(df_raw)
+    # Phase 0 is at UTC+1, so we need to correct the time:
+    delay = filter(x -> x.type == "scale" && x.phase == "phase4", time_correction).delay_seconds[1]
+    df_.DateTime .+= Dates.Second(delay)
+    df_ = unique(df_, :DateTime)
+
+    df_raw, df_
+end
+
+# ╔═╡ 764dd49c-92b7-4600-8bdd-1e3b5a68c218
+md"""
+#### Importing CO2
+
+Transpiration was measured every minute at the begining, and then every second. The data is noisy, but we integrate the values over the 5 min or 10 min time-window of the CO2 fluxes measurements, which helps reduce the noize (see below). To do that, we need to import the CO2 measurement file that gives us the precise timestamps for each measurement time window:
+"""
+
+# ╔═╡ c26df749-aa82-4815-a27d-516a79efdabe
+CO2 = let
+    df_ = CSV.read("../03-CO2/CO2_fluxes.csv", DataFrame)
+    select!(df_,
+        :DateTime_start_input,
+        :DateTime_end_input,
+        :DateTime_start_output,
+        :DateTime_end_output,
+        :
+    )
+
+    df_
+end
+
+# ╔═╡ b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
+md"""
+#### Importing plant sequence
+"""
+
+# ╔═╡ 48187906-42ac-45c7-8736-9d825cd23ce8
+md"""
+We want to filter out the scale measurements when a plant is moved from the scale or replaced. To do so, we can import the file that reports the plant sequences, because we know the measurement of plant weight is continuous inside a measurement sequence.
+
+We also correct the timestamps of the dates in the file as they were reported using the timestamp from the scale, with a delay that depends on the phase of measurement.
+"""
+
+# ╔═╡ ac08d634-e1b3-4b8f-995e-6c24e2941095
+plant_sequence_raw = let
+    df_ = CSV.read("../00-data/scenario_sequence/SequencePlanteMicro3.csv", DataFrame)
+    transform!(df_,
+        :DateTime_start => ByRow(x -> DateTime(x, dateformat"dd/mm/yyyy HH:MM:SS\'")) => :DateTime_start,
+        :DateTime_end => ByRow(x -> DateTime(x, dateformat"dd/mm/yyyy HH:MM:SS\'")) => :DateTime_end
+    )
+    phase1_dates = [first(df_phase_1_delayed.DateTime), last(df_phase_1_delayed.DateTime)]
+    delay_phase1 = filter(x -> x.type == "scale" && x.phase == "phase1", time_correction).delay_seconds[1]
+    df_.DateTime_start[df_.DateTime_start.>=phase1_dates[1].&&df_.DateTime_start.<=phase1_dates[2]] .+= Dates.Second(delay_phase1)
+    df_.DateTime_end[df_.DateTime_end.>=phase1_dates[1].&&df_.DateTime_end.<=phase1_dates[2]] .+= Dates.Second(delay_phase1)
+
+    phase2_dates = [first(df_phase_2_delayed.DateTime), last(df_phase_2_delayed.DateTime)]
+    delay_phase2 = filter(x -> x.type == "scale" && x.phase == "phase2", time_correction).delay_seconds[1]
+    df_.DateTime_start[df_.DateTime_start.>=phase2_dates[1].&&df_.DateTime_start.<=phase2_dates[2]] .+= Dates.Second(delay_phase2)
+    df_.DateTime_end[df_.DateTime_end.>=phase2_dates[1].&&df_.DateTime_end.<=phase2_dates[2]] .+= Dates.Second(delay_phase2)
+
+    phase3_dates = [first(df_phase_3_delayed.DateTime), last(df_phase_3_delayed.DateTime)]
+    delay_phase3 = filter(x -> x.type == "scale" && x.phase == "phase3", time_correction).delay_seconds[1]
+    df_.DateTime_start[df_.DateTime_start.>=phase3_dates[1].&&df_.DateTime_start.<=phase3_dates[2]] .+= Dates.Second(delay_phase3)
+    df_.DateTime_end[df_.DateTime_end.>=phase3_dates[1].&&df_.DateTime_end.<=phase3_dates[2]] .+= Dates.Second(delay_phase3)
+
+    df_
+end
+
+# ╔═╡ 31e9242c-00e2-4012-9425-4ca577ddcfd7
+plant_sequence = filter(row -> row.Event != "delete transpiration", plant_sequence_raw)
+# This is a day when the scale was at maximum capacity, so there is no measurement of transpiration
+
+# ╔═╡ 3ec8ee51-c26f-4771-95ef-f24e1698ea5f
+md"""
+#### Merging the data
+
+Now that we imported the data and corrected the delays to match UTC, we can merge the plant weight data into one single dataframe.
+"""
+
+# ╔═╡ 3fb32c18-bdd2-44bb-a635-ebb5682a5956
+weight_df = sort(vcat(df_phase_0, df_phase_1, df_phase_2, df_phase_3, df_phase_4), :DateTime)
+
+# ╔═╡ f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8
+md"""
+And we can also add the sequence of measurement to the dataframe so we can group by plant sequence then, and sort-out the time window when we are not performing a measurement, or in the process of changing the plant inside the chamber.
+"""
+
+# ╔═╡ cdc58362-6335-4349-8aaa-765e5fba6e34
+transpiration_df_seq = let
+    df_ = copy(weight_df)
+    df_.DateTime_start_seq = Vector{Union{DateTime,Missing}}(missing, nrow(df_))
+    df_.DateTime_end_seq = Vector{Union{DateTime,Missing}}(missing, nrow(df_))
+    df_.Plant = Vector{Union{String,Missing}}(missing, nrow(df_))
+    df_.sequence = Vector{Union{Int,Missing}}(missing, nrow(df_))
+    global gp = 1 # Sequence group
+
+    for row in eachrow(plant_sequence)
+        # 5-min time window:
+        ismissing(row.DateTime_start) || ismissing(row.DateTime_end) && continue
+        timestamps_within = findall(row.DateTime_start .<= df_.DateTime .<= row.DateTime_end)
+
+        if length(timestamps_within) > 0
+            df_.DateTime_start_seq[timestamps_within] .= row.DateTime_start
+            df_.DateTime_end_seq[timestamps_within] .= row.DateTime_end
+            df_.Plant[timestamps_within] .= row.Plant
+            df_.sequence[timestamps_within] .= gp
+            gp += 1 # increment the sequence group whenever we found one
+        end
+    end
+
+    df_
+
+    transform!(df_, :Plant => ByRow(x -> ismissing(x) ? missing : parse(Int, x[2])) => :Plant_id)
+
+    df_
+end
+
+# ╔═╡ 4f002bbb-c3a6-4156-a523-c0bef7868eaa
+md"""
+## Computing the transpiration
+"""
+
+# ╔═╡ ed2e2d47-3d4b-4c82-bfb9-0e75d400fa20
+md"""
+Plotting the plants weight along the whole experiment:
+"""
+
+# ╔═╡ e54d904a-186e-471f-b19d-314e4e26e44e
+data(dropmissing(transpiration_df_seq, :sequence)) *
 mapping(
-    :DateTime => "DateTime (UTC)",
-    :Ta_measurement => "Air temperature (°C)",
+    :DateTime => "Date (UTC)",
+    :weight => "Scale weight (g)",
+    color=:Plant_id
 ) *
-visual(Scatter, color=:red, markersize=1) +
-AlgebraOfGraphics.data(dropmissing(leaf_temperature_df, :Ta_measurement)) *
-mapping(
-    :DateTime => "DateTime (UTC)",
-    :Tl_mean => "Leaf temperature (°C)",
-    color=:plant => string => "Plant",
-) *
-visual(Scatter, markersize=3) |>
+visual(Scatter) |>
 draw
 
-# ╔═╡ 52d5f1b9-142e-404b-90a5-9c56cfaae070
+# ╔═╡ 7a0cea13-7b32-486d-bbc3-03924609280b
 md"""
-*Figure 2. Simulated leaf temperature for the four plants along the whole duration of the experiment. Points are colored according to the plant in the microcosm (`mic3`). The red colored points represent the air temperature.*
+We can see some outliers in the values. These outliers come from three different things:
+
+- We removed the plant from the scale to switch plants
+- The pot was irrigated
+- We touched the plot unintentionaly, *e.g.* when entering the chamber to get the camera data
 """
+
+# ╔═╡ 67bac77f-d15c-4bac-a1e1-71a45749e968
+md"""
+### Removing data below 2000 grammes
+
+Pots where never lighter than that, so values below that are either a change in plant, or no plant on the scale.
+"""
+
+# ╔═╡ 5dcde151-1cbf-4c7d-bf5a-ba6f2aec8926
+transpiration_df_sup2000 = filter(x -> x.weight > 2000.0, transpiration_df_seq);
+
+# ╔═╡ d8ab9636-33a3-41a6-9ca6-e15f282679a4
+md"""
+### Removing irrigation
+
+Plants were automatically watered in mic3. The irrigation events can be retreived by seeing a sharp increase in the plant weight. We can't directly use data points with increased weight as the data can be noisy and small increase in weight can be observed from one second to the other due to measurement error. Instead, we use a threshold that is higher than measurement error, but not too high so we get the irrigation events.
+
+To remove the irrigation effect from the data, we remove the cumulative sum of the irrigation values along each session of measurement (for each plant session).
+"""
+
+# ╔═╡ e0c86db6-5f09-4bb1-8247-3059741e35aa
+@bind threshold PlutoUI.Slider(3:10, default=5.0, show_value=true)
+
+# ╔═╡ c4eaec39-48d2-4b78-989b-ee22344daa7e
+transpiration_df_irrig = let
+    df_ = dropmissing(transpiration_df_sup2000, :DateTime_start_seq)
+    gdf = groupby(df_, :sequence)
+    transform!(gdf, :weight => (x -> first(x) .- x) => :weight_rel)
+    transform!(gdf, :weight_rel => (x -> x .- ShiftedArrays.lag(x)) => :diff)
+
+    transform!(
+        gdf,
+        :diff => ByRow(x -> begin
+            ismissing(x) && return 0.0
+            -x > threshold ? -x : 0.0
+        end
+        ) => :irrigation
+    )
+
+    transform!(gdf, :irrigation => ByRow(x -> x > 0.0) => :irrigation_event)
+    transform!(gdf, :irrigation => cumsum => :irrigation_cum)
+
+    transform!(
+        gdf,
+        [:weight_rel, :irrigation_cum] => ((w, i) -> w .- i) => :weight_rel_no_irrig,
+        [:weight, :irrigation_cum] => ((w, i) -> w .- i) => :weight_no_irrig,
+        [:diff, :irrigation] => ((w, i) -> w .+ i) => :diff_no_irrig,
+    )
+end
+
+# ╔═╡ 11701cca-d05a-4c57-9e28-b209233cc859
+md"""
+Ploting the irrigation events in the scale weights:
+"""
+
+# ╔═╡ 3aee3153-75f2-49fd-b3d6-3ca75daa9492
+data(transpiration_df_irrig) *
+mapping(
+    :DateTime => "Date (UTC)",
+    :weight_rel => "Relative scale weight (g)",
+    color=:irrigation_event
+) *
+visual(Scatter) |>
+draw
+
+# ╔═╡ a9798fa4-413c-4a68-960f-fc7306a6274b
+md"""
+And the plant weight corrected for irrigation:
+"""
+
+# ╔═╡ c0f4f748-cadb-445d-b42d-85dda0b1bc82
+data(transpiration_df_irrig) *
+mapping(
+    :DateTime => "Date (UTC)",
+    :weight_no_irrig => "Weight without irrigation (g)",
+    color=:Plant_id => "Plant ID"
+) *
+visual(Scatter) |>
+draw
+
+# ╔═╡ 1bf9b96d-92a5-4c80-9be8-68a115114d1d
+md"""
+## Matching CO2 time-scale
+"""
+
+# ╔═╡ 9ee350a3-c669-46bf-a44b-415dd5fe3014
+md"""
+We compute the plant transpiration at the same time-scale than the measurement of the CO2 fluxes. These fluxes are measured for 5 minutes every 10 minutes. We make two dataframes, one only with the transpiration during those 5 minutes, and one with the transpiration over the full 10-min window.
+
+The transpiration is computed following two different methods:
+
+- weight difference: the transpiration is computed from the difference in weight between the beginning and the end of the measurement window
+- regression: the transpiration is computed using the slope of the linear regression of the weight against time for all measurement points inside the time window.
+"""
+
+# ╔═╡ aa5fe143-dc0f-4d84-b9f3-e90c1490479a
+md"""
+Note that the weight is highly variable, even in a 5-min time-window, because of the wind inside the chamber that made the leaves move, which in turn made the weight measurement change. For example, here is a measurement for 5-min:
+"""
+
+# ╔═╡ 5fc42118-7938-48ad-99fb-330cc44eaf58
+md"""
+### 5 minute transpiration
+"""
+
+# ╔═╡ ff960dcc-cdbf-4bd5-8619-613e3633d4bf
+md"""
+In the "difference method", we can use only the first and last points, or if enough data point in the 5 minutes, we can take the median of several first and last points instead.
+
+We can choose the number of points used in this computation with the following slider:
+"""
+
+# ╔═╡ 88d95908-a13f-4408-b2a2-35943223e55b
+@bind points_mean PlutoUI.Slider(1:10, default=10, show_value=true)
+
+# ╔═╡ 32447cbe-452a-426f-9a3e-146e27d863ca
+md"""
+Comparing the two methods of computing the transpiration
+"""
+
+# ╔═╡ b5239d02-4898-479b-9078-be7d6365028c
+md"""
+### 10 minute transpiration
+"""
+
+# ╔═╡ 466c8b32-d3aa-47b4-a4b6-f3b986418689
+md"""
+## Analyses of the output
+"""
+
+# ╔═╡ 98667070-9121-42da-92bf-322329d7aff6
+@bind date_plot PlutoUI.Select(["2021-03-12", "2021-04-24"])
+
+# ╔═╡ 8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
+md"""
+## Saving
+
+Save the data to disk, and compressing it to save disk space.
+"""
+
+# ╔═╡ 47b34ad6-aaa4-481e-b199-47b57c8b230f
+CSV.write("plant_sequence_delayed_corrected.csv", plant_sequence_raw)
+
+# ╔═╡ f4d51d70-b378-44f0-ada2-8f470cd22b6b
+md"""
+## References
+"""
+
+# ╔═╡ 1c431080-33c6-4ac4-8409-df1c487a1f54
+"""
+	add_timeperiod(x,y)
+
+Add DateTime_start_input, DateTime_end_input, DateTime_start_output and DateTime_end_output on a copy of dataframe `x`.
+"""
+function add_timeperiod(x, y)
+    df_ = copy(x)
+    df_.DateTime_start_output = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_start_input = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_end_input = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+    df_.DateTime_end_output = Vector{Union{DateTime,Missing}}(undef, nrow(df_))
+
+    y_nrows = nrow(y)
+    for (i, row) in enumerate(eachrow(y))
+        # 5-min time window:
+        ismissing(row.DateTime_start_output) || ismissing(row.DateTime_end_output) && continue
+        timestamps_within = findall(row.DateTime_start_output .<= df_.DateTime .< row.DateTime_end_output)
+
+        # Don't compute time-steps that covers two sequences (we are changing plant here):
+        if length(timestamps_within) > 0 && length(unique(df_.sequence[timestamps_within])) == 1
+            df_.DateTime_start_output[timestamps_within] .= row.DateTime_start_output
+            df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
+        end
+
+        # 10-min time window:
+        timestamps_within = findall(row.DateTime_start_input .<= df_.DateTime .< row.DateTime_end_output)
+
+        if length(timestamps_within) > 0 && length(unique(df_.sequence[timestamps_within])) == 1
+            df_.DateTime_start_input[timestamps_within] .= row.DateTime_start_input
+            df_.DateTime_end_output[timestamps_within] .= row.DateTime_end_output
+            #NB: we add DateTime_end_output here for the time-steps that are within the input, because we still want to know when the measurement ends
+        end
+    end
+
+    df_.DateTime_end_input = df_.DateTime_start_output
+
+    return df_
+end
+
+# ╔═╡ 58399089-2b2f-4681-aaec-23c3d6d17a60
+transpiration_df = let
+    df_ = add_timeperiod(sort(dropmissing(transpiration_df_irrig, :DateTime), :DateTime), CO2)
+    transform!(
+        df_,
+        :DateTime => (x -> x .- ShiftedArrays.lag(x)) => :duration
+    )
+    df_
+end
+
+# ╔═╡ 380e80a3-34ee-452d-9b37-21c7872e8d10
+data(groupby(dropmissing(transpiration_df, :DateTime_start_output), :DateTime_start_output)[end]) * mapping(:DateTime => "Time (UTC)", :weight_no_irrig => "Plant weight (g)") |> draw
+
+# ╔═╡ 21e399d0-6cfe-4421-ab56-cb36d8643034
+transpiration_first_5min = let
+    df_ = dropmissing(transpiration_df, :DateTime_start_output)
+    # Compute the cumulated duration over each 5-min window:
+    gdf = groupby(df_, :DateTime_start_output)
+
+    transform!(gdf, :duration => cumsum => :duration_cum)
+
+    # Compute transpiration as the slope of the linear weight~duration relationship:
+    df_ = combine(
+        gdf,
+        :DateTime_end_output => unique => :DateTime_end,
+        :sequence => unique => :sequence,
+        :Plant_id => unique => :Plant,
+        [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
+            first_duration = Second(x[1]).value
+            x = [i.value - first_duration for i in Second.(x)]
+            (x' * x) \ x' * (y[1] .- y)
+        end
+        ) => :transpiration_g_s, # grammes s-1
+        # To compute as the weight difference between first last time-step(s):
+        [:weight_no_irrig, :duration_cum] => ((x, y) -> begin
+            if length(x) < 20
+                return (median(first(x, 1)) - median(last(x, 1))) / (Second(last(y)).value - Second(first(y)).value)
+            else
+                # If enough data points, we take the median of the last 10 points (for the 1s time-step data with high variability)
+
+                # For the duration, we take the average duration of the first "points_mean" points, and the average duration of the last "points_mean" points, because this becomes a moving window instead of jsut a point, so we need the duration between the two moving windows. We take the average window time because the size of the window can vary (the durations vary).
+                duration_cumul_first = mean([Second(i).value for i in first(y, points_mean)])
+                duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
+
+                return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
+            end
+        end) => :transpiration_diff_g_s,
+        #:duration_cum => (x -> canonicalize(maximum(x))) => :period_computation,
+        nrow,
+        :irrigation => sum => :irrigation,
+    )
+    rename!(df_, :DateTime_start_output => :DateTime_start)
+    # Keep only the time-steps where we have 3 minutes of data to compute Tr:
+    filter!(x -> x.nrow > 3, df_)
+
+    filter!(x -> x.transpiration_g_s > -0.005, df_)
+    df_
+end
+
+# ╔═╡ 23aee6b7-9256-435a-9378-d74baaaa4771
+let
+    p = data(transpiration_first_5min) *
+        mapping(
+            :DateTime_start => "Date (UTC)",
+            [:transpiration_diff_g_s, :transpiration_g_s] .=> "Instantaneous transpiration (g)",
+            color=dims(1) => renamer(["Difference", "Linear reg."])
+        ) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 307abcd3-4009-4a47-9f7e-a367da754a2f
+begin
+    f = Figure()
+    ax = Axis(f[1, 1], title="Transpiration (g s⁻¹)", xlabel="Difference between two consecutive points", ylabel="Slope of the linear regression")
+    ablines!(ax, [0.0], [1.0], color=:grey, linestyle=:dot)
+    scatter!(ax, transpiration_first_5min.transpiration_diff_g_s, transpiration_first_5min.transpiration_g_s, color=(:grey, 0.5))
+    f
+end
+
+# ╔═╡ 9caab45e-f33b-4b54-a7de-7f7035144f0e
+open(Bzip2CompressorStream, "transpiration_first_5min.csv.bz2", "w") do stream
+    CSV.write(stream, transpiration_first_5min)
+end
+
+# ╔═╡ 6031c01c-ee91-45cc-a8e9-45d77dc1e7e3
+transpiration_10min = let
+    df_ = dropmissing(transpiration_df, [:DateTime_start_input, :duration])
+    # Compute the cumulated duration over each 10-min window:
+    gdf = groupby(df_, :DateTime_start_input)
+    transform!(gdf, :duration => cumsum => :duration_cum)
+
+    # Compute transpiration as the slope of the linear weight~duration relationship:
+    df_ = combine(
+        gdf,
+        :DateTime_end_output => unique => :DateTime_end,
+        :sequence => unique => :sequence,
+        :Plant_id => unique => :Plant,
+        [:weight_no_irrig, :duration_cum] => ((y, x) -> begin
+            first_duration = Second(x[1]).value
+            x = [i.value - first_duration for i in Second.(x)]
+            (x' * x) \ x' * (y[1] .- y)
+        end
+        ) => :transpiration_g_s, # grammes s-1
+        # To compute as the weight difference between first last time-step(s):
+        [:weight_no_irrig, :duration_cum] => ((x, y) -> begin
+            if length(x) < 20
+                return (median(first(x, 1)) - median(last(x, 1))) / (Second(last(y)).value - Second(first(y)).value)
+            else
+                # If enough data points, we take the median of the last 10 points (for the 1s time-step data with high variability)
+
+                # For the duration, we take the average duration of the first "points_mean" points, and the average duration of the last "points_mean" points, because this becomes a moving window instead of jsut a point, so we need the duration between the two moving windows. We take the average window time because the size of the window can vary (the durations vary).
+                duration_cumul_first = mean([Second(i).value for i in first(y, points_mean)])
+                duration_cumul_last = mean([Second(i).value for i in last(y, points_mean)])
+
+                return (median(first(x, points_mean)) - median(last(x, points_mean))) / (duration_cumul_last - duration_cumul_first)
+            end
+        end) => :transpiration_diff_g_s,
+        nrow,
+        :irrigation => sum => :irrigation,
+        # :weight => mean,
+        # :diff_no_irrig => sum,
+        # :weight_no_irrig => (x -> [x]) => :weight_no_irrig
+    )
+    rename!(df_, :DateTime_start_input => :DateTime_start)
+    # Keep only the time-steps where we have 3 minutes of data to compute Tr:
+    filter!(x -> x.nrow > 3, df_)
+
+    filter!(x -> x.transpiration_g_s > -0.005, df_)
+
+    df_
+end
+
+# ╔═╡ 1ff00740-b298-4df4-ab91-8b5bb7f2bd49
+let
+    p = data(transpiration_10min) *
+        mapping(
+            :DateTime_start => "Date (UTC)",
+            [:transpiration_diff_g_s, :transpiration_g_s] .=> "Instantaneous transpiration (g)",
+            color=dims(1) => renamer(["Difference", "Linear reg."])
+        ) *
+        visual(Scatter)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ 505e0783-f20d-45b9-b4ff-b60983cbdb59
+let
+    date_to_plot = Date(date_plot)
+    df_ = filter(row -> row.DateTime_start >= date_to_plot && row.DateTime_start < date_to_plot + Day(1), transpiration_10min)
+    p = data(df_) *
+        mapping(
+            :DateTime_start => "Date (UTC)",
+            [:transpiration_diff_g_s, :transpiration_g_s] .=> "Instantaneous transpiration (g)",
+            color=dims(1) => renamer(["Difference", "Linear reg."]),
+            #layout=:
+        ) *
+        visual(Lines, title=date_to_plot)
+    draw(p, legend=(position=:bottom,))
+end
+
+# ╔═╡ fa15b07f-03b9-4abe-9a40-879d59d62131
+open(Bzip2CompressorStream, "transpiration_10min.csv.bz2", "w") do stream
+    CSV.write(stream, transpiration_10min)
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -137,29 +683,30 @@ AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 CodecBzip2 = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
-Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+ShiftedArrays = "1277b4bf-5013-50f5-be3d-901d8477a67a"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 
 [compat]
 AlgebraOfGraphics = "~0.6.14"
 CSV = "~0.10.9"
 CairoMakie = "~0.10.2"
 CodecBzip2 = "~0.8.3"
-Colors = "~0.12.10"
 DataFrames = "~1.6.1"
-Images = "~0.26.0"
-Makie = "~0.19.12"
+PlutoUI = "~0.7.50"
+ShiftedArrays = "~2.0.0"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.4"
+julia_version = "1.10.3"
 manifest_format = "2.0"
-project_hash = "fe1b3a66bcfdd20bb7649864e13f5ea311b78ec1"
+project_hash = "c84420aad6d25df38645c12100f8121de01b6eac"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -176,6 +723,12 @@ weakdeps = ["ChainRulesCore", "Test"]
 git-tree-sha1 = "222ee9e50b98f51b5d78feb93dd928880df35f06"
 uuid = "398f06c4-4d28-53ec-89ca-5b2656b7603d"
 version = "0.3.0"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.3.2"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -213,12 +766,6 @@ version = "0.4.1"
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.1"
-
-[[deps.ArnoldiMethod]]
-deps = ["LinearAlgebra", "Random", "StaticArrays"]
-git-tree-sha1 = "d57bd3762d308bded22c3b82d033bff85f6195c6"
-uuid = "ec485272-7323-5ecc-a04f-4719b315124d"
-version = "0.4.0"
 
 [[deps.ArrayInterface]]
 deps = ["Adapt", "LinearAlgebra", "SparseArrays", "SuiteSparse"]
@@ -272,12 +819,6 @@ version = "0.4.7"
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
-[[deps.BitTwiddlingConvenienceFunctions]]
-deps = ["Static"]
-git-tree-sha1 = "f21cfd4950cb9f0587d5067e69405ad2acd27b87"
-uuid = "62783981-4cbd-42fc-bca8-16325de8dc4b"
-version = "0.1.6"
-
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "9e2a6b69137e6969bab0152632dcb3bc108c8bdd"
@@ -288,12 +829,6 @@ version = "1.0.8+1"
 git-tree-sha1 = "389ad5c84de1ae7cf0e28e381131c98ea87d54fc"
 uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 version = "0.5.0"
-
-[[deps.CPUSummary]]
-deps = ["CpuId", "IfElse", "PrecompileTools", "Static"]
-git-tree-sha1 = "5a97e67919535d6841172016c9530fd69494e5ec"
-uuid = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
-version = "0.2.6"
 
 [[deps.CRC32c]]
 uuid = "8bf52ea8-c179-5cab-976a-9e18b702a9bc"
@@ -334,12 +869,6 @@ git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
 uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 version = "0.5.1"
 
-[[deps.CatIndices]]
-deps = ["CustomUnitRanges", "OffsetArrays"]
-git-tree-sha1 = "a0f80a09780eed9b1d106a1bf62041c2efc995bc"
-uuid = "aafaddc9-749c-510e-ac4f-586e18779b91"
-version = "0.2.2"
-
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra"]
 git-tree-sha1 = "71acdbf594aab5bbb2cec89b208c41b4c411e49f"
@@ -349,18 +878,6 @@ weakdeps = ["SparseArrays"]
 
     [deps.ChainRulesCore.extensions]
     ChainRulesCoreSparseArraysExt = "SparseArrays"
-
-[[deps.CloseOpenIntervals]]
-deps = ["Static", "StaticArrayInterface"]
-git-tree-sha1 = "05ba0d07cd4fd8b7a39541e31a7b0254704ea581"
-uuid = "fb6a15b2-703c-40df-9091-08a04967cfa9"
-version = "0.1.13"
-
-[[deps.Clustering]]
-deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "Random", "SparseArrays", "Statistics", "StatsBase"]
-git-tree-sha1 = "9ebb045901e9bbf58767a9f34ff89831ed711aae"
-uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
-version = "0.15.7"
 
 [[deps.CodecBzip2]]
 deps = ["Bzip2_jll", "Libdl", "TranscodingStreams"]
@@ -393,10 +910,14 @@ uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 version = "0.11.5"
 
 [[deps.ColorVectorSpace]]
-deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "SpecialFunctions", "Statistics", "TensorCore"]
-git-tree-sha1 = "600cc5508d66b78aae350f7accdb58763ac18589"
+deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "Requires", "Statistics", "TensorCore"]
+git-tree-sha1 = "a1f44953f2382ebb937d60dafbe2deea4bd23249"
 uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
-version = "0.9.10"
+version = "0.10.0"
+weakdeps = ["SpecialFunctions"]
+
+    [deps.ColorVectorSpace.extensions]
+    SpecialFunctionsExt = "SpecialFunctions"
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
@@ -415,11 +936,6 @@ git-tree-sha1 = "7b8a93dba8af7e3b42fecabf646260105ac373f7"
 uuid = "bbf7d656-a473-5ed7-a52c-81e309532950"
 version = "0.3.0"
 
-[[deps.CommonWorldInvalidations]]
-git-tree-sha1 = "ae52d1c52048455e85a387fbee9be553ec2b68d0"
-uuid = "f70d9fcc-98c5-4d4a-abd7-e4cdeebd8ca8"
-version = "1.0.0"
-
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
 git-tree-sha1 = "b1c55339b7c6c350ee89f2c1604299660525b248"
@@ -434,11 +950,6 @@ weakdeps = ["Dates", "LinearAlgebra"]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.1.1+0"
-
-[[deps.ComputationalResources]]
-git-tree-sha1 = "52cb3ec90e8a8bea0e62e275ba577ad0f74821f7"
-uuid = "ed09eef8-17a6-5b46-8889-db040fac31e3"
-version = "0.3.2"
 
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
@@ -456,27 +967,10 @@ git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.6.3"
 
-[[deps.CoordinateTransformations]]
-deps = ["LinearAlgebra", "StaticArrays"]
-git-tree-sha1 = "f9d7112bfff8a19a3a4ea4e03a8e6a91fe8456bf"
-uuid = "150eb455-5306-5404-9cee-2592286d6298"
-version = "0.6.3"
-
-[[deps.CpuId]]
-deps = ["Markdown"]
-git-tree-sha1 = "fcbb72b032692610bfbdb15018ac16a36cf2e406"
-uuid = "adafc99b-e345-5852-983c-f28acb93d879"
-version = "0.3.1"
-
 [[deps.Crayons]]
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 version = "4.1.1"
-
-[[deps.CustomUnitRanges]]
-git-tree-sha1 = "1a3f97f907e6dd8983b744d2642651bb162a3f7a"
-uuid = "dc8bdbbb-1ca9-579f-8c36-e416f6a65cce"
-version = "1.0.2"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -609,12 +1103,6 @@ deps = ["Artifacts", "Bzip2_jll", "FreeType2_jll", "FriBidi_jll", "JLLWrappers",
 git-tree-sha1 = "ab3f7e1819dba9434a3a5126510c8fda3a4e7000"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
 version = "6.1.1+0"
-
-[[deps.FFTViews]]
-deps = ["CustomUnitRanges", "FFTW"]
-git-tree-sha1 = "cbdf14d1e8c7c8aacbe8b19862e0179fd08321c2"
-uuid = "4f61f5a4-77b1-5117-aa51-3ab5ef4ef0cd"
-version = "0.3.2"
 
 [[deps.FFTW]]
 deps = ["AbstractFFTs", "FFTW_jll", "LinearAlgebra", "MKL_jll", "Preferences", "Reexport"]
@@ -751,12 +1239,6 @@ git-tree-sha1 = "9b02998aba7bf074d14de89f9d37ca24a1a0b046"
 uuid = "78b55507-aeef-58d4-861c-77aaff3498b1"
 version = "0.21.0+0"
 
-[[deps.Ghostscript_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "43ba3d3c82c18d88471cfd2924931658838c9d8f"
-uuid = "61579ee1-b43e-5ca0-a5da-69d92c66a64b"
-version = "9.55.0+4"
-
 [[deps.Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE2_jll", "Zlib_jll"]
 git-tree-sha1 = "7c82e6a6cd34e9d935e9aa4051b66c6ff3af59ba"
@@ -775,12 +1257,6 @@ git-tree-sha1 = "344bf40dcab1073aca04aa0df4fb092f920e4011"
 uuid = "3b182d85-2403-5c21-9c21-1e1f0cc25472"
 version = "1.3.14+0"
 
-[[deps.Graphs]]
-deps = ["ArnoldiMethod", "Compat", "DataStructures", "Distributed", "Inflate", "LinearAlgebra", "Random", "SharedArrays", "SimpleTraits", "SparseArrays", "Statistics"]
-git-tree-sha1 = "ebd18c326fa6cee1efb7da9a3b45cf69da2ed4d9"
-uuid = "86223c79-3864-5bf0-83f7-82e725a168b6"
-version = "1.11.2"
-
 [[deps.GridLayoutBase]]
 deps = ["GeometryBasics", "InteractiveUtils", "Observables"]
 git-tree-sha1 = "f57a64794b336d4990d90f80b147474b869b1bc4"
@@ -798,28 +1274,29 @@ git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "2.8.1+1"
 
-[[deps.HistogramThresholding]]
-deps = ["ImageBase", "LinearAlgebra", "MappedArrays"]
-git-tree-sha1 = "7194dfbb2f8d945abdaf68fa9480a965d6661e69"
-uuid = "2c695a8d-9458-5d45-9878-1b8a99cf7853"
-version = "0.3.1"
-
-[[deps.HostCPUFeatures]]
-deps = ["BitTwiddlingConvenienceFunctions", "IfElse", "Libdl", "Static"]
-git-tree-sha1 = "8e070b599339d622e9a081d17230d74a5c473293"
-uuid = "3e5b6fbb-0976-4d2c-9146-d79de83f2fb0"
-version = "0.1.17"
-
 [[deps.HypergeometricFunctions]]
 deps = ["DualNumbers", "LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
 git-tree-sha1 = "f218fe3736ddf977e0e772bc9a586b2383da2685"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.23"
 
-[[deps.IfElse]]
-git-tree-sha1 = "debdd00ffef04665ccbb3e150747a77560e8fad1"
-uuid = "615f187c-cbe4-4ef1-ba3b-2fcf58d6d173"
-version = "0.1.1"
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.5"
+
+[[deps.HypertextLiteral]]
+deps = ["Tricks"]
+git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.5"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.5"
 
 [[deps.ImageAxes]]
 deps = ["AxisArrays", "ImageBase", "ImageCore", "Reexport", "SimpleTraits"]
@@ -829,45 +1306,15 @@ version = "0.6.11"
 
 [[deps.ImageBase]]
 deps = ["ImageCore", "Reexport"]
-git-tree-sha1 = "b51bb8cae22c66d0f6357e3bcb6363145ef20835"
+git-tree-sha1 = "eb49b82c172811fd2c86759fa0553a2221feb909"
 uuid = "c817782e-172a-44cc-b673-b171935fbb9e"
-version = "0.1.5"
-
-[[deps.ImageBinarization]]
-deps = ["HistogramThresholding", "ImageCore", "LinearAlgebra", "Polynomials", "Reexport", "Statistics"]
-git-tree-sha1 = "f5356e7203c4a9954962e3757c08033f2efe578a"
-uuid = "cbc4b850-ae4b-5111-9e64-df94c024a13d"
-version = "0.3.0"
-
-[[deps.ImageContrastAdjustment]]
-deps = ["ImageBase", "ImageCore", "ImageTransformations", "Parameters"]
-git-tree-sha1 = "eb3d4365a10e3f3ecb3b115e9d12db131d28a386"
-uuid = "f332f351-ec65-5f6a-b3d1-319c6670881a"
-version = "0.3.12"
+version = "0.1.7"
 
 [[deps.ImageCore]]
-deps = ["AbstractFFTs", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Graphics", "MappedArrays", "MosaicViews", "OffsetArrays", "PaddedViews", "Reexport"]
-git-tree-sha1 = "acf614720ef026d38400b3817614c45882d75500"
+deps = ["ColorVectorSpace", "Colors", "FixedPointNumbers", "MappedArrays", "MosaicViews", "OffsetArrays", "PaddedViews", "PrecompileTools", "Reexport"]
+git-tree-sha1 = "b2a7eaa169c13f5bcae8131a83bc30eff8f71be0"
 uuid = "a09fc81d-aa75-5fe9-8630-4744c3626534"
-version = "0.9.4"
-
-[[deps.ImageCorners]]
-deps = ["ImageCore", "ImageFiltering", "PrecompileTools", "StaticArrays", "StatsBase"]
-git-tree-sha1 = "24c52de051293745a9bad7d73497708954562b79"
-uuid = "89d5987c-236e-4e32-acd0-25bd6bd87b70"
-version = "0.1.3"
-
-[[deps.ImageDistances]]
-deps = ["Distances", "ImageCore", "ImageMorphology", "LinearAlgebra", "Statistics"]
-git-tree-sha1 = "08b0e6354b21ef5dd5e49026028e41831401aca8"
-uuid = "51556ac3-7006-55f5-8cb3-34580c88182d"
-version = "0.2.17"
-
-[[deps.ImageFiltering]]
-deps = ["CatIndices", "ComputationalResources", "DataStructures", "FFTViews", "FFTW", "ImageBase", "ImageCore", "LinearAlgebra", "OffsetArrays", "PrecompileTools", "Reexport", "SparseArrays", "StaticArrays", "Statistics", "TiledIteration"]
-git-tree-sha1 = "3447781d4c80dbe6d71d239f7cfb1f8049d4c84f"
-uuid = "6a3955dd-da59-5b1f-98d4-e7296123deb5"
-version = "0.7.6"
+version = "0.10.2"
 
 [[deps.ImageIO]]
 deps = ["FileIO", "IndirectArrays", "JpegTurbo", "LazyModules", "Netpbm", "OpenEXR", "PNGFiles", "QOI", "Sixel", "TiffImages", "UUIDs"]
@@ -875,59 +1322,11 @@ git-tree-sha1 = "437abb322a41d527c197fa800455f79d414f0a3c"
 uuid = "82e4d734-157c-48bb-816b-45c225c6df19"
 version = "0.6.8"
 
-[[deps.ImageMagick]]
-deps = ["FileIO", "ImageCore", "ImageMagick_jll", "InteractiveUtils", "Libdl", "Pkg", "Random"]
-git-tree-sha1 = "5bc1cb62e0c5f1005868358db0692c994c3a13c6"
-uuid = "6218d12a-5da1-5696-b52f-db25d2ecc6d1"
-version = "1.2.1"
-
-[[deps.ImageMagick_jll]]
-deps = ["Artifacts", "Ghostscript_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "OpenJpeg_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "d65554bad8b16d9562050c67e7223abf91eaba2f"
-uuid = "c73af94c-d91f-53ed-93a7-00f77d67a9d7"
-version = "6.9.13+0"
-
 [[deps.ImageMetadata]]
 deps = ["AxisArrays", "ImageAxes", "ImageBase", "ImageCore"]
 git-tree-sha1 = "355e2b974f2e3212a75dfb60519de21361ad3cb7"
 uuid = "bc367c6b-8a6b-528e-b4bd-a4b897500b49"
 version = "0.9.9"
-
-[[deps.ImageMorphology]]
-deps = ["DataStructures", "ImageCore", "LinearAlgebra", "LoopVectorization", "OffsetArrays", "Requires", "TiledIteration"]
-git-tree-sha1 = "6f0a801136cb9c229aebea0df296cdcd471dbcd1"
-uuid = "787d08f9-d448-5407-9aad-5290dd7ab264"
-version = "0.4.5"
-
-[[deps.ImageQualityIndexes]]
-deps = ["ImageContrastAdjustment", "ImageCore", "ImageDistances", "ImageFiltering", "LazyModules", "OffsetArrays", "PrecompileTools", "Statistics"]
-git-tree-sha1 = "783b70725ed326340adf225be4889906c96b8fd1"
-uuid = "2996bd0c-7a13-11e9-2da2-2f5ce47296a9"
-version = "0.3.7"
-
-[[deps.ImageSegmentation]]
-deps = ["Clustering", "DataStructures", "Distances", "Graphs", "ImageCore", "ImageFiltering", "ImageMorphology", "LinearAlgebra", "MetaGraphs", "RegionTrees", "SimpleWeightedGraphs", "StaticArrays", "Statistics"]
-git-tree-sha1 = "44664eea5408828c03e5addb84fa4f916132fc26"
-uuid = "80713f31-8817-5129-9cf8-209ff8fb23e1"
-version = "1.8.1"
-
-[[deps.ImageShow]]
-deps = ["Base64", "ColorSchemes", "FileIO", "ImageBase", "ImageCore", "OffsetArrays", "StackViews"]
-git-tree-sha1 = "3b5344bcdbdc11ad58f3b1956709b5b9345355de"
-uuid = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
-version = "0.3.8"
-
-[[deps.ImageTransformations]]
-deps = ["AxisAlgorithms", "CoordinateTransformations", "ImageBase", "ImageCore", "Interpolations", "OffsetArrays", "Rotations", "StaticArrays"]
-git-tree-sha1 = "e0884bdf01bbbb111aea77c348368a86fb4b5ab6"
-uuid = "02fcd773-0e25-5acc-982a-7f6622650795"
-version = "0.10.1"
-
-[[deps.Images]]
-deps = ["Base64", "FileIO", "Graphics", "ImageAxes", "ImageBase", "ImageBinarization", "ImageContrastAdjustment", "ImageCore", "ImageCorners", "ImageDistances", "ImageFiltering", "ImageIO", "ImageMagick", "ImageMetadata", "ImageMorphology", "ImageQualityIndexes", "ImageSegmentation", "ImageShow", "ImageTransformations", "IndirectArrays", "IntegralArrays", "Random", "Reexport", "SparseArrays", "StaticArrays", "Statistics", "StatsBase", "TiledIteration"]
-git-tree-sha1 = "12fdd617c7fe25dc4a6cc804d657cc4b2230302b"
-uuid = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
-version = "0.26.1"
 
 [[deps.Imath_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -966,12 +1365,6 @@ version = "1.4.1"
 git-tree-sha1 = "b8ffb903da9f7b8cf695a8bead8e01814aa24b30"
 uuid = "18e54dd8-cb9d-406c-a71d-865a43cbb235"
 version = "0.1.2"
-
-[[deps.IntegralArrays]]
-deps = ["ColorTypes", "FixedPointNumbers", "IntervalSets"]
-git-tree-sha1 = "be8e690c3973443bec584db3346ddc904d4884eb"
-uuid = "1d092043-8f09-5a30-832f-7509e371ab51"
-version = "0.1.5"
 
 [[deps.IntelOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1044,12 +1437,6 @@ git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
 version = "1.0.0"
 
-[[deps.JLD2]]
-deps = ["FileIO", "MacroTools", "Mmap", "OrderedCollections", "Pkg", "PrecompileTools", "Reexport", "Requires", "TranscodingStreams", "UUIDs", "Unicode"]
-git-tree-sha1 = "84642bc18a79d715b39d3724b03cbdd2e7d48c62"
-uuid = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-version = "0.4.49"
-
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
 git-tree-sha1 = "7e5d6779a1e09a36db2a7b6cff50942a0a7d0fca"
@@ -1086,12 +1473,6 @@ git-tree-sha1 = "170b660facf5df5de098d866564877e119141cbd"
 uuid = "c1c5ebd0-6772-5130-a774-d5fcae4a789d"
 version = "3.100.2+0"
 
-[[deps.LERC_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "bf36f528eec6634efc60d7ec062008f171071434"
-uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
-version = "3.0.0+1"
-
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "d986ce2d884d49126836ea94ed5bfb0f12679713"
@@ -1108,12 +1489,6 @@ version = "2.10.2+0"
 git-tree-sha1 = "50901ebc375ed41dbf8058da26f9de442febbbec"
 uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 version = "1.3.1"
-
-[[deps.LayoutPointers]]
-deps = ["ArrayInterface", "LinearAlgebra", "ManualMemory", "SIMDTypes", "Static", "StaticArrayInterface"]
-git-tree-sha1 = "a9eaadb366f5493a5654e843864c13d8b107548c"
-uuid = "10f19ff3-798f-405d-979b-55457f8fc047"
-version = "0.1.17"
 
 [[deps.LazyArtifacts]]
 deps = ["Artifacts", "Pkg"]
@@ -1181,12 +1556,6 @@ git-tree-sha1 = "0c4f9c4f1a50d8f35048fa0532dabbadf702f81e"
 uuid = "4b2f31a3-9ecc-558c-b454-b3730dcb73e9"
 version = "2.40.1+0"
 
-[[deps.Libtiff_jll]]
-deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "XZ_jll", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "6355fb9a4d22d867318db186fd09b09b35bd2ed7"
-uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.6.0+0"
-
 [[deps.Libuuid_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "5ee6203157c120d79034c748a2acba45b82b8807"
@@ -1215,12 +1584,6 @@ git-tree-sha1 = "d76cec8007ec123c2b681269d40f94b053473fcf"
 uuid = "9b3f67b0-2d00-526e-9884-9e4938f8fb88"
 version = "0.2.7"
 
-[[deps.LittleCMS_jll]]
-deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll"]
-git-tree-sha1 = "fa7fd067dca76cadd880f1ca937b4f387975a9f5"
-uuid = "d3a379c0-f9a3-5b72-a4c0-6bf4d2e8af0f"
-version = "2.16.0+0"
-
 [[deps.Loess]]
 deps = ["Distances", "LinearAlgebra", "Statistics", "StatsAPI"]
 git-tree-sha1 = "a113a8be4c6d0c64e217b472fb6e61c760eb4022"
@@ -1246,16 +1609,10 @@ version = "0.3.28"
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
-[[deps.LoopVectorization]]
-deps = ["ArrayInterface", "CPUSummary", "CloseOpenIntervals", "DocStringExtensions", "HostCPUFeatures", "IfElse", "LayoutPointers", "LinearAlgebra", "OffsetArrays", "PolyesterWeave", "PrecompileTools", "SIMDTypes", "SLEEFPirates", "Static", "StaticArrayInterface", "ThreadingUtilities", "UnPack", "VectorizationBase"]
-git-tree-sha1 = "8084c25a250e00ae427a379a5b607e7aed96a2dd"
-uuid = "bdcacae8-1622-11e9-2a5c-532679323890"
-version = "0.12.171"
-weakdeps = ["ChainRulesCore", "ForwardDiff", "SpecialFunctions"]
-
-    [deps.LoopVectorization.extensions]
-    ForwardDiffExt = ["ChainRulesCore", "ForwardDiff"]
-    SpecialFunctionsExt = "SpecialFunctions"
+[[deps.MIMEs]]
+git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
+uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
+version = "0.1.4"
 
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
@@ -1281,11 +1638,6 @@ git-tree-sha1 = "9b11acd07f21c4d035bd4156e789532e8ee2cc70"
 uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
 version = "0.6.9"
 
-[[deps.ManualMemory]]
-git-tree-sha1 = "bcaef4fc7a0cfe2cba636d84cda54b5e4e4ca3cd"
-uuid = "d125e4d3-2237-4719-b19c-fa641b8a4667"
-version = "0.1.8"
-
 [[deps.MappedArrays]]
 git-tree-sha1 = "2dab0221fe2b0f2cb6754eaa743cc266339f527e"
 uuid = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
@@ -1305,12 +1657,6 @@ version = "0.5.7"
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 version = "2.28.2+1"
-
-[[deps.MetaGraphs]]
-deps = ["Graphs", "JLD2", "Random"]
-git-tree-sha1 = "1130dbe1d5276cb656f6e1094ce97466ed700e5a"
-uuid = "626554b9-1ddb-594c-aa3c-2596fe9399a5"
-version = "0.7.2"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -1352,12 +1698,6 @@ deps = ["OpenLibm_jll"]
 git-tree-sha1 = "0877504529a3e5c3343c6f8b4c0381e57e4387e4"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "1.0.2"
-
-[[deps.NearestNeighbors]]
-deps = ["Distances", "StaticArrays"]
-git-tree-sha1 = "91a67b4d73842da90b526011fa85c5c4c9343fe0"
-uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-version = "0.4.18"
 
 [[deps.Netpbm]]
 deps = ["FileIO", "ImageCore", "ImageMetadata"]
@@ -1405,12 +1745,6 @@ deps = ["Artifacts", "Imath_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
 git-tree-sha1 = "8292dd5c8a38257111ada2174000a33745b06d4e"
 uuid = "18a262bb-aa17-5467-a713-aee519bc75cb"
 version = "3.2.4+0"
-
-[[deps.OpenJpeg_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl", "Libtiff_jll", "LittleCMS_jll", "libpng_jll"]
-git-tree-sha1 = "f4cb457ffac5f5cf695699f82c537073958a6a6c"
-uuid = "643b3616-a352-519d-856d-80112ee9badc"
-version = "2.5.2+0"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1534,11 +1868,11 @@ git-tree-sha1 = "7b1a9df27f072ac4c9c7cbe5efb198489258d1f5"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
 version = "1.4.1"
 
-[[deps.PolyesterWeave]]
-deps = ["BitTwiddlingConvenienceFunctions", "CPUSummary", "IfElse", "Static", "ThreadingUtilities"]
-git-tree-sha1 = "645bed98cd47f72f67316fd42fc47dee771aefcd"
-uuid = "1d0040c9-8b98-4ee7-8388-3f51789ca0ad"
-version = "0.2.2"
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
+git-tree-sha1 = "ab55ee1510ad2af0ff674dbcced5e94921f867a9"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.59"
 
 [[deps.PolygonOps]]
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
@@ -1546,18 +1880,20 @@ uuid = "647866c9-e3ac-4575-94e7-e3d426903924"
 version = "0.1.2"
 
 [[deps.Polynomials]]
-deps = ["LinearAlgebra", "RecipesBase"]
-git-tree-sha1 = "3aa2bb4982e575acd7583f01531f241af077b163"
+deps = ["LinearAlgebra", "RecipesBase", "Requires", "Setfield", "SparseArrays"]
+git-tree-sha1 = "1a9cfb2dc2c2f1bd63f1906d72af39a79b49b736"
 uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
-version = "3.2.13"
+version = "4.0.11"
 
     [deps.Polynomials.extensions]
     PolynomialsChainRulesCoreExt = "ChainRulesCore"
+    PolynomialsFFTWExt = "FFTW"
     PolynomialsMakieCoreExt = "MakieCore"
     PolynomialsMutableArithmeticsExt = "MutableArithmetics"
 
     [deps.Polynomials.weakdeps]
     ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
+    FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
     MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
     MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
 
@@ -1624,12 +1960,6 @@ git-tree-sha1 = "9b23c31e76e333e6fb4c1595ae6afa74966a729e"
 uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 version = "2.9.4"
 
-[[deps.Quaternions]]
-deps = ["LinearAlgebra", "Random", "RealDot"]
-git-tree-sha1 = "994cc27cdacca10e68feb291673ec3a76aa2fae9"
-uuid = "94ee1d12-ae83-5a48-8b1c-48b8ff168ae0"
-version = "0.7.6"
-
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
@@ -1653,12 +1983,6 @@ weakdeps = ["FixedPointNumbers"]
     [deps.Ratios.extensions]
     RatiosFixedPointNumbersExt = "FixedPointNumbers"
 
-[[deps.RealDot]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "9f0a1b71baaf7650f4fa8a1d168c7fb6ee41f0c9"
-uuid = "c1ae055f-0cd5-4b69-90a6-9a35b1a98df9"
-version = "0.1.0"
-
 [[deps.RecipesBase]]
 deps = ["PrecompileTools"]
 git-tree-sha1 = "5c3d09cc4f31f5fc6af001c250bf1278733100ff"
@@ -1669,12 +1993,6 @@ version = "1.3.4"
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
-
-[[deps.RegionTrees]]
-deps = ["IterTools", "LinearAlgebra", "StaticArrays"]
-git-tree-sha1 = "4618ed0da7a251c7f92e869ae1a19c74a7d2a7f9"
-uuid = "dee08c22-ab7f-5625-9660-a9af2021b33f"
-version = "0.3.2"
 
 [[deps.RelocatableFolders]]
 deps = ["SHA", "Scratch"]
@@ -1706,16 +2024,6 @@ git-tree-sha1 = "d483cd324ce5cf5d61b77930f0bbd6cb61927d21"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.4.2+0"
 
-[[deps.Rotations]]
-deps = ["LinearAlgebra", "Quaternions", "Random", "StaticArrays"]
-git-tree-sha1 = "5680a9276685d392c87407df00d57c9924d9f11e"
-uuid = "6038ab10-8711-5258-84ad-4b1120ba62dc"
-version = "1.7.1"
-weakdeps = ["RecipesBase"]
-
-    [deps.Rotations.extensions]
-    RotationsRecipesBaseExt = "RecipesBase"
-
 [[deps.RoundingEmulator]]
 git-tree-sha1 = "40b9edad2e5287e05bd413a38f61a8ff55b9557b"
 uuid = "5eaf0fd0-dfba-4ccb-bf02-d820a40db705"
@@ -1730,17 +2038,6 @@ deps = ["PrecompileTools"]
 git-tree-sha1 = "2803cab51702db743f3fda07dd1745aadfbf43bd"
 uuid = "fdea26ae-647d-5447-a871-4b548cad5224"
 version = "3.5.0"
-
-[[deps.SIMDTypes]]
-git-tree-sha1 = "330289636fb8107c5f32088d2741e9fd7a061a5c"
-uuid = "94e857df-77ce-4151-89e5-788b33177be4"
-version = "0.1.0"
-
-[[deps.SLEEFPirates]]
-deps = ["IfElse", "Static", "VectorizationBase"]
-git-tree-sha1 = "456f610ca2fbd1c14f5fcf31c6bfadc55e7d66e0"
-uuid = "476501e8-09a2-5ece-8869-fb82de89a1fa"
-version = "0.6.43"
 
 [[deps.Scratch]]
 deps = ["Dates"]
@@ -1820,12 +2117,6 @@ git-tree-sha1 = "5d7e3f4e11935503d3ecaf7186eac40602e7d231"
 uuid = "699a6c99-e7fa-54fc-8d76-47d257e15c1d"
 version = "0.9.4"
 
-[[deps.SimpleWeightedGraphs]]
-deps = ["Graphs", "LinearAlgebra", "Markdown", "SparseArrays"]
-git-tree-sha1 = "4b33e0e081a825dbfaf314decf58fa47e53d6acb"
-uuid = "47aef6b3-ad0c-573a-a1e2-d07658019622"
-version = "1.4.0"
-
 [[deps.Sixel]]
 deps = ["Dates", "FileIO", "ImageCore", "IndirectArrays", "OffsetArrays", "REPL", "libsixel_jll"]
 git-tree-sha1 = "2da10356e31327c7096832eb9cd86307a50b1eb6"
@@ -1867,23 +2158,6 @@ deps = ["OffsetArrays"]
 git-tree-sha1 = "46e589465204cd0c08b4bd97385e4fa79a0c770c"
 uuid = "cae243ae-269e-4f55-b966-ac2d0dc13c15"
 version = "0.1.1"
-
-[[deps.Static]]
-deps = ["CommonWorldInvalidations", "IfElse", "PrecompileTools"]
-git-tree-sha1 = "0bbff21027dd8a107551847528127b62a35f7594"
-uuid = "aedffcd0-7271-4cad-89d0-dc628f76c6d3"
-version = "1.1.0"
-
-[[deps.StaticArrayInterface]]
-deps = ["ArrayInterface", "Compat", "IfElse", "LinearAlgebra", "PrecompileTools", "Requires", "SparseArrays", "Static", "SuiteSparse"]
-git-tree-sha1 = "8963e5a083c837531298fc41599182a759a87a6d"
-uuid = "0d7ed370-da01-4f52-bd93-41d350b8b718"
-version = "1.5.1"
-weakdeps = ["OffsetArrays", "StaticArrays"]
-
-    [deps.StaticArrayInterface.extensions]
-    StaticArrayInterfaceOffsetArraysExt = "OffsetArrays"
-    StaticArrayInterfaceStaticArraysExt = "StaticArrays"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
@@ -2003,23 +2277,11 @@ version = "0.1.1"
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
-[[deps.ThreadingUtilities]]
-deps = ["ManualMemory"]
-git-tree-sha1 = "eda08f7e9818eb53661b3deb74e3159460dfbc27"
-uuid = "8290d209-cae3-49c0-8002-c8c24d57dab5"
-version = "0.5.2"
-
 [[deps.TiffImages]]
 deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "Mmap", "OffsetArrays", "PkgVersion", "ProgressMeter", "SIMD", "UUIDs"]
 git-tree-sha1 = "bc7fd5c91041f44636b2c134041f7e5263ce58ae"
 uuid = "731e570b-9d59-4bfa-96dc-6df516fadf69"
 version = "0.10.0"
-
-[[deps.TiledIteration]]
-deps = ["OffsetArrays", "StaticArrayInterface"]
-git-tree-sha1 = "1176cc31e867217b06928e2f140c90bd1bc88283"
-uuid = "06e1c1a7-607b-532d-9fad-de7d9aa2abac"
-version = "0.5.0"
 
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "60df3f8126263c0d6b357b9a1017bb94f53e3582"
@@ -2030,6 +2292,11 @@ weakdeps = ["Random", "Test"]
     [deps.TranscodingStreams.extensions]
     TestExt = ["Test", "Random"]
 
+[[deps.Tricks]]
+git-tree-sha1 = "eae1bb484cd63b36999ee58be2de6c178105112f"
+uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
+version = "0.1.8"
+
 [[deps.TriplotBase]]
 git-tree-sha1 = "4d4ed7f294cda19382ff7de4c137d24d16adc89b"
 uuid = "981d1d27-644d-49a2-9326-4793e63143c3"
@@ -2039,6 +2306,11 @@ version = "0.1.0"
 git-tree-sha1 = "41d61b1c545b06279871ef1a4b5fcb2cac2191cd"
 uuid = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 version = "1.5.0"
+
+[[deps.URIs]]
+git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
+uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
+version = "1.5.1"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -2057,12 +2329,6 @@ deps = ["REPL"]
 git-tree-sha1 = "53915e50200959667e78a92a418594b428dffddf"
 uuid = "1cfade01-22cf-5700-b092-accc4b62d6e1"
 version = "0.4.1"
-
-[[deps.VectorizationBase]]
-deps = ["ArrayInterface", "CPUSummary", "HostCPUFeatures", "IfElse", "LayoutPointers", "Libdl", "LinearAlgebra", "SIMDTypes", "Static", "StaticArrayInterface"]
-git-tree-sha1 = "e7f5b81c65eb858bed630fe006837b935518aca5"
-uuid = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
-version = "0.21.70"
 
 [[deps.WeakRefStrings]]
 deps = ["DataAPI", "InlineStrings", "Parsers"]
@@ -2092,12 +2358,6 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll"
 git-tree-sha1 = "a54ee957f4c86b526460a720dbc882fa5edcbefc"
 uuid = "aed1982a-8fda-507f-9586-7b0439959a61"
 version = "1.1.41+0"
-
-[[deps.XZ_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "ac88fb95ae6447c8dda6a5503f3bafd496ae8632"
-uuid = "ffd25f8a-64ca-5728-b0f7-c24cf3aae800"
-version = "5.4.6+0"
 
 [[deps.Xorg_libX11_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libxcb_jll", "Xorg_xtrans_jll"]
@@ -2151,12 +2411,6 @@ version = "1.5.0+0"
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 version = "1.2.13+1"
-
-[[deps.Zstd_jll]]
-deps = ["Artifacts", "JLLWrappers", "Libdl"]
-git-tree-sha1 = "e678132f07ddb5bfa46857f0d7620fb9be675d3b"
-uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
-version = "1.5.6+0"
 
 [[deps.isoband_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2235,16 +2489,72 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─7b224c6c-b28a-11ed-1e13-cd4c9ebd2f85
-# ╟─efed6b69-6632-4212-aa68-ff0762a7eb36
-# ╟─28792394-5038-4640-9e45-f3bfa3bd96e1
-# ╠═3090d002-8236-46d1-8add-5a8921cbe835
-# ╟─8d49c5bc-5d82-4b88-9893-64d6056a3c24
-# ╠═64f9959f-6843-4f0c-8b62-f6c7479fd090
-# ╟─78d82a70-d719-4fff-a0bd-fc25ed1ec1ca
-# ╟─90d29494-0965-44ac-a703-50e86f9bfd5c
-# ╟─4cfbaa1a-a052-4dc0-a504-aaa9a064a55d
-# ╟─e5227295-12eb-40a3-b4d0-291532b81fbe
-# ╟─52d5f1b9-142e-404b-90a5-9c56cfaae070
+# ╟─6b8526e4-b297-11ed-1c66-470f26a581c7
+# ╟─20bf6c44-dabb-41c5-af4a-e766b04d37fc
+# ╟─0f079397-ef9e-4b2d-bedc-6f5c47e9918a
+# ╠═6685ea8b-7a27-4e62-9ce8-82955a06fd58
+# ╟─a7b313b8-2f6f-43c1-a39b-ada77982a31e
+# ╠═7027478e-8ba6-4b17-9448-628114d73816
+# ╟─d631a6a0-4842-4d28-b6ad-f82093fe8581
+# ╠═c8f60ef9-2caa-46de-ab51-11de279a678b
+# ╟─71f68fc0-b50e-4a93-b50e-81b4ae37df29
+# ╟─39fbd542-3f1b-4327-b8fb-ab56f8af1682
+# ╟─3ff85909-c02b-471c-b649-fa51c2df7b12
+# ╠═b6766baa-73a3-446a-a531-e20cca27c27e
+# ╟─8ddc6990-6c42-4ba8-9363-9726dc695db0
+# ╠═d48b9b43-07e8-464d-949b-40fa6e145c65
+# ╟─6b81d83c-e139-46b4-bc4f-2110cdaa42f0
+# ╠═c3c56b52-dc31-4528-a84d-e81b322dd3cf
+# ╟─a83879cd-1fd5-4306-9bf7-49074229f842
+# ╠═ffb69b11-816a-4e37-983d-fd18fdb86b08
+# ╟─6f1549b9-4bf9-4d09-9ce9-b36aa92ac9f1
+# ╠═fd652e98-a33b-491a-b95d-b512165f037d
+# ╟─764dd49c-92b7-4600-8bdd-1e3b5a68c218
+# ╠═c26df749-aa82-4815-a27d-516a79efdabe
+# ╟─b0704cac-ba83-4a38-ab04-8b74a5f8fe9b
+# ╟─48187906-42ac-45c7-8736-9d825cd23ce8
+# ╠═ac08d634-e1b3-4b8f-995e-6c24e2941095
+# ╠═31e9242c-00e2-4012-9425-4ca577ddcfd7
+# ╟─3ec8ee51-c26f-4771-95ef-f24e1698ea5f
+# ╠═3fb32c18-bdd2-44bb-a635-ebb5682a5956
+# ╟─f6e189cf-a0e9-4f2e-b14d-9235ed2fb6b8
+# ╠═cdc58362-6335-4349-8aaa-765e5fba6e34
+# ╟─4f002bbb-c3a6-4156-a523-c0bef7868eaa
+# ╟─ed2e2d47-3d4b-4c82-bfb9-0e75d400fa20
+# ╠═e54d904a-186e-471f-b19d-314e4e26e44e
+# ╟─7a0cea13-7b32-486d-bbc3-03924609280b
+# ╟─67bac77f-d15c-4bac-a1e1-71a45749e968
+# ╠═5dcde151-1cbf-4c7d-bf5a-ba6f2aec8926
+# ╟─d8ab9636-33a3-41a6-9ca6-e15f282679a4
+# ╠═e0c86db6-5f09-4bb1-8247-3059741e35aa
+# ╠═c4eaec39-48d2-4b78-989b-ee22344daa7e
+# ╟─11701cca-d05a-4c57-9e28-b209233cc859
+# ╠═3aee3153-75f2-49fd-b3d6-3ca75daa9492
+# ╟─a9798fa4-413c-4a68-960f-fc7306a6274b
+# ╠═c0f4f748-cadb-445d-b42d-85dda0b1bc82
+# ╟─1bf9b96d-92a5-4c80-9be8-68a115114d1d
+# ╟─9ee350a3-c669-46bf-a44b-415dd5fe3014
+# ╠═58399089-2b2f-4681-aaec-23c3d6d17a60
+# ╟─aa5fe143-dc0f-4d84-b9f3-e90c1490479a
+# ╟─380e80a3-34ee-452d-9b37-21c7872e8d10
+# ╟─5fc42118-7938-48ad-99fb-330cc44eaf58
+# ╠═21e399d0-6cfe-4421-ab56-cb36d8643034
+# ╟─ff960dcc-cdbf-4bd5-8619-613e3633d4bf
+# ╟─88d95908-a13f-4408-b2a2-35943223e55b
+# ╠═23aee6b7-9256-435a-9378-d74baaaa4771
+# ╟─32447cbe-452a-426f-9a3e-146e27d863ca
+# ╟─307abcd3-4009-4a47-9f7e-a367da754a2f
+# ╟─b5239d02-4898-479b-9078-be7d6365028c
+# ╠═6031c01c-ee91-45cc-a8e9-45d77dc1e7e3
+# ╟─1ff00740-b298-4df4-ab91-8b5bb7f2bd49
+# ╟─466c8b32-d3aa-47b4-a4b6-f3b986418689
+# ╟─98667070-9121-42da-92bf-322329d7aff6
+# ╟─505e0783-f20d-45b9-b4ff-b60983cbdb59
+# ╟─8948f7cf-1105-4c8d-a5e5-3dbc5dbd0c60
+# ╠═9caab45e-f33b-4b54-a7de-7f7035144f0e
+# ╠═fa15b07f-03b9-4abe-9a40-879d59d62131
+# ╠═47b34ad6-aaa4-481e-b199-47b57c8b230f
+# ╟─f4d51d70-b378-44f0-ada2-8f470cd22b6b
+# ╟─1c431080-33c6-4ac4-8409-df1c487a1f54
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

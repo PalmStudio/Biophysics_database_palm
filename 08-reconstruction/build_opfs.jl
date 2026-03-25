@@ -49,17 +49,17 @@ for i in reconstruction_folders # i = reconstruction_folders[3]
     )
 
     append!(translations, df_)
-    write_opf("10-reconstruction/reconstructions/$(basename(i)).opf", opf)
+    write_opf("08-reconstruction/reconstructions/$(basename(i)).opf", opf)
 end
 
-# Save the translations, not that we remove the units for writing:
-CSV.write("10-reconstruction/translations.csv", transform(translations, [:x, :y, :z] .=> (x -> ustrip.(x)) .=> [:x, :y, :z]))
+# Save the translations, note that we remove the units for writing:
+CSV.write("08-reconstruction/translations.csv", transform(translations, [:x, :y, :z] .=> (x -> ustrip.(x)) .=> [:x, :y, :z]))
 
 # Compress the reconstructions:
 begin
-    tar_bz = open("10-reconstruction/reconstructions.tar.bz2", write=true)
+    tar_bz = open("08-reconstruction/reconstructions.tar.bz2", write=true)
     tar = Bzip2CompressorStream(tar_bz)
-    Tar.create("10-reconstruction/reconstructions", tar)
+    Tar.create("08-reconstruction/reconstructions", tar)
     close(tar)
 end
 
@@ -67,7 +67,7 @@ end
 # Choose a plant (1, 2, 3 or 4):
 plant = 1
 
-OPFs = readdir("10-reconstruction/reconstructions", join=true)
+OPFs = readdir("08-reconstruction/reconstructions", join=true)
 # Checking that our OPF matches its lidar point-cloud:
 sessions = begin
     files_plant = OPFs[findall(x -> startswith(x, "Plant_$(plant)"), basename.(OPFs))]
@@ -81,7 +81,7 @@ opf = read_opf(files_plant[findfirst(x -> x == session, sessions)])
 transform!(opf, refmesh_to_mesh!)
 transform!(opf, :geometry => (x -> [coords(i).z for i in x.mesh.vertices]) => :z, ignore_nothing=true)
 
-transl = filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read("10-reconstruction/translations.csv", DataFrame))
+transl = filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read("08-reconstruction/translations.csv", DataFrame))
 
 lidar = let
     # 1. Find the lidar session corresponding to the reconstruction:
@@ -118,7 +118,7 @@ function plot_opf_and_lidar!(ax, plant, session)
     transform!(opf, refmesh_to_mesh!)
     transform!(opf, :geometry => (x -> [coords(i).z for i in x.mesh.vertices]) => :z, ignore_nothing=true)
 
-    transl = filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read("10-reconstruction/translations.csv", DataFrame))
+    transl = filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read("08-reconstruction/translations.csv", DataFrame))
 
     lidar = let
         # 1. Find the lidar session corresponding to the reconstruction:
@@ -143,7 +143,7 @@ end
 
 
 # Checking that our OPF matches its lidar point-cloud:
-function get_sessions(plant; OPFs=readdir("10-reconstruction/reconstructions", join=true))
+function get_sessions(plant; OPFs=readdir("08-reconstruction/reconstructions", join=true))
     files_plant = OPFs[findall(x -> startswith(x, "Plant_$(plant)"), basename.(OPFs))]
     folders_dates = replace.(basename.(files_plant), "Plant_$(plant)_" => "", ".opf" => "")
     Date.(folders_dates, dateformat"yyyy_mm_dd")

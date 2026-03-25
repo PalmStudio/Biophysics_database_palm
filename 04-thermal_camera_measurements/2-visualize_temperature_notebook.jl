@@ -1,779 +1,134 @@
 ### A Pluto.jl notebook ###
-# v0.19.43
+# v0.19.42
 
 #> [frontmatter]
-#> title = "Spad data"
+#> title = "Thermal camera data"
 #> layout = "layout.jlhtml"
-#> tags = ["spad"]
-#> description = "Plant response to experiments using Spad data in the Ecotron chambers."
+#> description = "Measurements and visualization of the leaf temperature in the Ecotron chambers."
+#> tags = ["thermal"]
 
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 0bba0195-e4d8-44c7-a06d-37b2d0de181c
+# ╔═╡ 3090d002-8236-46d1-8add-5a8921cbe835
 begin
-    using CSV, DataFrames, Dates
-    using CairoMakie, AlgebraOfGraphics
-    using PlutoUI
-    using GLM
+    using CSV
+    using DataFrames
+    using CairoMakie
+    using AlgebraOfGraphics
+    using CodecBzip2
+    using Colors
+    using Images
+    using Makie.GeometryBasics
 end
 
-# ╔═╡ e4ff89ea-be9e-11ed-2fc5-27bdaa05a067
+# ╔═╡ 7b224c6c-b28a-11ed-1e13-cd4c9ebd2f85
 md"""
-# SPAD
+# Leaf Temperature
 
-## Introduction
+Leaf temperature was measured with a a FLIR Vue™ Pro R thermal camera that took one image every second. The camera was placed on the farthest top left corner of the chamber, pointing down towards the center of the chamber to ensure the best visibility of the plant leaves.
 
-We made two types of SPAD measurements:
+The image database was compresses using `tar` with the `bzip2` algorithm, which reduced significantly disk space from ~60Go to ~23Go.
 
-1. During the pre-experiment (see 07-walz), where we made response curves at the leaf level for half the leaves of the plant during a week during four weeks (4 plants), we made three SPAD measurements on and around the position of the Walz GFS-3000 head. The objective here is to link SPAD measurements to photosynthetic parameters of a leaf, with the hypothesis that very young leaves have lower photosynthetic efficiency, mature leaves have the highest, and then lowering again with age.
+The images were then processed in the script [1-compute_leaf_temperature.jl](https://github.com/PalmStudio/Biophysics_database_palm/blob/main/04-thermal_camera_measurements/1-compute_leaf_temperature.jl), resulting in a new file `leaf_temperature.csv.bz2`, a compressed CSV file.
 
-2. During the Ecotron experiment, to be able to recompute the photosynthetic parameters of all leaves in the plant based on their SPAD and a response curve made on the reference leaf.
-
-## Dependencies
+Here is an example thermal image of plant 3 with a mask for leaf 3:
 """
 
-# ╔═╡ be7ea98f-a802-4213-a946-74cfca9c3652
-md"""
-## Data
-
-### SPAD
-
-Importing the SPAD measurements. We have two different source of data:
-
-1. SPAD measured on all leaves of all plants on the same date, repeated on two different dates: 2021-02-16 and 2021-02-23.
-"""
-
-# ╔═╡ d475c313-82ea-4e48-b249-ff179752359e
-SPAD_all_leaves = CSV.read("../00-data/spad/SPAD_all_plants.csv", DataFrame)
-
-# ╔═╡ f703eb8f-7e1d-4a0f-a510-880ab5fc4766
-md"""
-2. SPAD measured for all leaves in the plant of interest, dependening on the sequence.
-"""
-
-# ╔═╡ 85109740-232c-42d3-bb9e-30785a6f5219
-SPAD_sequence = let
-    df_ = CSV.read("../00-data/spad/SPAD.csv", DataFrame)
-    filter!(x -> x.SPAD > 0, df_)
-    transform!(df_, :Date => (x -> Date.(x, dateformat"dd/mm/yyyy")) => :Date)
-end
-
-# ╔═╡ 75ddc948-ef76-4628-8151-c8969d9dad40
-md"""
-!!! note
-	Some measurements of SPAD were at 0 due to a problem in the instrument. We don't keep those values.
-"""
-
-# ╔═╡ d24e6b5a-8132-496d-9487-318992ede474
-md"""
-### Photosynthetic parameters
-
-Importing the results of adjusting the FvCB (Farquhar–von Caemmerer–Berry) model for C3 photosynthesis (Farquhar et al., 1980; von Caemmerer and Farquhar, 1981) and the Medlyn et al. (2011) model of stomatal conductance on response curves taken with a Walz GFS-3000.
-"""
-
-# ╔═╡ 50f1d996-882e-46e6-9e8c-754370d59eb8
-parameters = CSV.read("../07-walz/photosynthetic_and_stomatal_parameters.csv", DataFrame)
-
-# ╔═╡ ae182b01-751e-41d4-90ab-bd71dc46269f
-md"""
-## Visualizations
-"""
-
-# ╔═╡ aa41e8be-52e3-4daf-8fc0-5e8811e7e6e0
-md"""
-### Comparing SPAD between plants
-"""
-
-# ╔═╡ c7ed5985-7f65-4c16-a09c-dced71bf7b5f
-md"""
-Visualizing SPAD measurement on all leaves of all plants on the same dates:
-"""
-
-# ╔═╡ 3e064ea3-6507-4e14-b87b-d289fb68818a
-data(SPAD_all_leaves) *
-mapping(:Leaf => string, :SPAD, color=:Plant => string, layout=:Date) |> draw
-
-# ╔═╡ 629b0443-85de-41be-ae93-207d7a7279ea
-md"""
-The relationship bewteen SPAD and leaf rank seams quite conservative between plants and date of measurement. Let's look at the data with a different angle, using a layout for each plant and coloring by date, using lines to represent the relationship:
-"""
-
-# ╔═╡ 74073b91-942e-4b2e-8d71-578911409905
+# ╔═╡ efed6b69-6632-4212-aa68-ff0762a7eb36
 let
-    p = data(SPAD_all_leaves) *
-        mapping(:Leaf => string, :SPAD, color=:Date, layout=:Plant => (x -> string("Plant ", x))) *
-        visual(Lines)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 03ec4f3f-55c9-49f9-ba77-3aca0de104ca
-md"""
-We see that the relationship is not exactly the same between plants, especially for the younger leaf that sometimes present low SPAD values. This is probably related to the age of the first leaf that can differ between plants. We don't know the date of emission of the leaf, so we cannot compute the true effect of age unfortunately.
-
-We can also look at more data using the second data base.
-"""
-
-# ╔═╡ dc338f4b-17c0-45b9-81b3-72fb31868034
-md"""
-### SPAD distribution in plants
-
-Vizualising the SPAD values for each leaf of each plant according to the date of measurement.
-"""
-
-# ╔═╡ 4391896a-bd2d-4be2-8138-533942d03332
-let
-    p = data(SPAD_sequence) *
-        mapping(:Leaf, :SPAD, color=:Date => string, layout=:Plant => (x -> string("Plant ", x))) *
-        visual(Lines)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 38f5aaac-88dd-4b94-a0c1-954201c38857
-md"""
-We can see that SPAD values are quite conservative according to the rank of the leaf on the palm. This time, only plant 1 and 4 have oldest leaves with lower values, which is an indicator of nitrogen remobilization.
-
-!!! note
-	The rank is the reverse of the leaf number, rank 1 is the youngest leaf (e.g. leaf 10), rank 10 the oldest (*e.g.* leaf 1)
-"""
-
-# ╔═╡ 3a16ad79-c50d-4602-976d-73d3cb33a277
-md"""
-## Relating photosynthetic parameters to SPAD
-"""
-
-# ╔═╡ a663fba3-5a8d-44a3-a9dd-878d0474fe7b
-md"""
-### Joining data
-"""
-
-# ╔═╡ f0445fa0-e9b6-4edf-a047-e96b244023ee
-df_all = let
-    leftjoin(parameters, vcat(SPAD_all_leaves, SPAD_sequence), on=[:Date, :Plant, :Leaf])
-end
-
-# ╔═╡ 6cf0f50c-e12c-467d-a104-c0fd20ca92da
-md"""
-### Visualizing SPAD~parameters relationships
-"""
-
-# ╔═╡ e55a93af-1e5a-46d3-b2f2-68045072fb24
-md"""
-### SPAD
-
-The value of the SPAD tends to be higher on the more mature leaves (lower leaf ID, higher rank).:
-"""
-
-# ╔═╡ fb98292e-bcd9-499d-8647-8d46f481efae
-let
-    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:Leaf, :SPAD, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 5c4cd186-e13b-48a1-a390-76b9f7a6ab01
-md"""
-SPAD also decrease with time when considering the same leaf (look at the points with the same color in a layout):
-"""
-
-# ╔═╡ 4ae7d579-0f79-47cf-a33c-646d1d04edbb
-let
-    df_ = dropmissing(df_all, :SPAD)
-    p = data(df_) *
-        mapping(:Date, :SPAD, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ ea6336ce-23e8-4bae-b6d9-2b8e8523a954
-md"""
-#### VcMaxRef
-"""
-
-# ╔═╡ 5f9dbf48-82d6-46c1-a3ac-96d755cbdd0a
-md"""
-We see that the value of VcMaxRef on the same reference leaf decreases with time. This is probably coming from a remobilization of Nitrogen as the leaf becomes older. We also see that leaves have different VcMaxRef values, and that as expected leaf rank seems to explain that variability:
-"""
-
-# ╔═╡ 3f5c7536-0491-4e3e-aa14-9f44b01643ef
-let
-    df_ = dropmissing(df_all, :SPAD)
-    p = data(df_) *
-        mapping(:Date, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ ade36dec-d71f-47a8-98d0-b9c9be02b9d3
-md"""
-If we look at the points taken before the ecotron experiment to remove the dynamic, we see that indeed VcMaxRef depends on the rank of the leaf, with young leaves having low values, more mature leaves have the highest values, and decreasing with age (except for plant 4 that has a very high value for its youngest leaf):
-"""
-
-# ╔═╡ e0018619-7cf4-4b42-a543-5f09fb637066
-let
-    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:Leaf, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 2deb246d-518a-44a3-bbec-0fb375cda465
-md"""
-We can relate the value of VcMaxRef observed along the leaf rank with the SPAD:
-"""
-
-# ╔═╡ ad2a826a-7e29-4651-a291-46dd77f5d6b8
-let
-    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:SPAD, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ cd22103a-bb7e-4c24-813a-ec845f113c0e
-md"""
-Unfortunately, the relationship we expected is not visible here, the SPAD does not seem to explain VcMaxRef well. Lets look at the dynamic data taken at different times, mostly on the same leaf along the Ecotron experiment:
-"""
-
-# ╔═╡ 2ff74fb7-0008-45cc-b6cf-6566a26e3479
-let
-    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:SPAD, :VcMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 210856b4-d6d0-41b7-8a71-ec6eb4793334
-md"""
-That's better! We can see a positive relationship between SPAD and VcMaxRef. Let's look at the same data but for all plants together:
-"""
-
-# ╔═╡ 5608d879-f246-40bc-bd8b-518aecbf1d3f
-let
-    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:SPAD, :VcMaxRef, color=:Plant => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ fdaa74a6-77b1-4684-b5b4-a28f832879cf
-md"""
-OK even much better. We can clearly see the effect of SPAD on VcMaxRef here.
-"""
-
-# ╔═╡ 2c83ba81-10a0-4a9a-8b46-d9973b0c3933
-md"""
-#### JMaxRef
-"""
-
-# ╔═╡ 415da816-cae2-47b1-bd3b-179b21f78227
-md"""
-Similarly to VcMaxRef, JmaxRef seems to decrease with time when looking at the same leaf over time:
-"""
-
-# ╔═╡ 3b78c8cf-0246-4ae6-95b3-0ae13b86651b
-let
-    df_ = dropmissing(df_all, :SPAD)
-    p = data(df_) *
-        mapping(:Date, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ ad53c43a-2efe-4325-a23a-7fb300795991
-md"""
-Again, we observe a similar result when comparing JMaxRef between leaves of the same plant around the same date:
-"""
-
-# ╔═╡ d4babf23-b3b6-45a5-8cef-182727e25342
-let
-    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:Leaf, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 802017f3-d852-4aab-a22e-bf868b86ea90
-md"""
-... and the relationship with SPAD is also not that clear at this time:
-"""
-
-# ╔═╡ f2e8c160-5bcd-4df4-a08c-0db8cc5f97f9
-let
-    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:SPAD, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 89501cb6-4f1e-4b1c-8fb8-a4abb41af63b
-md"""
-But a little bit better looking at the dynamic data:
-"""
-
-# ╔═╡ 4ebfa8ce-0017-41bd-a78a-1561ba418c8a
-let
-    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:SPAD, :JMaxRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ ed1ac430-42ec-4f1c-a792-93d9497605cd
-md"""
-And mixing all plants together shows a relationship:
-"""
-
-# ╔═╡ e7b2d76e-76d4-40f2-a762-d6ded5946988
-let
-    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:SPAD, :JMaxRef, color=:Plant => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 3e48e96a-105a-499a-be36-65d1685e245c
-md"""
-Two of the values are very high though.
-"""
-
-# ╔═╡ d3d23f7e-8621-494f-b143-93834c487640
-md"""
-#### RdRef
-"""
-
-# ╔═╡ 8165b48a-2e3b-4a87-90fe-f3af46454d35
-md"""
-RdRef seems more complicated to explain:
-"""
-
-# ╔═╡ 746c2f8a-bd94-4f5b-9813-593807440d2c
-let
-    df_ = dropmissing(df_all, :SPAD)
-    p = data(df_) *
-        mapping(:Date, :RdRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 1f5490da-618e-4b87-a153-af6401251924
-md"""
-As expected, there is no relationship between the value of RdRef and the leaf age:
-"""
-
-# ╔═╡ f8e0162a-28cb-4e29-9cf6-b9ff121e380a
-let
-    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:Leaf, :RdRef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 015cdc5d-7541-4254-ad4e-3b7893030bb0
-md"""
-This is confirmed when using all the data:
-"""
-
-# ╔═╡ 338006ee-124d-4739-9b74-37bab45b54e2
-let
-    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:SPAD, :RdRef, color=:Plant => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 1fe63420-26af-436a-b50a-9bf0106fbddd
-md"""
-RdRef will not be used to adjust the photosynthetic parameters between leaves.
-"""
-
-# ╔═╡ 739e2b24-0b7d-46bf-a7c5-1da80037d1e0
-md"""
-#### TPURef
-"""
-
-# ╔═╡ 21564d17-e551-4f7b-99d3-191c4697e885
-md"""
-The relationship is not very clear either with TPURef, with the same graphs as before below:
-"""
-
-# ╔═╡ 7399e605-8b46-4d31-a62f-4402b0deb420
-let
-    df_ = dropmissing(df_all, :SPAD)
-    p = data(df_) *
-        mapping(:Date, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ ec76ac76-8a5e-4dec-b72c-816f16ef4e90
-let
-    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:Leaf, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 53fd254c-00c4-4f3e-bd3f-faa9a487fc82
-let
-    df_ = dropmissing(filter(x -> x.Date < Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:SPAD, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 6624f95c-b4e4-40b1-9a8e-7ca0ddd6d814
-let
-    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), :SPAD)
-    p = data(df_) *
-        mapping(:SPAD, :TPURef, layout=:Plant => (x -> string("Plant ", x)), color=:Leaf => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 55799b2e-d442-4e22-abba-b7a49408ac12
-md"""
-Looking at plant scale data, we could think there might be a relationship (Plant 3), but when mixing all data the relationship is not clear:
-"""
-
-# ╔═╡ e40a10e4-832c-453d-927f-7016c4472cf4
-let
-    p = data(dropmissing(df_all, :SPAD)) *
-        mapping(:SPAD, :TPURef, color=:Plant => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 6ae1df90-7b27-4b3b-916b-6c268ac93a5e
-md"""
-We will make further investigation below before including TPURef to model photosynthesis according to leaf rank.
-"""
-
-# ╔═╡ 34d33656-7882-4d22-9330-7a2c0ded8422
-md"""
-#### g0
-"""
-
-# ╔═╡ 411d5fcd-f1b5-403a-8748-fd4f1a2de136
-let
-    p = data(dropmissing(df_all, [:g0, :SPAD])) *
-        mapping(:SPAD, :g0, layout=:Plant => (x -> string("Plant ", x))) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 44c9a8cf-3657-4eb8-9b28-8d32c06a4711
-let
-    df_ = dropmissing(filter(x -> x.Date > Date("2021-03-01"), df_all), [:SPAD, :g0])
-    p = data(df_) *
-        mapping(:SPAD, :g0, color=:Plant => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 7cf9c401-b08b-40dd-9091-21786cd583a9
-md"""
-g0 will not be used to adjust the photosynthetic parameters between leaves.
-"""
-
-# ╔═╡ 5fdd6887-37d0-493f-afad-86c74b322334
-md"""
-#### g1
-"""
-
-# ╔═╡ 1c36d0a4-3ee8-439f-83b3-820d5dbb3971
-let
-    p = data(dropmissing(df_all, [:g0, :SPAD])) *
-        mapping(:SPAD, :g1, layout=:Plant => (x -> string("Plant ", x))) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ cef058f0-6214-42e4-bc27-152c13bdb9b4
-let
-    p = data(dropmissing(df_all, [:g0, :SPAD])) *
-        mapping(:SPAD, :g1, color=:Plant => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ e543ed13-7ec4-4423-a9da-028e4edd21f6
-md"""
-g1 will not be used to adjust the photosynthetic parameters between leaves.
-"""
-
-# ╔═╡ 2934497c-334f-40e5-842a-dcf562d6b9a2
-md"""
-## Modelling
-
-In this section, we make a model that relates SPAD to the VcMaxRef photosynthetic parameter of the leaf. Ideally, we would also correlate the other parameters (*e.g.* JMaxRef) to the SPAD, but they can be highly correlated, so what we do instead is predict VcMaxRef with the SPAD, and then predict the others from VcMaxRef.
-"""
-
-# ╔═╡ 4c553165-e739-45cf-8971-745bc14cead8
-md"""
-### VcMaxRef~SPAD
-"""
-
-# ╔═╡ f3d91518-55b0-4e36-80db-b7afa14263f6
-md"""
-We use a simple linear model to predict the value of VcMaxRef from the SPAD value. We use all the data from all plants because the data is noisy, and the response should be specific, which is confirmed by the figure below.
-"""
-
-# ╔═╡ 6f9ab851-7623-4d4c-869c-a8e21f8e5b1c
-lm_VcMaxRef = lm(@formula(VcMaxRef ~ 0 + SPAD), df_all)
-
-# ╔═╡ 9b70dd59-39af-4b63-8322-13b6f7d209aa
-let
-    df_ = dropmissing(df_all, [:g0, :SPAD])
-    df_.VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
-    p = data(df_) *
-        mapping(:SPAD => "SPAD (-)", :VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", color=:Plant => string) *
-        visual(Scatter) +
-        data(df_) *
-        mapping(:SPAD => "SPAD (-)", :VcMaxRef_predicted => "VcMaxRef (μmol m⁻² s⁻¹)") *
-        visual(Lines)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ be98fbce-2335-41bb-9c7b-541690b21879
-Markdown.parse("""
-!!! tip
-	The model is as follows:
-
-	$(lm_VcMaxRef.mf.f.lhs.sym) ≃ $(round(coef(lm_VcMaxRef)[1], digits = 3)) ⋅ $(lm_VcMaxRef.mf.f.rhs.terms[2])
-""")
-
-# ╔═╡ cb7e7051-9a6a-4cbc-9a24-abb52253805e
-md"""
-The model fits well the data, and presents an R² of $(round(r2(lm_VcMaxRef), digits = 2)):
-"""
-
-# ╔═╡ bae84990-06e2-48d2-aaae-a6362e010997
-md"""
-If we look at its performance at the plant level, we see that indeed we should use all the data, because some plants have a high variability on the value, and the average fit seems close enough to the per-plant trend (except for Plant 4 that has only 3 points).
-"""
-
-# ╔═╡ 34593fb7-3145-4df0-9bf9-38cb70fc240d
-let
-    df_ = dropmissing(df_all, [:g0, :SPAD])
-    df_.VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
-    p = data(df_) *
-        mapping(:SPAD => "SPAD (-)", :VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", layout=:Plant => string) *
-        visual(Scatter) +
-        data(df_) *
-        mapping(:SPAD => "SPAD (-)", :VcMaxRef_predicted => "VcMaxRef (μmol m⁻² s⁻¹)", layout=:Plant => string) *
-        visual(Lines)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ bfeeddab-a586-4bbc-bb20-6392545c4ad2
-let
-    df_ = dropmissing(df_all, [:SPAD, :VcMaxRef])
-    df_.lm_VcMaxRef_predicted = predict(lm_VcMaxRef, df_)
-
-    p_mod =
-        data(df_) *
-        mapping(:VcMaxRef => "Observed (μmol m⁻² s⁻¹)", :lm_VcMaxRef_predicted => "Simulated (μmol m⁻² s⁻¹)", color=:Plant => string) *
-        visual(Scatter)
-    abline_ = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
-    draw(p_mod + abline_, legend=(position=:bottom,), axis=(title="VcMaxRef",))
-end
-
-# ╔═╡ d5a229c9-f97c-471d-a2d2-3db0de5cabc5
-md"""
-### Correlations between parameters
-
-#### JmaxRef~VcMaxRef
-"""
-
-# ╔═╡ 49d44542-daf4-4c94-8612-92488c7f6328
-md"""
-JMaxRef is highly correlated with VcMaxRef, so we can't really de-couple the value of one from another. We will model its change according to the modeled value of VcMaxRef of the leaf instead of its SPAD, as it helps us take into consideration their correlation.
-"""
-
-# ╔═╡ e9e61850-2934-4e57-99f7-4975ddd56891
-lm_JMaxRef = lm(@formula(JMaxRef ~ 0 + VcMaxRef), df_all)
-
-# ╔═╡ 131b3260-5872-48b8-93a1-cb59389392f9
-let
-    df_ = dropmissing(df_all, [:JMaxRef, :VcMaxRef])
-    p = data(df_) *
-        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :JMaxRef => "JMaxRef (μmol m⁻² s⁻¹)", color=:Plant => string) *
-        visual(Scatter)
-
-    df_.lm_JMaxRef_predicted = predict(lm_JMaxRef, df_)
-
-    p_mod =
-        data(df_) *
-        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :lm_JMaxRef_predicted => "JMaxRef (μmol m⁻² s⁻¹)") *
-        visual(Lines)
-
-    draw(p_mod + p, legend=(position=:bottom,))
-end
-
-# ╔═╡ 09374b54-3451-43b5-b8c8-9352941eddb2
-Markdown.parse("""
-!!! tip
-	The model is as follows:
-
-	$(lm_JMaxRef.mf.f.lhs.sym) ≃ $(round(coef(lm_JMaxRef)[1], digits = 3)) ⋅ $(lm_JMaxRef.mf.f.rhs.terms[2])
-""")
-
-# ╔═╡ fdf3a6ed-61b7-4c74-a591-b019d01e25b1
-let
-    df_ = dropmissing(df_all, [:JMaxRef, :VcMaxRef])
-    df_.lm_JMaxRef_predicted = predict(lm_JMaxRef, df_)
-
-    p_mod =
-        data(df_) *
-        mapping(:JMaxRef => "Observed (μmol m⁻² s⁻¹)", :lm_JMaxRef_predicted => "Simulated (μmol m⁻² s⁻¹)", color=:Plant => string) *
-        visual(Scatter)
-    abline_ = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
-    draw(p_mod + abline_, legend=(position=:bottom,), axis=(title="JMaxRef",))
-end
-
-# ╔═╡ 7023c18c-1301-4369-8dac-04294b87d153
-md"""
-#### TPURef~VcMaxRef
-"""
-
-# ╔═╡ 2477e827-54b5-4397-a2e3-1ecfa4402a6f
-md"""
-Similarly, TPURef is also highly correlated with VcMaxRef. We will model its change according to the modeled value of VcMaxRef of the leaf instead of its SPAD, as it helps us take into consideration their correlation.
-"""
-
-# ╔═╡ d44b506f-6237-4606-ba69-da3aa1db111b
-lm_TPURef = lm(@formula(TPURef ~ 0 + VcMaxRef), df_all)
-
-# ╔═╡ 8985210e-07a5-4b64-87f7-85a8ad0a62ab
-let
-    p = data(dropmissing(df_all, [:g0, :SPAD])) *
-        mapping(:VcMaxRef, :TPURef, color=:Plant => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-
-    df_ = dropmissing(df_all, [:TPURef, :VcMaxRef])
-    p = data(df_) *
-        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :TPURef => "TPURef (μmol m⁻² s⁻¹)", color=:Plant => string) *
-        visual(Scatter)
-
-    df_.lm_TPURef_predicted = predict(lm_TPURef, df_)
-
-    p_mod =
-        data(df_) *
-        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :lm_TPURef_predicted => "TPURef (μmol m⁻² s⁻¹)") *
-        visual(Lines)
-
-    draw(p_mod + p, legend=(position=:bottom,))
-end
-
-# ╔═╡ b130b61a-21cc-44ce-988f-b8f127663984
-Markdown.parse("""
-!!! tip
-	The model is as follows:
-
-	$(lm_TPURef.mf.f.lhs.sym) ≃ $(round(coef(lm_TPURef)[1], digits = 3)) ⋅ $(lm_TPURef.mf.f.rhs.terms[2])
-""")
-
-# ╔═╡ 63f5815f-d169-4819-8579-a837314a2496
-md"""
-Comparing observed and simulated TPURef:
-"""
-
-# ╔═╡ 62bb7355-3a4c-4c6f-ada7-84767430dc76
-let
-    df_ = dropmissing(df_all, [:VcMaxRef, :TPURef])
-    df_.lm_TPURef_predicted = predict(lm_TPURef, df_)
-
-    p_mod =
-        data(df_) *
-        mapping(:TPURef => "Observed (μmol m⁻² s⁻¹)", :lm_TPURef_predicted => "Simulated (μmol m⁻² s⁻¹)", color=:Plant => string) *
-        visual(Scatter)
-    abline_ = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
-    draw(p_mod + abline_, legend=(position=:bottom,), axis=(title="TPURef",))
-end
-
-# ╔═╡ e3bb4406-0bc2-45ac-ad8d-913a9f2e5d29
-md"""
-#### RdRef~VcMaxRef
-"""
-
-# ╔═╡ 7e19bec8-9e3b-41b2-bed4-d131930db3ac
-let
-    p = data(dropmissing(df_all, [:g0, :SPAD])) *
-        mapping(:VcMaxRef => "VcMaxRef (μmol m⁻² s⁻¹)", :RdRef => "RdRef (μmol m⁻² s⁻¹)", color=:Plant => string) *
-        visual(Scatter)
-    draw(p, legend=(position=:bottom,))
-end
-
-# ╔═╡ b6a496a0-eb39-422f-b7ec-9e995d6f44d0
-md"""
-RdRef was not explained by the SPAD, and as we can see it is confirmed when we see that it is not correlated with VcMaxRef.
-"""
-
-# ╔═╡ c728c1e9-d277-4746-a142-07bf72cf06fa
-md"""
-## Summary
-
-We model the effect of leaf age on the photosynthetic parameters using SPAD as a proxy of the chlorophyll content.
-
-The data showed there is a clear relationship between VcMaxRef, JMaxRef, and in a lesser extent TPURef with SPAD. The three parameters are correlated, so we prefer modulating the the values of the parameters according to SPAD by using 1/ a linear model between SPAD and VcMaxRef, and 2/ a relationship between VcMaxRef and JMaxRef or TPURef. This way we control for the correlation between the parameters.
-
-The resulting models are the following:
-
-- VcMaxRef ≃ $(round(coef(lm_VcMaxRef)[1], digits = 3)) ⋅ SPAD
-- JMaxRef ≃ $(round(coef(lm_JMaxRef)[1], digits = 3)) ⋅ VcMaxRef
-- TPURef ≃ $(round(coef(lm_TPURef)[1], digits = 3)) ⋅ VcMaxRef
-
-"""
-
-# ╔═╡ 8d7e0fb1-734a-4156-9d6f-32c712331d3b
-CSV.write(
-    "SPAD_models.csv",
-    DataFrame(
-        :variable => [:VcMaxref, :JMaxRef, :TPURef],
-        :predictor => [:SPAD, :VcMaxref, :VcMaxref],
-        :coefficient => [coef(lm_VcMaxRef)[1], coef(lm_JMaxRef)[1], coef(lm_TPURef)[1]]
+    img_file = "../EcotronAnalysis.jl/test/test_data/20210308_180009_R.jpg"
+    mask_file = "../EcotronAnalysis.jl/test/test_data/P3F3-S1-S2-S3-20210308_174136-20210309_140728_XY_Coordinates.csv"
+
+    im = Images.load(img_file)'
+    mask = CSV.read(mask_file, DataFrame)
+    f = Figure()
+    image(
+        f[1, 1],
+        im,
+        axis=(
+            aspect=DataAspect(),
+            yreversed=true,
+            title="Mask for leaf 3 from plant 3",
+            subtitle="Applicable from 17:41 on the 08/03/2021 to 14:07 on the 09/03/2021",
+        )
     )
-)
 
-# ╔═╡ 99ae2011-ab49-4b4b-b15a-538ac9b0ab88
+    poly!(
+        f[1, 1],
+        Polygon([Point(round(i.X), round(i.Y)) for i in eachrow(mask)]),
+        color="red"
+    )
+    f
+end
+
+# ╔═╡ 28792394-5038-4640-9e45-f3bfa3bd96e1
 md"""
-## References
+## Import
+
+Importing the dependencies:
 """
 
-# ╔═╡ 746bf356-afa2-4c52-86bb-0c559278afdb
+# ╔═╡ 8d49c5bc-5d82-4b88-9893-64d6056a3c24
 md"""
-Caemmerer, S. von, et G. D. Farquhar. 1981. « Some Relationships between the Biochemistry of
-Photosynthesis and the Gas Exchange of Leaves ». Planta 153 (4): 376‑87.
-https://doi.org/10.1007/BF00384257.
-
-Farquhar, G. D., S. von von Caemmerer, et J. A. Berry. 1980. « A biochemical model of
-photosynthetic CO2 assimilation in leaves of C3 species ». Planta 149 (1): 78‑90.
-
-Medlyn, B. E., E. Dreyer, D. Ellsworth, M. Forstreuter, P. C. Harley, M. U. F. Kirschbaum,
-X. Le Roux, et al. 2002. « Temperature response of parameters of a biochemically based model
-of photosynthesis. II. A review of experimental data ». Plant, Cell & Environment 25 (9): 1167‑79.
-https://doi.org/10.1046/j.1365-3040.2002.00891.x.
-
+Reading the leaf temperature data:
 """
 
-# ╔═╡ 6bed5212-92e1-4969-9f1e-f65e09e79470
-TableOfContents(title="📚 Table of Contents", indent=true, depth=4, aside=true)
+# ╔═╡ 64f9959f-6843-4f0c-8b62-f6c7479fd090
+leaf_temperature_df = let
+    df = open(Bzip2DecompressorStream, "leaf_temperature.csv.bz2") do io
+        CSV.read(io, DataFrame)
+    end
+    climate = CSV.read("../01-climate/climate_mic3.csv", DataFrame)
+    leftjoin(df, climate, on=:DateTime)
+end
+
+# ╔═╡ 78d82a70-d719-4fff-a0bd-fc25ed1ec1ca
+md"""
+## Plotting
+"""
+
+# ╔═╡ 90d29494-0965-44ac-a703-50e86f9bfd5c
+begin
+    abline = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
+    p =
+        abline +
+        AlgebraOfGraphics.data(dropmissing(leaf_temperature_df, :Ta_measurement)) *
+        mapping(
+            :Ta_measurement => "Air temperature (°C)",
+            :Tl_mean => "Leaf temperature (°C)",
+            color=:leaf => "Leaf Number",
+            layout=:plant => string => "Plant",
+        ) *
+        visual(Scatter, markersize=3) |>
+        draw
+end
+
+# ╔═╡ 4cfbaa1a-a052-4dc0-a504-aaa9a064a55d
+md"""
+*Figure 1. Simulated leaf temperature (y) and measured air temperature (x) for the four plants, colored according to the leaf number.*
+"""
+
+# ╔═╡ e5227295-12eb-40a3-b4d0-291532b81fbe
+data(dropmissing(leaf_temperature_df, :Ta_measurement)) *
+mapping(
+    :DateTime => "DateTime (UTC)",
+    :Ta_measurement => "Air temperature (°C)",
+) *
+visual(Scatter, color=:red, markersize=1) +
+AlgebraOfGraphics.data(dropmissing(leaf_temperature_df, :Ta_measurement)) *
+mapping(
+    :DateTime => "DateTime (UTC)",
+    :Tl_mean => "Leaf temperature (°C)",
+    color=:plant => string => "Plant",
+) *
+visual(Scatter, markersize=3) |>
+draw
+
+# ╔═╡ 52d5f1b9-142e-404b-90a5-9c56cfaae070
+md"""
+*Figure 2. Simulated leaf temperature for the four plants along the whole duration of the experiment. Points are colored according to the plant in the microcosm (`mic3`). The red colored points represent the air temperature.*
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -781,27 +136,30 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 AlgebraOfGraphics = "cbdf2221-f076-402e-a563-3d30da359d67"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+CodecBzip2 = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
+Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
-Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
-GLM = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Images = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [compat]
 AlgebraOfGraphics = "~0.6.14"
 CSV = "~0.10.9"
 CairoMakie = "~0.10.2"
+CodecBzip2 = "~0.8.3"
+Colors = "~0.12.10"
 DataFrames = "~1.6.1"
-GLM = "~1.8.1"
-PlutoUI = "~0.7.50"
+Images = "~0.26.0"
+Makie = "~0.19.12"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.3"
+julia_version = "1.10.4"
 manifest_format = "2.0"
-project_hash = "2daae58bb7f7883e636518c6fb67a055b9c815c6"
+project_hash = "fe1b3a66bcfdd20bb7649864e13f5ea311b78ec1"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -818,12 +176,6 @@ weakdeps = ["ChainRulesCore", "Test"]
 git-tree-sha1 = "222ee9e50b98f51b5d78feb93dd928880df35f06"
 uuid = "398f06c4-4d28-53ec-89ca-5b2656b7603d"
 version = "0.3.0"
-
-[[deps.AbstractPlutoDingetjes]]
-deps = ["Pkg"]
-git-tree-sha1 = "6e1d2a35f2f90a4bc7c2ed98079b2ba09c35b83a"
-uuid = "6e696c72-6542-2067-7265-42206c756150"
-version = "1.3.2"
 
 [[deps.AbstractTrees]]
 git-tree-sha1 = "2d9c9a55f9c93e8887ad391fbae72f8ef55e1177"
@@ -861,6 +213,12 @@ version = "0.4.1"
 [[deps.ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
 version = "1.1.1"
+
+[[deps.ArnoldiMethod]]
+deps = ["LinearAlgebra", "Random", "StaticArrays"]
+git-tree-sha1 = "d57bd3762d308bded22c3b82d033bff85f6195c6"
+uuid = "ec485272-7323-5ecc-a04f-4719b315124d"
+version = "0.4.0"
 
 [[deps.ArrayInterface]]
 deps = ["Adapt", "LinearAlgebra", "SparseArrays", "SuiteSparse"]
@@ -914,6 +272,12 @@ version = "0.4.7"
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
 
+[[deps.BitTwiddlingConvenienceFunctions]]
+deps = ["Static"]
+git-tree-sha1 = "f21cfd4950cb9f0587d5067e69405ad2acd27b87"
+uuid = "62783981-4cbd-42fc-bca8-16325de8dc4b"
+version = "0.1.6"
+
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "9e2a6b69137e6969bab0152632dcb3bc108c8bdd"
@@ -924,6 +288,12 @@ version = "1.0.8+1"
 git-tree-sha1 = "389ad5c84de1ae7cf0e28e381131c98ea87d54fc"
 uuid = "fa961155-64e5-5f13-b03f-caf6b980ea82"
 version = "0.5.0"
+
+[[deps.CPUSummary]]
+deps = ["CpuId", "IfElse", "PrecompileTools", "Static"]
+git-tree-sha1 = "5a97e67919535d6841172016c9530fd69494e5ec"
+uuid = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
+version = "0.2.6"
 
 [[deps.CRC32c]]
 uuid = "8bf52ea8-c179-5cab-976a-9e18b702a9bc"
@@ -964,6 +334,12 @@ git-tree-sha1 = "f641eb0a4f00c343bbc32346e1217b86f3ce9dad"
 uuid = "49dc2e85-a5d0-5ad3-a950-438e2897f1b9"
 version = "0.5.1"
 
+[[deps.CatIndices]]
+deps = ["CustomUnitRanges", "OffsetArrays"]
+git-tree-sha1 = "a0f80a09780eed9b1d106a1bf62041c2efc995bc"
+uuid = "aafaddc9-749c-510e-ac4f-586e18779b91"
+version = "0.2.2"
+
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra"]
 git-tree-sha1 = "71acdbf594aab5bbb2cec89b208c41b4c411e49f"
@@ -973,6 +349,24 @@ weakdeps = ["SparseArrays"]
 
     [deps.ChainRulesCore.extensions]
     ChainRulesCoreSparseArraysExt = "SparseArrays"
+
+[[deps.CloseOpenIntervals]]
+deps = ["Static", "StaticArrayInterface"]
+git-tree-sha1 = "05ba0d07cd4fd8b7a39541e31a7b0254704ea581"
+uuid = "fb6a15b2-703c-40df-9091-08a04967cfa9"
+version = "0.1.13"
+
+[[deps.Clustering]]
+deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "Random", "SparseArrays", "Statistics", "StatsBase"]
+git-tree-sha1 = "9ebb045901e9bbf58767a9f34ff89831ed711aae"
+uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
+version = "0.15.7"
+
+[[deps.CodecBzip2]]
+deps = ["Bzip2_jll", "Libdl", "TranscodingStreams"]
+git-tree-sha1 = "f8889d1770addf59d0a015c49a473fa2bdb9f809"
+uuid = "523fee87-0ab8-5b00-afb7-3ecf72e48cfd"
+version = "0.8.3"
 
 [[deps.CodecZlib]]
 deps = ["TranscodingStreams", "Zlib_jll"]
@@ -999,14 +393,10 @@ uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 version = "0.11.5"
 
 [[deps.ColorVectorSpace]]
-deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "Requires", "Statistics", "TensorCore"]
-git-tree-sha1 = "a1f44953f2382ebb937d60dafbe2deea4bd23249"
+deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "SpecialFunctions", "Statistics", "TensorCore"]
+git-tree-sha1 = "600cc5508d66b78aae350f7accdb58763ac18589"
 uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
-version = "0.10.0"
-weakdeps = ["SpecialFunctions"]
-
-    [deps.ColorVectorSpace.extensions]
-    SpecialFunctionsExt = "SpecialFunctions"
+version = "0.9.10"
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
@@ -1025,6 +415,11 @@ git-tree-sha1 = "7b8a93dba8af7e3b42fecabf646260105ac373f7"
 uuid = "bbf7d656-a473-5ed7-a52c-81e309532950"
 version = "0.3.0"
 
+[[deps.CommonWorldInvalidations]]
+git-tree-sha1 = "ae52d1c52048455e85a387fbee9be553ec2b68d0"
+uuid = "f70d9fcc-98c5-4d4a-abd7-e4cdeebd8ca8"
+version = "1.0.0"
+
 [[deps.Compat]]
 deps = ["TOML", "UUIDs"]
 git-tree-sha1 = "b1c55339b7c6c350ee89f2c1604299660525b248"
@@ -1039,6 +434,11 @@ weakdeps = ["Dates", "LinearAlgebra"]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 version = "1.1.1+0"
+
+[[deps.ComputationalResources]]
+git-tree-sha1 = "52cb3ec90e8a8bea0e62e275ba577ad0f74821f7"
+uuid = "ed09eef8-17a6-5b46-8889-db040fac31e3"
+version = "0.3.2"
 
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
@@ -1056,10 +456,27 @@ git-tree-sha1 = "439e35b0b36e2e5881738abc8857bd92ad6ff9a8"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.6.3"
 
+[[deps.CoordinateTransformations]]
+deps = ["LinearAlgebra", "StaticArrays"]
+git-tree-sha1 = "f9d7112bfff8a19a3a4ea4e03a8e6a91fe8456bf"
+uuid = "150eb455-5306-5404-9cee-2592286d6298"
+version = "0.6.3"
+
+[[deps.CpuId]]
+deps = ["Markdown"]
+git-tree-sha1 = "fcbb72b032692610bfbdb15018ac16a36cf2e406"
+uuid = "adafc99b-e345-5852-983c-f28acb93d879"
+version = "0.3.1"
+
 [[deps.Crayons]]
 git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 version = "4.1.1"
+
+[[deps.CustomUnitRanges]]
+git-tree-sha1 = "1a3f97f907e6dd8983b744d2642651bb162a3f7a"
+uuid = "dc8bdbbb-1ca9-579f-8c36-e416f6a65cce"
+version = "1.0.2"
 
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
@@ -1193,6 +610,12 @@ git-tree-sha1 = "ab3f7e1819dba9434a3a5126510c8fda3a4e7000"
 uuid = "b22a6f82-2f65-5046-a5b2-351ab43fb4e5"
 version = "6.1.1+0"
 
+[[deps.FFTViews]]
+deps = ["CustomUnitRanges", "FFTW"]
+git-tree-sha1 = "cbdf14d1e8c7c8aacbe8b19862e0179fd08321c2"
+uuid = "4f61f5a4-77b1-5117-aa51-3ab5ef4ef0cd"
+version = "0.3.2"
+
 [[deps.FFTW]]
 deps = ["AbstractFFTs", "FFTW_jll", "LinearAlgebra", "MKL_jll", "Preferences", "Reexport"]
 git-tree-sha1 = "4820348781ae578893311153d69049a93d05f39d"
@@ -1306,9 +729,9 @@ uuid = "9fa8497b-333b-5362-9e8d-4d0656e87820"
 
 [[deps.GLM]]
 deps = ["Distributions", "LinearAlgebra", "Printf", "Reexport", "SparseArrays", "SpecialFunctions", "Statistics", "StatsAPI", "StatsBase", "StatsFuns", "StatsModels"]
-git-tree-sha1 = "97829cfda0df99ddaeaafb5b370d6cab87b7013e"
+git-tree-sha1 = "273bd1cd30768a2fddfa3fd63bbc746ed7249e5f"
 uuid = "38e38edf-8417-5370-95a0-9cbb8c7f171a"
-version = "1.8.3"
+version = "1.9.0"
 
 [[deps.GeoInterface]]
 deps = ["Extents"]
@@ -1328,6 +751,12 @@ git-tree-sha1 = "9b02998aba7bf074d14de89f9d37ca24a1a0b046"
 uuid = "78b55507-aeef-58d4-861c-77aaff3498b1"
 version = "0.21.0+0"
 
+[[deps.Ghostscript_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "43ba3d3c82c18d88471cfd2924931658838c9d8f"
+uuid = "61579ee1-b43e-5ca0-a5da-69d92c66a64b"
+version = "9.55.0+4"
+
 [[deps.Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE2_jll", "Zlib_jll"]
 git-tree-sha1 = "7c82e6a6cd34e9d935e9aa4051b66c6ff3af59ba"
@@ -1346,6 +775,12 @@ git-tree-sha1 = "344bf40dcab1073aca04aa0df4fb092f920e4011"
 uuid = "3b182d85-2403-5c21-9c21-1e1f0cc25472"
 version = "1.3.14+0"
 
+[[deps.Graphs]]
+deps = ["ArnoldiMethod", "Compat", "DataStructures", "Distributed", "Inflate", "LinearAlgebra", "Random", "SharedArrays", "SimpleTraits", "SparseArrays", "Statistics"]
+git-tree-sha1 = "ebd18c326fa6cee1efb7da9a3b45cf69da2ed4d9"
+uuid = "86223c79-3864-5bf0-83f7-82e725a168b6"
+version = "1.11.2"
+
 [[deps.GridLayoutBase]]
 deps = ["GeometryBasics", "InteractiveUtils", "Observables"]
 git-tree-sha1 = "f57a64794b336d4990d90f80b147474b869b1bc4"
@@ -1363,29 +798,28 @@ git-tree-sha1 = "129acf094d168394e80ee1dc4bc06ec835e510a3"
 uuid = "2e76f6c2-a576-52d4-95c1-20adfe4de566"
 version = "2.8.1+1"
 
+[[deps.HistogramThresholding]]
+deps = ["ImageBase", "LinearAlgebra", "MappedArrays"]
+git-tree-sha1 = "7194dfbb2f8d945abdaf68fa9480a965d6661e69"
+uuid = "2c695a8d-9458-5d45-9878-1b8a99cf7853"
+version = "0.3.1"
+
+[[deps.HostCPUFeatures]]
+deps = ["BitTwiddlingConvenienceFunctions", "IfElse", "Libdl", "Static"]
+git-tree-sha1 = "8e070b599339d622e9a081d17230d74a5c473293"
+uuid = "3e5b6fbb-0976-4d2c-9146-d79de83f2fb0"
+version = "0.1.17"
+
 [[deps.HypergeometricFunctions]]
 deps = ["DualNumbers", "LinearAlgebra", "OpenLibm_jll", "SpecialFunctions"]
 git-tree-sha1 = "f218fe3736ddf977e0e772bc9a586b2383da2685"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
 version = "0.3.23"
 
-[[deps.Hyperscript]]
-deps = ["Test"]
-git-tree-sha1 = "179267cfa5e712760cd43dcae385d7ea90cc25a4"
-uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
-version = "0.0.5"
-
-[[deps.HypertextLiteral]]
-deps = ["Tricks"]
-git-tree-sha1 = "7134810b1afce04bbc1045ca1985fbe81ce17653"
-uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
-version = "0.9.5"
-
-[[deps.IOCapture]]
-deps = ["Logging", "Random"]
-git-tree-sha1 = "b6d6bfdd7ce25b0f9b2f6b3dd56b2673a66c8770"
-uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
-version = "0.2.5"
+[[deps.IfElse]]
+git-tree-sha1 = "debdd00ffef04665ccbb3e150747a77560e8fad1"
+uuid = "615f187c-cbe4-4ef1-ba3b-2fcf58d6d173"
+version = "0.1.1"
 
 [[deps.ImageAxes]]
 deps = ["AxisArrays", "ImageBase", "ImageCore", "Reexport", "SimpleTraits"]
@@ -1395,15 +829,45 @@ version = "0.6.11"
 
 [[deps.ImageBase]]
 deps = ["ImageCore", "Reexport"]
-git-tree-sha1 = "eb49b82c172811fd2c86759fa0553a2221feb909"
+git-tree-sha1 = "b51bb8cae22c66d0f6357e3bcb6363145ef20835"
 uuid = "c817782e-172a-44cc-b673-b171935fbb9e"
-version = "0.1.7"
+version = "0.1.5"
+
+[[deps.ImageBinarization]]
+deps = ["HistogramThresholding", "ImageCore", "LinearAlgebra", "Polynomials", "Reexport", "Statistics"]
+git-tree-sha1 = "f5356e7203c4a9954962e3757c08033f2efe578a"
+uuid = "cbc4b850-ae4b-5111-9e64-df94c024a13d"
+version = "0.3.0"
+
+[[deps.ImageContrastAdjustment]]
+deps = ["ImageBase", "ImageCore", "ImageTransformations", "Parameters"]
+git-tree-sha1 = "eb3d4365a10e3f3ecb3b115e9d12db131d28a386"
+uuid = "f332f351-ec65-5f6a-b3d1-319c6670881a"
+version = "0.3.12"
 
 [[deps.ImageCore]]
-deps = ["ColorVectorSpace", "Colors", "FixedPointNumbers", "MappedArrays", "MosaicViews", "OffsetArrays", "PaddedViews", "PrecompileTools", "Reexport"]
-git-tree-sha1 = "b2a7eaa169c13f5bcae8131a83bc30eff8f71be0"
+deps = ["AbstractFFTs", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Graphics", "MappedArrays", "MosaicViews", "OffsetArrays", "PaddedViews", "Reexport"]
+git-tree-sha1 = "acf614720ef026d38400b3817614c45882d75500"
 uuid = "a09fc81d-aa75-5fe9-8630-4744c3626534"
-version = "0.10.2"
+version = "0.9.4"
+
+[[deps.ImageCorners]]
+deps = ["ImageCore", "ImageFiltering", "PrecompileTools", "StaticArrays", "StatsBase"]
+git-tree-sha1 = "24c52de051293745a9bad7d73497708954562b79"
+uuid = "89d5987c-236e-4e32-acd0-25bd6bd87b70"
+version = "0.1.3"
+
+[[deps.ImageDistances]]
+deps = ["Distances", "ImageCore", "ImageMorphology", "LinearAlgebra", "Statistics"]
+git-tree-sha1 = "08b0e6354b21ef5dd5e49026028e41831401aca8"
+uuid = "51556ac3-7006-55f5-8cb3-34580c88182d"
+version = "0.2.17"
+
+[[deps.ImageFiltering]]
+deps = ["CatIndices", "ComputationalResources", "DataStructures", "FFTViews", "FFTW", "ImageBase", "ImageCore", "LinearAlgebra", "OffsetArrays", "PrecompileTools", "Reexport", "SparseArrays", "StaticArrays", "Statistics", "TiledIteration"]
+git-tree-sha1 = "3447781d4c80dbe6d71d239f7cfb1f8049d4c84f"
+uuid = "6a3955dd-da59-5b1f-98d4-e7296123deb5"
+version = "0.7.6"
 
 [[deps.ImageIO]]
 deps = ["FileIO", "IndirectArrays", "JpegTurbo", "LazyModules", "Netpbm", "OpenEXR", "PNGFiles", "QOI", "Sixel", "TiffImages", "UUIDs"]
@@ -1411,11 +875,59 @@ git-tree-sha1 = "437abb322a41d527c197fa800455f79d414f0a3c"
 uuid = "82e4d734-157c-48bb-816b-45c225c6df19"
 version = "0.6.8"
 
+[[deps.ImageMagick]]
+deps = ["FileIO", "ImageCore", "ImageMagick_jll", "InteractiveUtils", "Libdl", "Pkg", "Random"]
+git-tree-sha1 = "5bc1cb62e0c5f1005868358db0692c994c3a13c6"
+uuid = "6218d12a-5da1-5696-b52f-db25d2ecc6d1"
+version = "1.2.1"
+
+[[deps.ImageMagick_jll]]
+deps = ["Artifacts", "Ghostscript_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "OpenJpeg_jll", "Zlib_jll", "libpng_jll"]
+git-tree-sha1 = "d65554bad8b16d9562050c67e7223abf91eaba2f"
+uuid = "c73af94c-d91f-53ed-93a7-00f77d67a9d7"
+version = "6.9.13+0"
+
 [[deps.ImageMetadata]]
 deps = ["AxisArrays", "ImageAxes", "ImageBase", "ImageCore"]
 git-tree-sha1 = "355e2b974f2e3212a75dfb60519de21361ad3cb7"
 uuid = "bc367c6b-8a6b-528e-b4bd-a4b897500b49"
 version = "0.9.9"
+
+[[deps.ImageMorphology]]
+deps = ["DataStructures", "ImageCore", "LinearAlgebra", "LoopVectorization", "OffsetArrays", "Requires", "TiledIteration"]
+git-tree-sha1 = "6f0a801136cb9c229aebea0df296cdcd471dbcd1"
+uuid = "787d08f9-d448-5407-9aad-5290dd7ab264"
+version = "0.4.5"
+
+[[deps.ImageQualityIndexes]]
+deps = ["ImageContrastAdjustment", "ImageCore", "ImageDistances", "ImageFiltering", "LazyModules", "OffsetArrays", "PrecompileTools", "Statistics"]
+git-tree-sha1 = "783b70725ed326340adf225be4889906c96b8fd1"
+uuid = "2996bd0c-7a13-11e9-2da2-2f5ce47296a9"
+version = "0.3.7"
+
+[[deps.ImageSegmentation]]
+deps = ["Clustering", "DataStructures", "Distances", "Graphs", "ImageCore", "ImageFiltering", "ImageMorphology", "LinearAlgebra", "MetaGraphs", "RegionTrees", "SimpleWeightedGraphs", "StaticArrays", "Statistics"]
+git-tree-sha1 = "44664eea5408828c03e5addb84fa4f916132fc26"
+uuid = "80713f31-8817-5129-9cf8-209ff8fb23e1"
+version = "1.8.1"
+
+[[deps.ImageShow]]
+deps = ["Base64", "ColorSchemes", "FileIO", "ImageBase", "ImageCore", "OffsetArrays", "StackViews"]
+git-tree-sha1 = "3b5344bcdbdc11ad58f3b1956709b5b9345355de"
+uuid = "4e3cecfd-b093-5904-9786-8bbb286a6a31"
+version = "0.3.8"
+
+[[deps.ImageTransformations]]
+deps = ["AxisAlgorithms", "CoordinateTransformations", "ImageBase", "ImageCore", "Interpolations", "OffsetArrays", "Rotations", "StaticArrays"]
+git-tree-sha1 = "e0884bdf01bbbb111aea77c348368a86fb4b5ab6"
+uuid = "02fcd773-0e25-5acc-982a-7f6622650795"
+version = "0.10.1"
+
+[[deps.Images]]
+deps = ["Base64", "FileIO", "Graphics", "ImageAxes", "ImageBase", "ImageBinarization", "ImageContrastAdjustment", "ImageCore", "ImageCorners", "ImageDistances", "ImageFiltering", "ImageIO", "ImageMagick", "ImageMetadata", "ImageMorphology", "ImageQualityIndexes", "ImageSegmentation", "ImageShow", "ImageTransformations", "IndirectArrays", "IntegralArrays", "Random", "Reexport", "SparseArrays", "StaticArrays", "Statistics", "StatsBase", "TiledIteration"]
+git-tree-sha1 = "12fdd617c7fe25dc4a6cc804d657cc4b2230302b"
+uuid = "916415d5-f1e6-5110-898d-aaa5f9f070e0"
+version = "0.26.1"
 
 [[deps.Imath_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1454,6 +966,12 @@ version = "1.4.1"
 git-tree-sha1 = "b8ffb903da9f7b8cf695a8bead8e01814aa24b30"
 uuid = "18e54dd8-cb9d-406c-a71d-865a43cbb235"
 version = "0.1.2"
+
+[[deps.IntegralArrays]]
+deps = ["ColorTypes", "FixedPointNumbers", "IntervalSets"]
+git-tree-sha1 = "be8e690c3973443bec584db3346ddc904d4884eb"
+uuid = "1d092043-8f09-5a30-832f-7509e371ab51"
+version = "0.1.5"
 
 [[deps.IntelOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -1526,6 +1044,12 @@ git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
 version = "1.0.0"
 
+[[deps.JLD2]]
+deps = ["FileIO", "MacroTools", "Mmap", "OrderedCollections", "Pkg", "PrecompileTools", "Reexport", "Requires", "TranscodingStreams", "UUIDs", "Unicode"]
+git-tree-sha1 = "84642bc18a79d715b39d3724b03cbdd2e7d48c62"
+uuid = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+version = "0.4.49"
+
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
 git-tree-sha1 = "7e5d6779a1e09a36db2a7b6cff50942a0a7d0fca"
@@ -1562,6 +1086,12 @@ git-tree-sha1 = "170b660facf5df5de098d866564877e119141cbd"
 uuid = "c1c5ebd0-6772-5130-a774-d5fcae4a789d"
 version = "3.100.2+0"
 
+[[deps.LERC_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "bf36f528eec6634efc60d7ec062008f171071434"
+uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
+version = "3.0.0+1"
+
 [[deps.LLVMOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "d986ce2d884d49126836ea94ed5bfb0f12679713"
@@ -1578,6 +1108,12 @@ version = "2.10.2+0"
 git-tree-sha1 = "50901ebc375ed41dbf8058da26f9de442febbbec"
 uuid = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 version = "1.3.1"
+
+[[deps.LayoutPointers]]
+deps = ["ArrayInterface", "LinearAlgebra", "ManualMemory", "SIMDTypes", "Static", "StaticArrayInterface"]
+git-tree-sha1 = "a9eaadb366f5493a5654e843864c13d8b107548c"
+uuid = "10f19ff3-798f-405d-979b-55457f8fc047"
+version = "0.1.17"
 
 [[deps.LazyArtifacts]]
 deps = ["Artifacts", "Pkg"]
@@ -1645,6 +1181,12 @@ git-tree-sha1 = "0c4f9c4f1a50d8f35048fa0532dabbadf702f81e"
 uuid = "4b2f31a3-9ecc-558c-b454-b3730dcb73e9"
 version = "2.40.1+0"
 
+[[deps.Libtiff_jll]]
+deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "XZ_jll", "Zlib_jll", "Zstd_jll"]
+git-tree-sha1 = "6355fb9a4d22d867318db186fd09b09b35bd2ed7"
+uuid = "89763e89-9b03-5906-acba-b20f662cd828"
+version = "4.6.0+0"
+
 [[deps.Libuuid_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "5ee6203157c120d79034c748a2acba45b82b8807"
@@ -1673,6 +1215,12 @@ git-tree-sha1 = "d76cec8007ec123c2b681269d40f94b053473fcf"
 uuid = "9b3f67b0-2d00-526e-9884-9e4938f8fb88"
 version = "0.2.7"
 
+[[deps.LittleCMS_jll]]
+deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll"]
+git-tree-sha1 = "fa7fd067dca76cadd880f1ca937b4f387975a9f5"
+uuid = "d3a379c0-f9a3-5b72-a4c0-6bf4d2e8af0f"
+version = "2.16.0+0"
+
 [[deps.Loess]]
 deps = ["Distances", "LinearAlgebra", "Statistics", "StatsAPI"]
 git-tree-sha1 = "a113a8be4c6d0c64e217b472fb6e61c760eb4022"
@@ -1698,10 +1246,16 @@ version = "0.3.28"
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
-[[deps.MIMEs]]
-git-tree-sha1 = "65f28ad4b594aebe22157d6fac869786a255b7eb"
-uuid = "6c6e2e6c-3030-632d-7369-2d6c69616d65"
-version = "0.1.4"
+[[deps.LoopVectorization]]
+deps = ["ArrayInterface", "CPUSummary", "CloseOpenIntervals", "DocStringExtensions", "HostCPUFeatures", "IfElse", "LayoutPointers", "LinearAlgebra", "OffsetArrays", "PolyesterWeave", "PrecompileTools", "SIMDTypes", "SLEEFPirates", "Static", "StaticArrayInterface", "ThreadingUtilities", "UnPack", "VectorizationBase"]
+git-tree-sha1 = "8084c25a250e00ae427a379a5b607e7aed96a2dd"
+uuid = "bdcacae8-1622-11e9-2a5c-532679323890"
+version = "0.12.171"
+weakdeps = ["ChainRulesCore", "ForwardDiff", "SpecialFunctions"]
+
+    [deps.LoopVectorization.extensions]
+    ForwardDiffExt = ["ChainRulesCore", "ForwardDiff"]
+    SpecialFunctionsExt = "SpecialFunctions"
 
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "oneTBB_jll"]
@@ -1727,6 +1281,11 @@ git-tree-sha1 = "9b11acd07f21c4d035bd4156e789532e8ee2cc70"
 uuid = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
 version = "0.6.9"
 
+[[deps.ManualMemory]]
+git-tree-sha1 = "bcaef4fc7a0cfe2cba636d84cda54b5e4e4ca3cd"
+uuid = "d125e4d3-2237-4719-b19c-fa641b8a4667"
+version = "0.1.8"
+
 [[deps.MappedArrays]]
 git-tree-sha1 = "2dab0221fe2b0f2cb6754eaa743cc266339f527e"
 uuid = "dbb5928d-eab1-5f90-85c2-b9b0edb7c900"
@@ -1746,6 +1305,12 @@ version = "0.5.7"
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 version = "2.28.2+1"
+
+[[deps.MetaGraphs]]
+deps = ["Graphs", "JLD2", "Random"]
+git-tree-sha1 = "1130dbe1d5276cb656f6e1094ce97466ed700e5a"
+uuid = "626554b9-1ddb-594c-aa3c-2596fe9399a5"
+version = "0.7.2"
 
 [[deps.Missings]]
 deps = ["DataAPI"]
@@ -1787,6 +1352,12 @@ deps = ["OpenLibm_jll"]
 git-tree-sha1 = "0877504529a3e5c3343c6f8b4c0381e57e4387e4"
 uuid = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 version = "1.0.2"
+
+[[deps.NearestNeighbors]]
+deps = ["Distances", "StaticArrays"]
+git-tree-sha1 = "91a67b4d73842da90b526011fa85c5c4c9343fe0"
+uuid = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
+version = "0.4.18"
 
 [[deps.Netpbm]]
 deps = ["FileIO", "ImageCore", "ImageMetadata"]
@@ -1834,6 +1405,12 @@ deps = ["Artifacts", "Imath_jll", "JLLWrappers", "Libdl", "Zlib_jll"]
 git-tree-sha1 = "8292dd5c8a38257111ada2174000a33745b06d4e"
 uuid = "18a262bb-aa17-5467-a713-aee519bc75cb"
 version = "3.2.4+0"
+
+[[deps.OpenJpeg_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Libtiff_jll", "LittleCMS_jll", "libpng_jll"]
+git-tree-sha1 = "f4cb457ffac5f5cf695699f82c537073958a6a6c"
+uuid = "643b3616-a352-519d-856d-80112ee9badc"
+version = "2.5.2+0"
 
 [[deps.OpenLibm_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -1957,11 +1534,11 @@ git-tree-sha1 = "7b1a9df27f072ac4c9c7cbe5efb198489258d1f5"
 uuid = "995b91a9-d308-5afd-9ec6-746e21dbc043"
 version = "1.4.1"
 
-[[deps.PlutoUI]]
-deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "FixedPointNumbers", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "MIMEs", "Markdown", "Random", "Reexport", "URIs", "UUIDs"]
-git-tree-sha1 = "ab55ee1510ad2af0ff674dbcced5e94921f867a9"
-uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.59"
+[[deps.PolyesterWeave]]
+deps = ["BitTwiddlingConvenienceFunctions", "CPUSummary", "IfElse", "Static", "ThreadingUtilities"]
+git-tree-sha1 = "645bed98cd47f72f67316fd42fc47dee771aefcd"
+uuid = "1d0040c9-8b98-4ee7-8388-3f51789ca0ad"
+version = "0.2.2"
 
 [[deps.PolygonOps]]
 git-tree-sha1 = "77b3d3605fc1cd0b42d95eba87dfcd2bf67d5ff6"
@@ -1969,20 +1546,18 @@ uuid = "647866c9-e3ac-4575-94e7-e3d426903924"
 version = "0.1.2"
 
 [[deps.Polynomials]]
-deps = ["LinearAlgebra", "RecipesBase", "Requires", "Setfield", "SparseArrays"]
-git-tree-sha1 = "1a9cfb2dc2c2f1bd63f1906d72af39a79b49b736"
+deps = ["LinearAlgebra", "RecipesBase"]
+git-tree-sha1 = "3aa2bb4982e575acd7583f01531f241af077b163"
 uuid = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
-version = "4.0.11"
+version = "3.2.13"
 
     [deps.Polynomials.extensions]
     PolynomialsChainRulesCoreExt = "ChainRulesCore"
-    PolynomialsFFTWExt = "FFTW"
     PolynomialsMakieCoreExt = "MakieCore"
     PolynomialsMutableArithmeticsExt = "MutableArithmetics"
 
     [deps.Polynomials.weakdeps]
     ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-    FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
     MakieCore = "20f20a25-4f0e-4fdf-b5d1-57303727442b"
     MutableArithmetics = "d8a4904e-b15c-11e9-3269-09a3773c0cb0"
 
@@ -2049,6 +1624,12 @@ git-tree-sha1 = "9b23c31e76e333e6fb4c1595ae6afa74966a729e"
 uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 version = "2.9.4"
 
+[[deps.Quaternions]]
+deps = ["LinearAlgebra", "Random", "RealDot"]
+git-tree-sha1 = "994cc27cdacca10e68feb291673ec3a76aa2fae9"
+uuid = "94ee1d12-ae83-5a48-8b1c-48b8ff168ae0"
+version = "0.7.6"
+
 [[deps.REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
 uuid = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
@@ -2072,6 +1653,12 @@ weakdeps = ["FixedPointNumbers"]
     [deps.Ratios.extensions]
     RatiosFixedPointNumbersExt = "FixedPointNumbers"
 
+[[deps.RealDot]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "9f0a1b71baaf7650f4fa8a1d168c7fb6ee41f0c9"
+uuid = "c1ae055f-0cd5-4b69-90a6-9a35b1a98df9"
+version = "0.1.0"
+
 [[deps.RecipesBase]]
 deps = ["PrecompileTools"]
 git-tree-sha1 = "5c3d09cc4f31f5fc6af001c250bf1278733100ff"
@@ -2082,6 +1669,12 @@ version = "1.3.4"
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.2.2"
+
+[[deps.RegionTrees]]
+deps = ["IterTools", "LinearAlgebra", "StaticArrays"]
+git-tree-sha1 = "4618ed0da7a251c7f92e869ae1a19c74a7d2a7f9"
+uuid = "dee08c22-ab7f-5625-9660-a9af2021b33f"
+version = "0.3.2"
 
 [[deps.RelocatableFolders]]
 deps = ["SHA", "Scratch"]
@@ -2113,6 +1706,16 @@ git-tree-sha1 = "d483cd324ce5cf5d61b77930f0bbd6cb61927d21"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.4.2+0"
 
+[[deps.Rotations]]
+deps = ["LinearAlgebra", "Quaternions", "Random", "StaticArrays"]
+git-tree-sha1 = "5680a9276685d392c87407df00d57c9924d9f11e"
+uuid = "6038ab10-8711-5258-84ad-4b1120ba62dc"
+version = "1.7.1"
+weakdeps = ["RecipesBase"]
+
+    [deps.Rotations.extensions]
+    RotationsRecipesBaseExt = "RecipesBase"
+
 [[deps.RoundingEmulator]]
 git-tree-sha1 = "40b9edad2e5287e05bd413a38f61a8ff55b9557b"
 uuid = "5eaf0fd0-dfba-4ccb-bf02-d820a40db705"
@@ -2127,6 +1730,17 @@ deps = ["PrecompileTools"]
 git-tree-sha1 = "2803cab51702db743f3fda07dd1745aadfbf43bd"
 uuid = "fdea26ae-647d-5447-a871-4b548cad5224"
 version = "3.5.0"
+
+[[deps.SIMDTypes]]
+git-tree-sha1 = "330289636fb8107c5f32088d2741e9fd7a061a5c"
+uuid = "94e857df-77ce-4151-89e5-788b33177be4"
+version = "0.1.0"
+
+[[deps.SLEEFPirates]]
+deps = ["IfElse", "Static", "VectorizationBase"]
+git-tree-sha1 = "456f610ca2fbd1c14f5fcf31c6bfadc55e7d66e0"
+uuid = "476501e8-09a2-5ece-8869-fb82de89a1fa"
+version = "0.6.43"
 
 [[deps.Scratch]]
 deps = ["Dates"]
@@ -2206,6 +1820,12 @@ git-tree-sha1 = "5d7e3f4e11935503d3ecaf7186eac40602e7d231"
 uuid = "699a6c99-e7fa-54fc-8d76-47d257e15c1d"
 version = "0.9.4"
 
+[[deps.SimpleWeightedGraphs]]
+deps = ["Graphs", "LinearAlgebra", "Markdown", "SparseArrays"]
+git-tree-sha1 = "4b33e0e081a825dbfaf314decf58fa47e53d6acb"
+uuid = "47aef6b3-ad0c-573a-a1e2-d07658019622"
+version = "1.4.0"
+
 [[deps.Sixel]]
 deps = ["Dates", "FileIO", "ImageCore", "IndirectArrays", "OffsetArrays", "REPL", "libsixel_jll"]
 git-tree-sha1 = "2da10356e31327c7096832eb9cd86307a50b1eb6"
@@ -2247,6 +1867,23 @@ deps = ["OffsetArrays"]
 git-tree-sha1 = "46e589465204cd0c08b4bd97385e4fa79a0c770c"
 uuid = "cae243ae-269e-4f55-b966-ac2d0dc13c15"
 version = "0.1.1"
+
+[[deps.Static]]
+deps = ["CommonWorldInvalidations", "IfElse", "PrecompileTools"]
+git-tree-sha1 = "0bbff21027dd8a107551847528127b62a35f7594"
+uuid = "aedffcd0-7271-4cad-89d0-dc628f76c6d3"
+version = "1.1.0"
+
+[[deps.StaticArrayInterface]]
+deps = ["ArrayInterface", "Compat", "IfElse", "LinearAlgebra", "PrecompileTools", "Requires", "SparseArrays", "Static", "SuiteSparse"]
+git-tree-sha1 = "8963e5a083c837531298fc41599182a759a87a6d"
+uuid = "0d7ed370-da01-4f52-bd93-41d350b8b718"
+version = "1.5.1"
+weakdeps = ["OffsetArrays", "StaticArrays"]
+
+    [deps.StaticArrayInterface.extensions]
+    StaticArrayInterfaceOffsetArraysExt = "OffsetArrays"
+    StaticArrayInterfaceStaticArraysExt = "StaticArrays"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore"]
@@ -2366,11 +2003,23 @@ version = "0.1.1"
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
+[[deps.ThreadingUtilities]]
+deps = ["ManualMemory"]
+git-tree-sha1 = "eda08f7e9818eb53661b3deb74e3159460dfbc27"
+uuid = "8290d209-cae3-49c0-8002-c8c24d57dab5"
+version = "0.5.2"
+
 [[deps.TiffImages]]
 deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "Mmap", "OffsetArrays", "PkgVersion", "ProgressMeter", "SIMD", "UUIDs"]
 git-tree-sha1 = "bc7fd5c91041f44636b2c134041f7e5263ce58ae"
 uuid = "731e570b-9d59-4bfa-96dc-6df516fadf69"
 version = "0.10.0"
+
+[[deps.TiledIteration]]
+deps = ["OffsetArrays", "StaticArrayInterface"]
+git-tree-sha1 = "1176cc31e867217b06928e2f140c90bd1bc88283"
+uuid = "06e1c1a7-607b-532d-9fad-de7d9aa2abac"
+version = "0.5.0"
 
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "60df3f8126263c0d6b357b9a1017bb94f53e3582"
@@ -2381,11 +2030,6 @@ weakdeps = ["Random", "Test"]
     [deps.TranscodingStreams.extensions]
     TestExt = ["Test", "Random"]
 
-[[deps.Tricks]]
-git-tree-sha1 = "eae1bb484cd63b36999ee58be2de6c178105112f"
-uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
-version = "0.1.8"
-
 [[deps.TriplotBase]]
 git-tree-sha1 = "4d4ed7f294cda19382ff7de4c137d24d16adc89b"
 uuid = "981d1d27-644d-49a2-9326-4793e63143c3"
@@ -2395,11 +2039,6 @@ version = "0.1.0"
 git-tree-sha1 = "41d61b1c545b06279871ef1a4b5fcb2cac2191cd"
 uuid = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
 version = "1.5.0"
-
-[[deps.URIs]]
-git-tree-sha1 = "67db6cc7b3821e19ebe75791a9dd19c9b1188f2b"
-uuid = "5c2747f8-b7ea-4ff2-ba2e-563bfd36b1d4"
-version = "1.5.1"
 
 [[deps.UUIDs]]
 deps = ["Random", "SHA"]
@@ -2418,6 +2057,12 @@ deps = ["REPL"]
 git-tree-sha1 = "53915e50200959667e78a92a418594b428dffddf"
 uuid = "1cfade01-22cf-5700-b092-accc4b62d6e1"
 version = "0.4.1"
+
+[[deps.VectorizationBase]]
+deps = ["ArrayInterface", "CPUSummary", "HostCPUFeatures", "IfElse", "LayoutPointers", "Libdl", "LinearAlgebra", "SIMDTypes", "Static", "StaticArrayInterface"]
+git-tree-sha1 = "e7f5b81c65eb858bed630fe006837b935518aca5"
+uuid = "3d5dd08c-fd9d-11e8-17fa-ed2836048c2f"
+version = "0.21.70"
 
 [[deps.WeakRefStrings]]
 deps = ["DataAPI", "InlineStrings", "Parsers"]
@@ -2447,6 +2092,12 @@ deps = ["Artifacts", "JLLWrappers", "Libdl", "Libgcrypt_jll", "Libgpg_error_jll"
 git-tree-sha1 = "a54ee957f4c86b526460a720dbc882fa5edcbefc"
 uuid = "aed1982a-8fda-507f-9586-7b0439959a61"
 version = "1.1.41+0"
+
+[[deps.XZ_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "ac88fb95ae6447c8dda6a5503f3bafd496ae8632"
+uuid = "ffd25f8a-64ca-5728-b0f7-c24cf3aae800"
+version = "5.4.6+0"
 
 [[deps.Xorg_libX11_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Xorg_libxcb_jll", "Xorg_xtrans_jll"]
@@ -2500,6 +2151,12 @@ version = "1.5.0+0"
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
 version = "1.2.13+1"
+
+[[deps.Zstd_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl"]
+git-tree-sha1 = "e678132f07ddb5bfa46857f0d7620fb9be675d3b"
+uuid = "3161d3a3-bdf6-5164-811a-617609db77b4"
+version = "1.5.6+0"
 
 [[deps.isoband_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2578,112 +2235,16 @@ version = "3.5.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╟─e4ff89ea-be9e-11ed-2fc5-27bdaa05a067
-# ╠═0bba0195-e4d8-44c7-a06d-37b2d0de181c
-# ╟─be7ea98f-a802-4213-a946-74cfca9c3652
-# ╠═d475c313-82ea-4e48-b249-ff179752359e
-# ╟─f703eb8f-7e1d-4a0f-a510-880ab5fc4766
-# ╠═85109740-232c-42d3-bb9e-30785a6f5219
-# ╟─75ddc948-ef76-4628-8151-c8969d9dad40
-# ╟─d24e6b5a-8132-496d-9487-318992ede474
-# ╠═50f1d996-882e-46e6-9e8c-754370d59eb8
-# ╟─ae182b01-751e-41d4-90ab-bd71dc46269f
-# ╟─aa41e8be-52e3-4daf-8fc0-5e8811e7e6e0
-# ╟─c7ed5985-7f65-4c16-a09c-dced71bf7b5f
-# ╠═3e064ea3-6507-4e14-b87b-d289fb68818a
-# ╟─629b0443-85de-41be-ae93-207d7a7279ea
-# ╠═74073b91-942e-4b2e-8d71-578911409905
-# ╟─03ec4f3f-55c9-49f9-ba77-3aca0de104ca
-# ╟─dc338f4b-17c0-45b9-81b3-72fb31868034
-# ╠═4391896a-bd2d-4be2-8138-533942d03332
-# ╟─38f5aaac-88dd-4b94-a0c1-954201c38857
-# ╟─3a16ad79-c50d-4602-976d-73d3cb33a277
-# ╟─a663fba3-5a8d-44a3-a9dd-878d0474fe7b
-# ╠═f0445fa0-e9b6-4edf-a047-e96b244023ee
-# ╟─6cf0f50c-e12c-467d-a104-c0fd20ca92da
-# ╟─e55a93af-1e5a-46d3-b2f2-68045072fb24
-# ╠═fb98292e-bcd9-499d-8647-8d46f481efae
-# ╟─5c4cd186-e13b-48a1-a390-76b9f7a6ab01
-# ╟─4ae7d579-0f79-47cf-a33c-646d1d04edbb
-# ╟─ea6336ce-23e8-4bae-b6d9-2b8e8523a954
-# ╟─5f9dbf48-82d6-46c1-a3ac-96d755cbdd0a
-# ╟─3f5c7536-0491-4e3e-aa14-9f44b01643ef
-# ╟─ade36dec-d71f-47a8-98d0-b9c9be02b9d3
-# ╟─e0018619-7cf4-4b42-a543-5f09fb637066
-# ╟─2deb246d-518a-44a3-bbec-0fb375cda465
-# ╟─ad2a826a-7e29-4651-a291-46dd77f5d6b8
-# ╟─cd22103a-bb7e-4c24-813a-ec845f113c0e
-# ╟─2ff74fb7-0008-45cc-b6cf-6566a26e3479
-# ╟─210856b4-d6d0-41b7-8a71-ec6eb4793334
-# ╟─5608d879-f246-40bc-bd8b-518aecbf1d3f
-# ╟─fdaa74a6-77b1-4684-b5b4-a28f832879cf
-# ╟─2c83ba81-10a0-4a9a-8b46-d9973b0c3933
-# ╟─415da816-cae2-47b1-bd3b-179b21f78227
-# ╟─3b78c8cf-0246-4ae6-95b3-0ae13b86651b
-# ╟─ad53c43a-2efe-4325-a23a-7fb300795991
-# ╟─d4babf23-b3b6-45a5-8cef-182727e25342
-# ╟─802017f3-d852-4aab-a22e-bf868b86ea90
-# ╟─f2e8c160-5bcd-4df4-a08c-0db8cc5f97f9
-# ╟─89501cb6-4f1e-4b1c-8fb8-a4abb41af63b
-# ╟─4ebfa8ce-0017-41bd-a78a-1561ba418c8a
-# ╟─ed1ac430-42ec-4f1c-a792-93d9497605cd
-# ╟─e7b2d76e-76d4-40f2-a762-d6ded5946988
-# ╟─3e48e96a-105a-499a-be36-65d1685e245c
-# ╟─d3d23f7e-8621-494f-b143-93834c487640
-# ╟─8165b48a-2e3b-4a87-90fe-f3af46454d35
-# ╟─746c2f8a-bd94-4f5b-9813-593807440d2c
-# ╟─1f5490da-618e-4b87-a153-af6401251924
-# ╟─f8e0162a-28cb-4e29-9cf6-b9ff121e380a
-# ╟─015cdc5d-7541-4254-ad4e-3b7893030bb0
-# ╟─338006ee-124d-4739-9b74-37bab45b54e2
-# ╟─1fe63420-26af-436a-b50a-9bf0106fbddd
-# ╟─739e2b24-0b7d-46bf-a7c5-1da80037d1e0
-# ╟─21564d17-e551-4f7b-99d3-191c4697e885
-# ╟─7399e605-8b46-4d31-a62f-4402b0deb420
-# ╟─ec76ac76-8a5e-4dec-b72c-816f16ef4e90
-# ╟─53fd254c-00c4-4f3e-bd3f-faa9a487fc82
-# ╟─6624f95c-b4e4-40b1-9a8e-7ca0ddd6d814
-# ╟─55799b2e-d442-4e22-abba-b7a49408ac12
-# ╟─e40a10e4-832c-453d-927f-7016c4472cf4
-# ╟─6ae1df90-7b27-4b3b-916b-6c268ac93a5e
-# ╟─34d33656-7882-4d22-9330-7a2c0ded8422
-# ╠═411d5fcd-f1b5-403a-8748-fd4f1a2de136
-# ╠═44c9a8cf-3657-4eb8-9b28-8d32c06a4711
-# ╟─7cf9c401-b08b-40dd-9091-21786cd583a9
-# ╟─5fdd6887-37d0-493f-afad-86c74b322334
-# ╠═1c36d0a4-3ee8-439f-83b3-820d5dbb3971
-# ╟─cef058f0-6214-42e4-bc27-152c13bdb9b4
-# ╟─e543ed13-7ec4-4423-a9da-028e4edd21f6
-# ╟─2934497c-334f-40e5-842a-dcf562d6b9a2
-# ╟─4c553165-e739-45cf-8971-745bc14cead8
-# ╟─f3d91518-55b0-4e36-80db-b7afa14263f6
-# ╟─9b70dd59-39af-4b63-8322-13b6f7d209aa
-# ╠═6f9ab851-7623-4d4c-869c-a8e21f8e5b1c
-# ╟─be98fbce-2335-41bb-9c7b-541690b21879
-# ╟─cb7e7051-9a6a-4cbc-9a24-abb52253805e
-# ╟─bae84990-06e2-48d2-aaae-a6362e010997
-# ╟─34593fb7-3145-4df0-9bf9-38cb70fc240d
-# ╠═bfeeddab-a586-4bbc-bb20-6392545c4ad2
-# ╟─d5a229c9-f97c-471d-a2d2-3db0de5cabc5
-# ╠═131b3260-5872-48b8-93a1-cb59389392f9
-# ╟─49d44542-daf4-4c94-8612-92488c7f6328
-# ╠═e9e61850-2934-4e57-99f7-4975ddd56891
-# ╟─09374b54-3451-43b5-b8c8-9352941eddb2
-# ╠═fdf3a6ed-61b7-4c74-a591-b019d01e25b1
-# ╟─7023c18c-1301-4369-8dac-04294b87d153
-# ╟─8985210e-07a5-4b64-87f7-85a8ad0a62ab
-# ╟─2477e827-54b5-4397-a2e3-1ecfa4402a6f
-# ╠═d44b506f-6237-4606-ba69-da3aa1db111b
-# ╟─b130b61a-21cc-44ce-988f-b8f127663984
-# ╟─63f5815f-d169-4819-8579-a837314a2496
-# ╠═62bb7355-3a4c-4c6f-ada7-84767430dc76
-# ╟─e3bb4406-0bc2-45ac-ad8d-913a9f2e5d29
-# ╠═7e19bec8-9e3b-41b2-bed4-d131930db3ac
-# ╟─b6a496a0-eb39-422f-b7ec-9e995d6f44d0
-# ╟─c728c1e9-d277-4746-a142-07bf72cf06fa
-# ╠═8d7e0fb1-734a-4156-9d6f-32c712331d3b
-# ╟─99ae2011-ab49-4b4b-b15a-538ac9b0ab88
-# ╟─746bf356-afa2-4c52-86bb-0c559278afdb
-# ╟─6bed5212-92e1-4969-9f1e-f65e09e79470
+# ╟─7b224c6c-b28a-11ed-1e13-cd4c9ebd2f85
+# ╟─efed6b69-6632-4212-aa68-ff0762a7eb36
+# ╟─28792394-5038-4640-9e45-f3bfa3bd96e1
+# ╠═3090d002-8236-46d1-8add-5a8921cbe835
+# ╟─8d49c5bc-5d82-4b88-9893-64d6056a3c24
+# ╠═64f9959f-6843-4f0c-8b62-f6c7479fd090
+# ╟─78d82a70-d719-4fff-a0bd-fc25ed1ec1ca
+# ╟─90d29494-0965-44ac-a703-50e86f9bfd5c
+# ╟─4cfbaa1a-a052-4dc0-a504-aaa9a064a55d
+# ╟─e5227295-12eb-40a3-b4d0-291532b81fbe
+# ╟─52d5f1b9-142e-404b-90a5-9c56cfaae070
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
