@@ -4,7 +4,7 @@
 # load packages -----------------------------------------------------------
 
 
-packs <- c("lubridate", "stringr", "tidyverse", "viridis", "Vpalmr", "data.table", "yaml", "archimedR", "png", "cowplot", "ggpattern")
+packs <- c("lubridate", "stringr", "tidyverse", "viridis", "Vpalmr", "data.table", "yaml", "archimedR", "png", "cowplot", "ggpattern",'ggpmisc','cowplot','ggrepel','plotly','scales')
 InstIfNec <- function(pack) {
   if (!do.call(require, as.list(pack))) {
     do.call(install.packages, as.list(pack))
@@ -15,6 +15,13 @@ lapply(packs, InstIfNec)
 
 
 # inputs ------------------------------------------------------------------
+
+colors_plant=hue_pal()(4) 
+names(colors_plant)=c("P1",'P2','P3','P5')
+
+colors_scenar=c('darkolivegreen3','darkolivegreen4','darkolivegreen','cyan','blue3','firebrick','firebrick1','grey')
+names(colors_scenar)=c("400ppm",'600ppm','800ppm','DryCold','Cold','Hot','DryHot','Cloudy')
+
 
 
 colors_event <- c("darkolivegreen3", "darkolivegreen4", "darkolivegreen", "cyan", "blue3", "firebrick", "firebrick1", "grey")
@@ -51,6 +58,16 @@ myTheme_multi <- theme_bw() %+replace%
     axis.text = element_text(face = "plain", size = 16),
     legend.title = element_blank()
   )
+
+
+f.vpd=function(Temp,HR,p1=18.9321,p2=5300.24){
+  (exp(p1-p2/(Temp+273)))*(1-HR/100)
+}
+  
+Temp=c(23,27)
+Hr=c(75,30)
+
+f.vpd(Temp = Temp,HR=Hr)
 
 # calendar -------------------------------------------------------------
 
@@ -131,16 +148,17 @@ gr_CO2 <- CurveCO2 %>%
 
 gr_gs <- CurveGs %>%
   filter(Date == day) %>%
+  mutate(var=A/(Cₐ*sqrt(Dₗ))) %>% 
   ggplot() +
-  geom_point(aes(x = Dₗ, y = Gₛ, col = "Obs"), size = 2) +
-  geom_line(aes(x = Dₗ, y = Gₛ_sim, col = "Medlyn")) +
+  geom_point(aes(x = var, y = Gₛ, col = "Obs"), size = 2) +
+  geom_line(aes(x = var, y = Gₛ_sim, col = "Medlyn"))+
   myTheme_multi +
   geom_text(
-    data = param_sub, aes(x = Dₗ, y = Gₛ, label = paste("g0:", round(g0, 2), "\n", "g1:", round(g1, 2))),
+    data = param_sub, aes(x =A/(Cᵢ*sqrt(Dₗ)), y = Gₛ, label = paste("g0:", round(g0, 2), "\n", "g1:", round(g1, 2))),
     hjust = 0, col = "blue"
   ) +
   labs(
-    x = expression(D[l] * " (kPa)"),
+    x = expression(A*'/'*'('*C[a]*D[l]^0.5*')' *" (ppm)"),
     y = expression(g[s] * " (" * mol * " " * m * " "**-2 * " " * s**-1 * ")")
   ) +
   scale_color_manual(values = c("Obs" = 1, "Medlyn" = "blue")) +
@@ -149,9 +167,11 @@ gr_gs <- CurveGs %>%
 
 plot_grid(gr_CO2, gr_gs, ncol = 2, labels = c("A", "B"))
 
+
 ggsave(filename = "2-figuresTables/LeafGasExchanges.pdf", width = 12, height = 6)
 
 # climate -----------------------------------------------------------------
+
 
 mic3_raw <- fread("../02-climate/climate_mic3.csv") %>%
   mutate(
@@ -165,38 +185,86 @@ mic3 <- merge(mic3_raw, cal %>% filter(!is.na(scenar)), all.y = T) %>%
   rename(
     `Temperature (°C)` = Ta_measurement,
     `Relative humidity (%)` = Rh_measurement,
-    `PAR (mircomol of CO2 m-2 s-1)` = R_measurement
+    `PAR (µmol m-2 s-1)` = R_measurement
   ) %>%
-  tidyr::gather(key = "variable", "value", `Temperature (°C)`, `Relative humidity (%)`, `PAR (mircomol of CO2 m-2 s-1)`)
+  tidyr::gather(key = "variable", "value", `Temperature (°C)`, `Relative humidity (%)`, `PAR (µmol m-2 s-1)`)
+# 
+# mic3_m <- merge(mic3_raw, cal %>% filter(!is.na(scenar)), all.y = T) %>%
+#   group_by(scenar, hms) %>%
+#   summarize(
+#     Ta_measurement = median(Ta_measurement, na.rm = T),
+#     Rh_measurement = median(Rh_measurement, na.rm = T),
+#     R_measurement = median(R_measurement, na.rm = T),
+#     CO2_ppm = median(CO2_ppm, na.rm = T)
+#   ) %>%
+#   ungroup() %>%
+#   rename(
+#     `Temperature (°C)` = Ta_measurement,
+#     `Relative humidity (%)` = Rh_measurement,
+#     `PAR (µmol m-2 s-1)` = R_measurement,
+#     `CO2 (ppm)` = CO2_ppm
+#   ) %>%
+#   tidyr::gather(key = "variable", "value", `Temperature (°C)`, `Relative humidity (%)`, `PAR (µmol m-2 s-1)`, `CO2 (ppm)`)
+# 
+# ggplot() +
+#   geom_line(data = mic3 %>% filter(!(scenar %in% c("WalzClosed", "WalzOpen"))), aes(x = hms(hms), y = value, group = Date), alpha = 0.2) +
+#   geom_line(data = mic3_m %>% filter(!(scenar %in% c("WalzClosed", "WalzOpen"))), aes(x = hms(hms), y = value)) +
+#   facet_grid(variable ~ scenar, scale = "free_y") +
+#   # scale_color_manual(values = colors_event, name = "Scenario") +
+#   scale_x_time() +
+#   labs(x = "Time of the day", y = "") +
+#   theme_bw() +
+#   theme(axis.text.x = element_text(angle = 90),
+#         legend.position='bottom')
 
-mic3_m <- merge(mic3_raw, cal %>% filter(!is.na(scenar)), all.y = T) %>%
-  group_by(scenar, hms) %>%
-  summarize(
-    Ta_measurement = median(Ta_measurement, na.rm = T),
-    Rh_measurement = median(Rh_measurement, na.rm = T),
-    R_measurement = median(R_measurement, na.rm = T),
-    CO2_ppm = median(CO2_ppm, na.rm = T)
+
+### remove open door
+database_raw<- fread("../09-database/database_5min.csv") %>% 
+  mutate(
+    Date = ymd(str_sub(DateTime_start, start = 1, end = 10)),
+    hms = str_sub(DateTime_start, 12, 19)
   ) %>%
-  ungroup() %>%
-  rename(
-    `Temperature (°C)` = Ta_measurement,
-    `Relative humidity (%)` = Rh_measurement,
-    `PAR (mircomol of CO2 m-2 s-1)` = R_measurement,
-    `CO2 (ppm)` = CO2_ppm
-  ) %>%
-  tidyr::gather(key = "variable", "value", `Temperature (°C)`, `Relative humidity (%)`, `PAR (mircomol of CO2 m-2 s-1)`, `CO2 (ppm)`)
+  filter(hms(hms) >= hms("05:00:00") & hms(hms) <= hms("20:00:00"))
+
+database <- database_raw%>%
+    rename(
+      `Temperature (°C)` = Ta_measurement,
+      `Relative humidity (%)` = Rh_measurement,
+      `PAR (µmol m-2 s-1)` = R_measurement,
+      `CO2 (ppm)` = CO2_ppm,
+    ) %>%
+  mutate(`VPD (kPa)`=f.vpd(HR = `Relative humidity (%)`,Temp=`Temperature (°C)`,p1=18.9321,p2=5300.24) ) %>%
+    tidyr::gather(key = "variable", "value",`CO2 (ppm)`, `Temperature (°C)`, `Relative humidity (%)`, `PAR (µmol m-2 s-1)`,`VPD (kPa)`)
+
+# database_m <- database_raw %>%
+#   group_by(Scenario, hms) %>%
+#   summarize(
+#     Ta_measurement = median(Ta_measurement, na.rm = T),
+#     Rh_measurement = median(Rh_measurement, na.rm = T),
+#     R_measurement = median(R_measurement, na.rm = T),
+#     CO2_ppm = median(CO2_ppm, na.rm = T)
+#   ) %>%
+#   ungroup() %>%
+#   rename(
+#     `Temperature (°C)` = Ta_measurement,
+#     `Relative humidity (%)` = Rh_measurement,
+#     `PAR (µmol m-2 s-1)` = R_measurement,
+#     `CO2 (ppm)` = CO2_ppm
+#   ) %>%
+#   tidyr::gather(key = "variable", "value", `Temperature (°C)`, `Relative humidity (%)`, `PAR (µmol m-2 s-1)`, `CO2 (ppm)`)
 
 ggplot() +
-  geom_line(data = mic3 %>% filter(!(scenar %in% c("WalzClosed", "WalzOpen"))), aes(x = hms(hms), y = value, col = scenar, group = Date), alpha = 0.2) +
-  geom_line(data = mic3_m %>% filter(!(scenar %in% c("WalzClosed", "WalzOpen"))), aes(x = hms(hms), y = value, col = scenar)) +
-  facet_grid(variable ~ scenar, scale = "free_y") +
-  scale_color_manual(values = colors_event, name = "Scenario") +
-  scale_x_time() +
-  labs(x = "Time of the day", y = "") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90))
+    geom_line(data = database %>% filter(!(Scenario %in% c("TestLight", ""))), aes(x = hms(hms), y = value, group = Date), alpha = 0.2) +
+    # geom_line(data = database_m %>% filter(!(scenar %in% c("WalzClosed", "WalzOpen"))), aes(x = hms(hms), y = value)) +
+    facet_grid(variable ~ Scenario, scale = "free_y") +
+    # scale_color_manual(values = colors_event, name = "Scenario") +
+    scale_x_time() +
+    labs(x = "Time of the day", y = "") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90),
+          legend.position='bottom')
 
-ggsave(filename = "2-figuresTables/Scenarios.pdf", width = 12, height = 9)
+ggsave(filename = "2-figuresTables/Scenarios.pdf", width = 16, height = 18,units = 'cm')
 
 
 
@@ -383,9 +451,10 @@ area <- data.table::fread(input = "0-data/ComparisonArea.csv")
 
 # leaf area
 pLeaf <- area %>%
-  ggplot(aes(x = Planim_area, y = Manual_mesh_area, group = plant, fill = plant)) +
+  ggplot(aes(x = Planim_area, y = Manual_mesh_area, group = plant, fill = plant,col = plant)) +
   geom_abline(slope = 1, intercept = 0, col = "grey") +
   geom_smooth(method = "lm", se = F, aes(col = plant)) +
+  stat_poly_eq(use_label(c("eq", "R2")))+
   geom_label(aes(label = rank), col = 1) +
   # facet_wrap(~plant)+
   labs(
@@ -395,7 +464,7 @@ pLeaf <- area %>%
   ylim(c(0, 1550)) +
   xlim(c(0, 1550)) +
   myTheme +
-  theme(legend.position = c(0.9, 0.2))
+  theme(legend.position = c(0.1, 0.4))
 
 pPlant <- area %>%
   group_by(plant) %>%
@@ -417,7 +486,7 @@ pPlant <- area %>%
 
 ggdraw() +
   draw_plot(pLeaf) +
-  draw_plot(pPlant, x = 0.15, y = .55, width = .45, height = .45)
+  draw_plot(pPlant, x = 0.55, y = .15, width = .45, height = .45)
 
 ggsave(filename = "2-figuresTables/compareArea.pdf", width = 8, height = 5)
 
@@ -498,3 +567,222 @@ sp%>%
   myTheme
 
 ggsave(filename = "2-figuresTables/LightSpectrum.pdf", width = 10, height = 8)
+
+
+
+# fluxes ------------------------------------------------------------------
+
+AllScenar=fread('0-data/SequencePlantScenar.csv')%>%
+  mutate(Date=dmy(Date))%>%
+  filter(Plant!='' & Ref=='T')
+
+don_raw=fread(input = "0-data/database_5min.csv")%>%
+  mutate(Date=ymd(str_sub(DateTime_start,start = 0,end = 10)),
+         hms=str_sub(DateTime_start,12,19),
+         Plant=paste0('P',Plant))
+
+don=merge(don_raw,AllScenar,all.y=T)
+
+# both transpi and Co2 ----------------------------------------------------
+
+maxTranspi=max(don$transpiration_diff_g_s,na.rm=T)
+maxCO2=max(don$CO2_outflux_umol_s,na.rm=T)
+
+don2=don%>%gather('var',"val",transpiration_diff_g_s,CO2_outflux_umol_s)%>%
+  mutate(val = if_else(var == 'CO2_outflux_umol_s', val, val / (maxTranspi / maxCO2)))%>%
+  filter(Plant %in% c('P3'))
+
+ggplot()+
+  geom_ribbon(data=don2%>%filter(hms(hms)<=hms('18:30:00')),aes(x = hms(hms), ymax = Inf, ymin = -Inf),fill = 'lightgrey', alpha = 0.3)+
+  geom_ribbon(data=don2%>%filter(hms(hms)>=hms('05:30:00')),aes(x = hms(hms), ymax = Inf, ymin = -Inf),fill = 'lightgrey', alpha = 0.3)+
+  geom_line(data=don2%>%filter(var=='CO2_outflux_umol_s'),aes(x=hms(hms),y=val,col='CO2',group=paste(Scenario,Date)),lwd=1)+
+  geom_line(data=don2%>%filter(var=='transpiration_diff_g_s'),aes(x=hms(hms),y=val,col='H2O',group=paste(Scenario,Date)),lwd=1)+
+  scale_x_time(breaks = seq(0,24,6)*3600,labels = paste0(seq(0,24,6),'h'))+
+  scale_y_continuous(sec.axis = sec_axis(trans = ~ . * (maxTranspi / maxCO2),
+                                         name = expression('H2O flux ' *(g[H20]*' '*s**-1)))) +
+  facet_wrap(~Scenario,ncol=4)+
+  ylab(expression('CO2 flux ' *(mu*mol[C02]*' '*s**-1)))+
+  xlab(expression('Time of the day'))+
+  myTheme+
+  theme(legend.position='none',
+        axis.title.y.left =  element_text(color=hue_pal()(1)),
+        axis.title.y.right =  element_text(color=hue_pal()(2)[2]),
+        axis.text.y.left =  element_text(color=hue_pal()(1)),
+        axis.text.y.right =  element_text(color=hue_pal()(2)[2]),
+        
+  )
+
+
+ggsave(filename = "2-figuresTables/Day_fluxes.pdf", width = 12, height = 8)
+
+### valeurs intégrées
+
+molCO2togr=44.0095
+
+int=don%>%
+  select(Plant,Scenario,hms,transpiration_diff_g_s,CO2_outflux_umol_s)%>%
+  distinct()%>%
+  group_by(Plant,Scenario)%>%
+  filter(hms(hms)<=hms('19:30:00') & hms(hms)>=hms('05:30:00'))%>% # filter complete day
+  mutate(nb_mes=n())%>%
+  filter(nb_mes>83)%>% # remove incomplete day
+  summarize(CO2_tot_g=sum(CO2_outflux_umol_s)*(60*10)/(10**6)*molCO2togr, #sec-->mn-->day-->mol-->g
+            H2O_tot=sum(transpiration_diff_g_s)*60*10)%>%
+  ungroup()
+
+grCO2=int%>%
+  group_by(Scenario)%>%
+  summarize(mean=mean(CO2_tot_g,na.rm=T),
+            sd=sd(CO2_tot_g,na.rm=T))%>%
+  ungroup()%>%
+  ggplot(aes(x=Scenario,y=mean,col=Scenario))+
+  geom_col(position='dodge',aes(fill=Scenario),alpha=0.8,col=1)+
+  geom_errorbar(aes(x = Scenario,ymin = mean-sd,ymax=mean+sd),width = 0.25)+
+  myTheme+
+  ylab(expression('C assimilation '*(g[CO[2]]*' '*day**-1)))+
+  xlab('')+
+  coord_flip()+
+  scale_fill_manual(values = colors_scenar)+
+  scale_color_manual(values = colors_scenar)+
+  theme(legend.position = 'none')
+
+
+grH2O=int%>%
+  group_by(Scenario)%>%
+  summarize(mean=mean(H2O_tot/100,na.rm=T),
+            sd=sd(H2O_tot/100,na.rm=T))%>%
+  ungroup()%>%
+  ggplot(aes(x=Scenario,y=mean,col=Scenario))+
+  geom_col(position='dodge',aes(fill=Scenario),alpha=0.8,col=1)+
+  geom_errorbar(aes(x = Scenario,ymin = mean-sd,ymax=mean+sd),width = 0.25)+
+  myTheme+
+  ylab(expression('Transpiration '*(100*g[H2O]*' '*day**-1)))+
+  xlab('')+
+  coord_flip()+
+  scale_fill_manual(values = colors_scenar)+
+  scale_color_manual(values = colors_scenar)+
+  theme(legend.position = 'none')
+
+### water use efficiency
+grWUE=int%>%
+  mutate(WUE=abs(CO2_tot_g)/H2O_tot)%>%
+  group_by(Scenario)%>%
+  summarize(mean=mean(WUE,na.rm=T),
+            sd=sd(WUE,na.rm=T))%>%
+  ungroup()%>%
+  ggplot(aes(x=Scenario,y=mean,col=Scenario))+
+  geom_col(position='dodge',aes(fill=Scenario),alpha=0.8,col=1)+
+  geom_errorbar(aes(x = Scenario,ymin = mean-sd,ymax=mean+sd),width = 0.25)+
+  myTheme+
+  ylab(expression('Water use efficiency '*(g[CO[2]]*' '*g[H2O]**-1)))+
+  xlab('')+
+  coord_flip()+
+  scale_fill_manual(values = colors_scenar)+
+  scale_color_manual(values = colors_scenar)+
+  theme(legend.position = 'none')
+
+
+plot_grid(grCO2,grH2O,grWUE,ncol=3)
+
+
+ggsave(filename = "2-figuresTables/Integrated_fluxes.pdf", width = 16, height = 8)
+
+
+
+# test light --------------------------------------------------------------
+#### Licor data
+close1=read.csv(file='../00-data/walz/walz/scenarii/closed/P5F70427.csv',sep=';',header=F,dec='.',skip =2)
+
+
+head=str_split(string = readLines(con ='../00-data/walz/walz/scenarii/closed/P5F70427.csv' ,n = 1),pattern = ';')[[1]]
+
+colnames(close1)=head
+
+close1=close1%>%
+  mutate(Plant='P4',
+         Walz_head='WalzClosed')
+
+
+close2=read.csv(file='../00-data/walz/walz/scenarii/closed/P1F60428.csv',sep=';',header=F,dec='.',skip =2)
+
+colnames(close2)=head
+
+close2=close2%>%
+  mutate(Plant='P1',
+         Walz_head='WalzClosed')
+
+
+open1=read.csv(file='../00-data/walz/walz/scenarii/opened/P5F70429.csv',sep=';',header=F,dec='.',skip =2)
+headO=str_split(string = readLines(con ='../00-data/walz/walz/scenarii/opened/P5F70429.csv' ,n = 1),pattern = ';')[[1]]
+colnames(open1)=headO
+
+open1=open1%>%
+  mutate(Plant='P4',
+         Walz_head='WalzOpen')
+
+open2=read.csv(file='../00-data/walz/walz/scenarii/opened/P1F60430.csv',sep=';',header=F,dec='.',skip =2)
+colnames(open2)=headO
+
+open2=open2%>%
+  mutate(Plant='P1',
+         Walz_head='WalzOpen')
+
+
+vars=c('Date','Time','PARtop','Tleaf','Tcuv','Tamb','Ttop','PARamb','rh','VPD','E','GH2O','A','ci','ca','wa','Plant','Walz_head')
+
+walz=bind_rows(close1%>%
+                 dplyr::select(vars),
+               close2%>%
+                 dplyr::select(vars),
+               open1%>%
+                 dplyr::select(vars),
+               open2%>%
+                 dplyr::select(vars)
+)%>%
+  mutate(Time=hms(Time), 
+         hms=Time,
+         hour=Time@hour,
+         minute=Time@minute,
+         Date=ymd(Date))%>%
+  filter(hms(hms)<=hms('17:00:00') & hms(hms)>=hms('12:00:00'))
+  
+walz %>% 
+  filter(hms(hms)<=hms('17:00:00') & hms(hms)>=hms('12:00:00')) %>% 
+  group_by(Plant,Walz_head) %>% 
+  summarize(maxA=max(A),
+            minA=min(A),
+            coef=sd(A)/mean(A)*100)
+
+climWalz=mic3 %>% 
+  filter(Date %in% unique(walz$Date) & variable=="PAR (µmol m-2 s-1)") %>% 
+  mutate(PAR=value) %>% 
+  select(Date,hms,PAR)
+
+maxA=max(walz$A,na.rm=T)
+maxPAR=max(climWalz$PAR,na.rm=T)
+
+climWalz=merge(climWalz %>% 
+  mutate(relPAR=PAR/(maxPAR/maxA),
+         hms=hms(hms)+hms('02:00:00')),
+  walz %>% select(Date,Plant,Walz_head) %>% distinct(),all.x=T,all.y=F)%>%
+  filter(hms(hms)<=hms('17:00:00') & hms(hms)>=hms('12:00:00'))
+
+ggplot()+
+  geom_line(data=climWalz,aes(x=hms(hms),y=relPAR,group=paste(Plant,Walz_head)),lwd=1,col='grey')+
+  geom_point(data=walz,aes(x=hms(hms),y=A,group=paste(Plant,Walz_head)),lwd=1,col='black')+
+  facet_wrap(Plant~Walz_head,scales='free_x')+
+  scale_x_time(breaks = seq(0,24,1)*3600,labels = paste0(seq(0,24,1),'h'))+
+  scale_y_continuous(sec.axis = sec_axis(trans = ~ . * (maxPAR / maxA),
+                                         name = expression('PPFD ' *(µmol*' '*m**-2*' '*s**-1)))) +
+  ylab(expression(A[n] * " (" * mu * mol * " " * m * " "**-2 * " " * s**-1 * ")"))+
+  xlab(expression('Time of the day'))+
+  myTheme+
+  theme(legend.position='none',
+        axis.title.y.left =  element_text(color='black'),
+        axis.title.y.right =  element_text(color='grey'),
+        axis.text.y.left =  element_text(color='black'),
+        axis.text.y.right =  element_text(color='grey'),
+        
+  )
+
+ggsave(filename = "2-figuresTables/WalzTests.pdf", width = 16, height = 8)

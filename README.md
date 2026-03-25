@@ -1,50 +1,49 @@
-# Ecotron 2021
+# Ecotron 2021 {#ecotron-2021}
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12704284.svg)](https://doi.org/10.5281/zenodo.12704284)
 
-- [Ecotron 2021](#ecotron-2021)
-  - [Folder structure](#folder-structure)
-  - [Database](#database)
-  - [Notebook links](#notebook-links)
-    - [Climate](#climate)
-    - [Time synchronization](#time-synchronization)
-    - [CO₂ fluxes](#co-fluxes)
-    - [Leaf temperature](#leaf-temperature)
-    - [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
-    - [Leaf gas exchange](#leaf-gas-exchange)
-    - [SPAD](#spad)
-    - [Making the database](#making-the-database)
-    - [3D reconstructions](#3d-reconstructions)
-  - [Usage](#usage)
-    - [Pluto](#pluto)
-      - [Install Pluto](#install-pluto)
-      - [Open a notebook](#open-a-notebook)
-    - [Download and instantiate](#download-and-instantiate)
+-   [Ecotron 2021](#ecotron-2021)
+    -   [Folder structure](#folder-structure)
+    -   [Database](#database)
+    -   [Notebook links](#notebook-links)
+        -   [Climate](#climate)
+        -   [Time synchronization](#time-synchronization)
+        -   [CO₂ fluxes](#co-fluxes)
+        -   [Leaf temperature](#leaf-temperature)
+        -   [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
+        -   [Leaf gas exchange](#leaf-gas-exchange)
+        -   [SPAD](#spad)
+        -   [Making the database](#making-the-database)
+        -   [3D reconstructions](#3d-reconstructions)
+    -   [Usage](#usage)
+        -   [Pluto](#pluto)
+            -   [Install Pluto](#install-pluto)
+            -   [Open a notebook](#open-a-notebook)
+        -   [Download and instantiate](#download-and-instantiate)
 
 The Ecotron is a controlled environment facility for plants located in Montpellier, France. In this work, we did an experiment that investigated the behaviour of oil palm (*Elaeis guineensis*) in response to different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day with no rainfall and near-average air temperature and humidity. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapour pressure deficit.
 
 The height resulting conditions were the following:
 
-- 400ppm: the base condition
-- 600ppm: 50% more CO2
-- 800ppm: 100% more CO2
-Cloudy: This is the same as the base condition but with the PAR values based on the most cloudy day in our database from Sumatra. The PAR dynamic is kept the same as in the base condition, though. The maximum PPFD was 130 µmol m² s⁻¹ at 51cm from the lamps, compared to 300 in the reference scenario.
-- Cold: -30% °C compared to the base condition
-- Hot: +30% °C
-- DryCold: -30% relative humidity and -30% °C
-- DryHot: -30% relative humidity and +30% °C
+-   400ppm: the base condition
+-   600ppm: 50% more CO2
+-   800ppm: 100% more CO2 Cloudy: This is the same as the base condition but with the PAR values based on the most cloudy day in our database from Sumatra. The PAR dynamic is kept the same as in the base condition, though. The maximum PPFD was 130 µmol m² s⁻¹ at 51cm from the lamps, compared to 300 in the reference scenario.
+-   Cold: -30% °C compared to the base condition
+-   Hot: +30% °C
+-   DryCold: -30% relative humidity and -30% °C
+-   DryHot: -30% relative humidity and +30% °C
 
 Two microcosms were used during 2 months to measure each of the four plants with each condition. The two microcosms are 114cm (Width) x 113cm (Depth) x 152cm (Height) chambers with a radiation and climate control system that can precisely control the temperature, humidity, and CO2 concentration. The first microcosm was used to store the plants, always following the base conditions, and the second one was used to experiment on different situations.
 
 Measurements included:
 
-- CO2 fluxes with a Picarro G2101-i, measuring the CO2 concentration in the chamber for 5 minutes, and input CO2 concentration for 5 minutes
-- H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was sealed with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/ARCHIMED-platform/Precision_scale-Raspberry_Pi)
-- Leaf temperature, measured with a thermal camera
-- Lidar scans of the plants are done each week using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
-- Biomass and surface measurements of all plant organs were also performed at the end of the experiment.
-- SPAD measurements of each leaf of the plants
-- A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves using a portable gas analyzer (Walz GFS-3000) for model calibration
+-   CO2 fluxes with a Picarro G2101-i, measuring the CO2 concentration in the chamber for 5 minutes, and input CO2 concentration for 5 minutes
+-   H2O fluxes with a precision scale, considering that any change in the weight of the potted plant is due to loss of H2O fluxes by transpiration, as the pot was sealed with a plastic film during the experiment in the second microcosm. The code to control the scale is available [here](https://github.com/ARCHIMED-platform/Precision_scale-Raspberry_Pi)
+-   Leaf temperature, measured with a thermal camera
+-   Lidar scans of the plants are done each week using a Riegl VZ400. Each plant was extracted from the co-registered point clouds using Riegl RiSCAN Pro. The plants were then reconstructed using Blender.
+-   Biomass and surface measurements of all plant organs were also performed at the end of the experiment.
+-   SPAD measurements of each leaf of the plants
+-   A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves using a portable gas analyzer (Walz GFS-3000) for model calibration
 
 This repository does not contain the raw thermal images and the raw lidar data taken during the experiment because they are too large to be stored on Git (images: 60Go, 24Go when compressed). The data is available on a [dedicated repository in Zenodo](https://doi.org/10.5281/zenodo.12704284).
 
@@ -52,9 +51,9 @@ Here are the reconstructions of the plants on top of the point clouds over time:
 
 ![3d reconstruction](11-outputs/Reconstructions_LiDAR_all.png)
 
-## Folder structure
+## Folder structure {#folder-structure}
 
-```text
+``` text
 This folder
 ├── 00-data                        --> Contains raw, unprocessed data
 │   ├── lidar                      --> lidar data for the 3D reconstruction of the plants
@@ -154,7 +153,7 @@ This folder
 └── README.md                      --> This file
 ```
 
-## Database
+## Database {#database}
 
 The database of all processed data is in the `09-database` folder or in the releases of this repository. It is available in two versions: one aggregated to match the 10-minute CO2 measurement and one aggregated to match the 5-minute output CO2 measurement.
 
@@ -175,72 +174,72 @@ end
 
 The database has the following columns:
 
-| name                     | Unit             | type              | Description                                                                                                                                                    |     |
-|--------------------------|------------------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
-| DateTime_start           | UTC              | ISODateTimeFormat | DateTime of the start of the measurement                                                                                                                       |     |
-| DateTime_end             | UTC              | ISODateTimeFormat | DateTime of the end of the measurement (either the 5-min output measurement window or the whole 10-min output-input)                                          |     |
-| Plant                    | \-               | Int               | Plant ID                                                                                                                                                       |     |
-| Leaf                     | ID               | Int               | Leaf ID, leaf ID 1 is the first emitted leaf (the oldest)                                                                                                      |     |
-| Scenario                 | \-               | String            | Scenario forcing climatic conditions                                                                                                                           |     |
-| Sequence                 | \-               | Int               | Sequence for the scenario. Plants can stay in the chamber for one or several days (one or several scenarios). The sequence changes value when the plant changes. |     |
-| DateTime_start_CO2_in    | UTC              | ISODateTimeFormat | DateTime of the start of the CO2 input measurement (CO2 was measured for 5min input, then 5min output, end of CO2 output is equal to `DateTime_end`)           |     |
-| DateTime_start_sequence  | UTC              | ISODateTimeFormat | DateTime of the start of the sequence                                                                                                                          |     |
-| DateTime_end_sequence    | UTC              | ISODateTimeFormat | DateTime of the end of the sequence                                                                                                                            |     |
-| CO2_outflux_umol_s       | μmol plant⁻¹ s⁻¹ | Float             | CO2 flux measured from the chamber (outflux from the chamber)                                                                                                  |     |
-| CO2_dry_input            | ppm              | Float             | CO2 concentration of the input flux in the chamber                                                                                                             |     |
-| CO2_dry_output           | ppm              | Float             | CO2 concentration of the output flux of the chamber                                                                                                            |     |
-| Ta_instruction           | Celsius degree   | Float             | Instruction on the air temperature of the chamber                                                                                                              |     |
-| Ta_measurement           | Celsius degree   | Float             | Effective air temperature of the chamber (measurement)                                                                                                         |     |
-| Rh_instruction           | \%               | Float             | Instruction on the relative humidity in the chamber                                                                                                            |     |
-| Rh_measurement           | \%               | Float             | Effective relative humidity in the chamber (measurement)                                                                                                       |     |
-| R_instruction            | \%               | Float             | Instruction on the radiation in the chamber (0 = turned off, 1 = maximal intensity)                                                                            |     |
-| R_measurement            | μmol m⁻² s⁻¹     | Float             | Effective radiation in the chamber (measurement)                                                                                                               |     |
-| CO2_ppm                  | ppm              | Float             | CO2 concentration in the chamber                                                                                                                               |     |
-| CO2_influx               |                  | Float             | Input CO2 flux of the chamber                                                                                                                                  |     |
-| CO2_instruction          | ppm              | Float             | Instruction for the CO2 concentration in the chamber                                                                                                           |     |
-| transpiration_linear_g_s | g plant⁻¹ s⁻¹    | Float             | Transpiration of the plant, computed from the rate of change within the 5min window using the slope of a linear regression (uses all points)                   |     |
-| transpiration_diff_g_s   | g plant⁻¹ s⁻¹    | Float             | Transpiration of the plant, computed from the difference in weight between the beginning and end of the time-step (uses fewer points)                           |     |
-| Tl_mean                  | Celsius degree   | Float             | Average leaf temperature of all pixels in the mask for the leaf                                                                                                |     |
-| Tl_min                   | Celsius degree   | Float             | Minimum leaf temperature of all pixels in the mask for the leaf                                                                                                |     |
-| Tl_max                   | Celsius degree   | Float             | Maximum leaf temperature of all pixels in the mask for the leaf                                                                                                |     |
-| Tl_std                   | Celsius degree   | Float             | Standard deviation of the leaf temperature of all pixels in the mask for the leaf                                                                              |     |
-| Date_walz                | UTC              | ISODateFormat     | Date of measurement of the response curves on which the parameters are fitted on (VcMaxRef, JMaxRef, RdRef, g0 and g1)                                         |     |
-| Leaf_walz                | ID               | Int               | ID of the leaf on which the response curve was measured                                                                                                        |     |
-| VcMaxRef                 | μmol m⁻² s⁻¹     | Float             | Reference VcMax, fitted on the response curve preceding the plant sequence                                                                                     |     |
-| JMaxRef                  | μmol m⁻² s⁻¹     | Float             | Reference JMax, fitted on the response curve preceding the plant sequence                                                                                      |     |
-| RdRef                    | μmol m⁻² s⁻¹     | Float             | Reference Rd, fitted on the response curve preceding the plant sequence                                                                                        |     |
-| TPURef                   | μmol m⁻² s⁻¹     | Float             | Reference TPU, fitted on the response curve preceding the plant sequence                                                                                       |     |
-| Tr                       | Celsius degree   | Float             | Reference temperature on which the parameters were fitted                                                                                                      |     |
-| g0                       | mol[CO2] m⁻² s⁻¹ | Float             | g0, fitted on the response curve preceding the plant sequence                                                                                                  |     |
-| g1                       | kPa\^0.5         | Float             | g1, fitted on the response curve preceding the plant sequence                                                                                                  |     |
-| VcMaxRef_mean_leaf       | μmol m⁻² s⁻¹     | Float             | Reference VcMax, averaged on all measurements of this leaf during the whole experiment                                                                         |     |
-| JMaxRef_mean_leaf        | μmol m⁻² s⁻¹     | Float             | Reference JMax, averaged on all measurements of this leaf during the whole experiment                                                                          |     |
-| RdRef_mean_leaf          | μmol m⁻² s⁻¹     | Float             | Reference RdMax, averaged on all measurements of this leaf during the whole experiment                                                                         |     |
-| TPURef_mean_leaf         | μmol m⁻² s⁻¹     | Float             | Reference TPU, averaged on all measurements of this leaf during the whole experiment                                                                           |     |
-| Tr_mean_leaf             | μmol m⁻² s⁻¹     | Float             | Reference temperature on which the parameters were fitted, averaged over all measurements on that leaf during the whole experiment                             |     |
-| g0_mean_leaf             | mol[CO2] m⁻² s⁻¹ | Float             | g0, averaged on all measurements of this leaf during the whole experiment                                                                                      |     |
-| g1_mean_leaf             | kPa\^0.5         | Float             | g1, averaged on all measurements of this leaf during the whole experiment                                                                                      |     |
-| VcMaxRef_mean_plant      | μmol m⁻² s⁻¹     | Float             | Reference VcMax, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                    |     |
-| JMaxRef_mean_plant       | μmol m⁻² s⁻¹     | Float             | Reference JMax, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                     |     |
-| RdRef_mean_plant         | μmol m⁻² s⁻¹     | Float             | Reference Rd, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                       |     |
-| TPURef_mean_plant        | μmol m⁻² s⁻¹     | Float             | Reference TPU, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                      |     |
-| Tr_mean_plant            | μmol m⁻² s⁻¹     | Float             | Reference temperature of the measurements, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                          |     |
-| g0_mean_plant            | mol[CO2] m⁻² s⁻¹ | Float             | g0, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                                 |     |
-| g1_mean_plant            | kPa\^0.5         | Float             | g1, averaged on all measurements of this plant (whatever the leaf) during the whole experiment                                                                 |     |
-|                          |                  |                   |                                                                                                                                                                |     |
-|                          |                  |                   |                                                                                                                                                                |     |
+| name | Unit | type | Description |   |
+|----|----|----|----|----|
+| DateTime_start | UTC | ISODateTimeFormat | DateTime of the start of the measurement |  |
+| DateTime_end | UTC | ISODateTimeFormat | DateTime of the end of the measurement (either the 5-min output measurement window or the whole 10-min output-input) |  |
+| Plant | \- | Int | Plant ID |  |
+| Leaf | ID | Int | Leaf ID, leaf ID 1 is the first emitted leaf (the oldest) |  |
+| Scenario | \- | String | Scenario forcing climatic conditions |  |
+| Sequence | \- | Int | Sequence for the scenario. Plants can stay in the chamber for one or several days (one or several scenarios). The sequence changes value when the plant changes. |  |
+| DateTime_start_CO2_in | UTC | ISODateTimeFormat | DateTime of the start of the CO2 input measurement (CO2 was measured for 5min input, then 5min output, end of CO2 output is equal to `DateTime_end`) |  |
+| DateTime_start_sequence | UTC | ISODateTimeFormat | DateTime of the start of the sequence |  |
+| DateTime_end_sequence | UTC | ISODateTimeFormat | DateTime of the end of the sequence |  |
+| CO2_outflux_umol_s | μmol plant⁻¹ s⁻¹ | Float | CO2 flux measured from the chamber (outflux from the chamber) |  |
+| CO2_dry_input | ppm | Float | CO2 concentration of the input flux in the chamber |  |
+| CO2_dry_output | ppm | Float | CO2 concentration of the output flux of the chamber |  |
+| Ta_instruction | Celsius degree | Float | Instruction on the air temperature of the chamber |  |
+| Ta_measurement | Celsius degree | Float | Effective air temperature of the chamber (measurement) |  |
+| Rh_instruction | \% | Float | Instruction on the relative humidity in the chamber |  |
+| Rh_measurement | \% | Float | Effective relative humidity in the chamber (measurement) |  |
+| R_instruction | \% | Float | Instruction on the radiation in the chamber (0 = turned off, 1 = maximal intensity) |  |
+| R_measurement | μmol m⁻² s⁻¹ | Float | Effective radiation in the chamber (measurement) |  |
+| CO2_ppm | ppm | Float | CO2 concentration in the chamber |  |
+| CO2_influx |  | Float | Input CO2 flux of the chamber |  |
+| CO2_instruction | ppm | Float | Instruction for the CO2 concentration in the chamber |  |
+| transpiration_linear_g_s | g plant⁻¹ s⁻¹ | Float | Transpiration of the plant, computed from the rate of change within the 5min window using the slope of a linear regression (uses all points) |  |
+| transpiration_diff_g_s | g plant⁻¹ s⁻¹ | Float | Transpiration of the plant, computed from the difference in weight between the beginning and end of the time-step (uses fewer points) |  |
+| Tl_mean | Celsius degree | Float | Average leaf temperature of all pixels in the mask for the leaf |  |
+| Tl_min | Celsius degree | Float | Minimum leaf temperature of all pixels in the mask for the leaf |  |
+| Tl_max | Celsius degree | Float | Maximum leaf temperature of all pixels in the mask for the leaf |  |
+| Tl_std | Celsius degree | Float | Standard deviation of the leaf temperature of all pixels in the mask for the leaf |  |
+| Date_walz | UTC | ISODateFormat | Date of measurement of the response curves on which the parameters are fitted on (VcMaxRef, JMaxRef, RdRef, g0 and g1) |  |
+| Leaf_walz | ID | Int | ID of the leaf on which the response curve was measured |  |
+| VcMaxRef | μmol m⁻² s⁻¹ | Float | Reference VcMax, fitted on the response curve preceding the plant sequence |  |
+| JMaxRef | μmol m⁻² s⁻¹ | Float | Reference JMax, fitted on the response curve preceding the plant sequence |  |
+| RdRef | μmol m⁻² s⁻¹ | Float | Reference Rd, fitted on the response curve preceding the plant sequence |  |
+| TPURef | μmol m⁻² s⁻¹ | Float | Reference TPU, fitted on the response curve preceding the plant sequence |  |
+| Tr | Celsius degree | Float | Reference temperature on which the parameters were fitted |  |
+| g0 | mol[CO2] m⁻² s⁻¹ | Float | g0, fitted on the response curve preceding the plant sequence |  |
+| g1 | kPa\^0.5 | Float | g1, fitted on the response curve preceding the plant sequence |  |
+| VcMaxRef_mean_leaf | μmol m⁻² s⁻¹ | Float | Reference VcMax, averaged on all measurements of this leaf during the whole experiment |  |
+| JMaxRef_mean_leaf | μmol m⁻² s⁻¹ | Float | Reference JMax, averaged on all measurements of this leaf during the whole experiment |  |
+| RdRef_mean_leaf | μmol m⁻² s⁻¹ | Float | Reference RdMax, averaged on all measurements of this leaf during the whole experiment |  |
+| TPURef_mean_leaf | μmol m⁻² s⁻¹ | Float | Reference TPU, averaged on all measurements of this leaf during the whole experiment |  |
+| Tr_mean_leaf | μmol m⁻² s⁻¹ | Float | Reference temperature on which the parameters were fitted, averaged over all measurements on that leaf during the whole experiment |  |
+| g0_mean_leaf | mol[CO2] m⁻² s⁻¹ | Float | g0, averaged on all measurements of this leaf during the whole experiment |  |
+| g1_mean_leaf | kPa\^0.5 | Float | g1, averaged on all measurements of this leaf during the whole experiment |  |
+| VcMaxRef_mean_plant | μmol m⁻² s⁻¹ | Float | Reference VcMax, averaged on all measurements of this plant (whatever the leaf) during the whole experiment |  |
+| JMaxRef_mean_plant | μmol m⁻² s⁻¹ | Float | Reference JMax, averaged on all measurements of this plant (whatever the leaf) during the whole experiment |  |
+| RdRef_mean_plant | μmol m⁻² s⁻¹ | Float | Reference Rd, averaged on all measurements of this plant (whatever the leaf) during the whole experiment |  |
+| TPURef_mean_plant | μmol m⁻² s⁻¹ | Float | Reference TPU, averaged on all measurements of this plant (whatever the leaf) during the whole experiment |  |
+| Tr_mean_plant | μmol m⁻² s⁻¹ | Float | Reference temperature of the measurements, averaged on all measurements of this plant (whatever the leaf) during the whole experiment |  |
+| g0_mean_plant | mol[CO2] m⁻² s⁻¹ | Float | g0, averaged on all measurements of this plant (whatever the leaf) during the whole experiment |  |
+| g1_mean_plant | kPa\^0.5 | Float | g1, averaged on all measurements of this plant (whatever the leaf) during the whole experiment |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
 
-## Notebook links
+## Notebook links {#notebook-links}
 
 You may paste the commands into a terminal to open the Pluto notebooks. Note that you must install Julia first and Pluto on your global environment. See the [Usage](#usage) section for more details.
 
-### Climate
+### Climate {#climate}
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "02-climate/climate_notebook.jl")'
 ```
 
-### Time synchronization
+### Time synchronization {#time-synchronization}
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "03-time-synchronization/time_synchronization_notebook.jl")'
@@ -252,14 +251,13 @@ julia -e 'using Pluto; Pluto.run(notebook = "03-time-synchronization/time_synchr
 julia -e 'using Pluto; Pluto.run(notebook = "04-CO2/CO2_notebook.jl")'
 ```
 
-### Leaf temperature
+### Leaf temperature {#leaf-temperature}
 
 Computation: The leaf temperature is computed in a Julia script rather than a Pluto notebook because it takes a long time to process. You can find the script in the `05-thermal_camera_measurements/1-compute_leaf_temperature.jl`.
 
-> [!WARNING]
-> This notebook takes several hours to process as it computes the leaf temperature for each plant leaf for each image. It is recommended to run it on a powerful computer and know what you're doing.
+> [!WARNING] This notebook takes several hours to process as it computes the leaf temperature for each plant leaf for each image. It is recommended to run it on a powerful computer and know what you're doing.
 
-- Visualization:
+-   Visualization:
 
     ``` bash
     julia -e 'using Pluto; Pluto.run(notebook = "05-thermal_camera_measurements/2-visualize_temperature_notebook.jl")'
@@ -271,7 +269,7 @@ Computation: The leaf temperature is computed in a Julia script rather than a Pl
 julia -e 'using Pluto; Pluto.run(notebook = "06-transpiration/transpiration_notebook.jl")'
 ```
 
-### Leaf gas exchange
+### Leaf gas exchange {#leaf-gas-exchange}
 
 These are the A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves.
 
@@ -279,13 +277,13 @@ These are the A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves.
 julia -e 'using Pluto; Pluto.run(notebook = "07-walz/notebook_walz.jl")'
 ```
 
-### SPAD
+### SPAD {#spad}
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "08-spad/notebook_spad.jl")'
 ```
 
-### Making the database
+### Making the database {#making-the-database}
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "09-database/database_notebook.jl")'
@@ -301,16 +299,15 @@ julia -e 'using Pluto; Pluto.run(notebook = "10-reconstruction/visualize_plants_
 
 Note that if you want to do the 3D reconstructions of the plants alone, it can be done using a script. You'll have to open this repository in VS Code and then open a Julia REPL in the repository. Then, you can open and run the following script: "10-reconstruction/build_opfs.jl".
 
-Also, note that one of the data archive is not included in this repository because it is too large. You can download it from the Zenodo repository.
-It is named `lidar.tar.bz2`, and should be located in `00-data/lidar/lidar.tar.bz2`. We use the [unzip-http](https://github.com/saulpw/unzip-http) tool to extract and download only the necessary files from the whole archive.
+Also, note that one of the data archive is not included in this repository because it is too large. You can download it from the Zenodo repository. It is named `lidar.tar.bz2`, and should be located in `00-data/lidar/lidar.tar.bz2`. We use the [unzip-http](https://github.com/saulpw/unzip-http) tool to extract and download only the necessary files from the whole archive.
 
-## Usage
+## Usage {#usage}
 
-### Pluto
+### Pluto {#pluto}
 
 Most of the resources are Pluto reactive notebooks. You know when a Julia script (a `.jl` file) is a notebook when it starts with "\### A Pluto.jl notebook \###". In this case, Pluto is used to execute the file.
 
-#### Install Pluto
+#### Install Pluto {#install-pluto}
 
 To install Pluto, enter the package manager mode in Julia by pressing `]` in the REPL, and then execute the following code:
 
@@ -324,7 +321,7 @@ Then, each time you want to use Pluto, type the following command in the REPL (i
 using Pluto
 ```
 
-#### Open a notebook
+#### Open a notebook {#open-a-notebook}
 
 There are different ways to open a notebook, but the same function is always used: `Pluto.run()`.
 
@@ -345,7 +342,7 @@ Pluto.run(notebook = "02-climate/climate_notebook.jl")
 
 Watch [this video](https://www.youtube.com/watch?v=jdEqGOv8ycc&list=PLLiJ249IkzRFxZGALbKy75_ZyHxYCUmuk&index=4) if you need more details about how to use Pluto.
 
-### Download and instantiate
+### Download and instantiate {#download-and-instantiate}
 
 If you want to use the resources from this repository locally, the best way is to download a local copy (or clone it if you know GIT). To do so, click on the green button in this page called "Code":
 
