@@ -18,10 +18,6 @@ Make an OPF from the meshes of the leaves, spears, bulb and pot.
 * `translationxyz`: the translation that was applied to the mesh to put the center of the pot at the origin.
 """
 function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotations.AngleAxis(π, 0, 0, 1), scale=100.0)
-
-    # Empty reference meshes:
-    refmeshes = PlantGeom.RefMeshes(RefMesh[])
-
     # Create the base of the MTG (plant scale + Pot + first stipe):
     opf = MultiScaleTreeGraph.Node(1, NodeMTG("/", "Plant", 1, 0), Dict{Symbol,Any}())
 
@@ -33,14 +29,11 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
     translationxyz = [-p for p in Meshes.to(pot_center)]
     translationxyz[3] = -z_min
 
-    mesh_tri =
-        push!(
-            refmeshes.meshes,
-            PlantGeom.RefMesh(
-                "Pot",
-                # Triangulated quad mesh:
-                Meshes.simplexify(mesh |> Meshes.Translate(translationxyz...) |> Meshes.Rotate(rot))
-            )
+    mesh_pot =
+        PlantGeom.RefMesh(
+            "Pot",
+            # Triangulated quad mesh:
+            PlantGeom.to_geometrybasics(Meshes.simplexify(mesh |> Meshes.Translate(translationxyz...) |> Meshes.Rotate(rot)))
         )
     # Add the Pot to the OPF:
     prev_node = MultiScaleTreeGraph.Node(
@@ -48,26 +41,16 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
         opf,
         NodeMTG("/", "Pot", 1, 2),
         Dict{Symbol,Any}(
-            :geometry => PlantGeom.geometry(
-                refmeshes.meshes[end],
-                length(refmeshes.meshes),
-                TransformsBase.Identity(),
-                1,
-                1,
-                nothing,
-            )
+            :geometry => PlantGeom.Geometry(ref_mesh=mesh_pot)
         )
     )
 
     # Adding the bulb:
     mesh = readply(bulb_file[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Rotate(rot)
-    mesh_tri =
-        push!(
-            refmeshes.meshes,
-            PlantGeom.RefMesh(
-                "Bulb",
-                Meshes.simplexify(mesh) # Triangulated quad mesh
-            )
+    mesh_bulb =
+        PlantGeom.RefMesh(
+            "Bulb",
+            PlantGeom.to_geometrybasics(Meshes.simplexify(mesh)) # Triangulated quad mesh
         )
 
     prev_stipe = MultiScaleTreeGraph.Node(
@@ -75,14 +58,7 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
         prev_node,
         NodeMTG("<", "Bulb", 1, 2),
         Dict{Symbol,Any}(
-            :geometry => PlantGeom.geometry(
-                refmeshes.meshes[end],
-                length(refmeshes.meshes),
-                TransformsBase.Identity(),
-                1,
-                1,
-                nothing,
-            )
+            :geometry => PlantGeom.Geometry(ref_mesh=mesh_bulb)
         )
     )
 
@@ -93,17 +69,14 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
     for i in leaves_files
         # i = leaves_files[1]
         mesh = readply(i) |> Meshes.Translate(translationxyz...) |> Meshes.Rotate(rot)
-        mesh_tri = Meshes.simplexify(mesh) # Triangulate the quad mesh for Archimed
+        mesh_tri = PlantGeom.to_geometrybasics(Meshes.simplexify(mesh)) # Triangulate the quad mesh for Archimed
         id_leaf = parse(Int, replace(basename(i), ".ply" => "", r"Plant_[0-9]_[0-9][0-9]_[0-9][0-9]_[0-9]{4}_R" => "")) # Get the leaf number
         # Add stipe (no mesh but we want a goof MTG):
         prev_stipe = MultiScaleTreeGraph.Node(id[1], prev_stipe, NodeMTG("<", "Stipe", 1, 3), Dict{Symbol,Any}())
-        push!(
-            refmeshes.meshes,
-            PlantGeom.RefMesh(
-                "Rank_$id_leaf",
-                mesh_tri
-                # , Colors.RGB(1.0, 1.0, 1.0)
-            )
+        mesh_leaf = PlantGeom.RefMesh(
+            "Rank_$id_leaf",
+            mesh_tri
+            # , Colors.RGB(1.0, 1.0, 1.0)
         )
         # viz(mesh_tri)
         # Add leaf:
@@ -113,17 +86,9 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
             prev_stipe,
             NodeMTG("+", "Leaf", id_leaf, 3),
             Dict{Symbol,Any}(
-                :geometry => PlantGeom.geometry(
-                    refmeshes.meshes[end],
-                    length(refmeshes.meshes),
-                    TransformsBase.Identity(),
-                    1,
-                    1,
-                    nothing
-                )
+                :geometry => PlantGeom.Geometry(ref_mesh=mesh_leaf)
             ) # add geometry here
         )
-        # opf[:ref_meshes] = refmeshes; viz(opf)
         id[1] += 1
     end
 
@@ -132,33 +97,21 @@ function meshes_to_opf(leaves_files, spear_files, bulb_file, pot_file; rot=Rotat
         prev_stipe = MultiScaleTreeGraph.Node(id[1], prev_stipe, NodeMTG("<", "Stipe", 1, 3), Dict{Symbol,Any}())
         id[1] += 1
         mesh = readply(spear_files[1]) |> Meshes.Translate(translationxyz...) |> Meshes.Rotate(rot)
-        mesh_tri = Meshes.simplexify(mesh) # Triangulate the quad mesh for Archimed
-        push!(
-            refmeshes.meshes,
-            PlantGeom.RefMesh(
-                "Spear",
-                mesh_tri
-                # , Colors.RGB(1.0, 1.0, 1.0)
-            )
+        mesh_tri = PlantGeom.to_geometrybasics(Meshes.simplexify(mesh)) # Triangulate the quad mesh for Archimed
+        mesh_spear = PlantGeom.RefMesh(
+            "Spear",
+            mesh_tri
+            # , Colors.RGB(1.0, 1.0, 1.0)
         )
         MultiScaleTreeGraph.Node(
             id[1],
             prev_stipe,
             NodeMTG("+", "Spear", 1, 3),
             Dict{Symbol,Any}(
-                :geometry => PlantGeom.geometry(
-                    refmeshes.meshes[end],
-                    length(refmeshes.meshes),
-                    TransformsBase.Identity(),
-                    1,
-                    1,
-                    nothing
-                )
+                :geometry => PlantGeom.Geometry(ref_mesh=mesh_spear)
             ) # add geometry here
         )
     end
-
-    append!(opf, Dict(:ref_meshes => refmeshes))
 
     return opf, translationxyz
 end

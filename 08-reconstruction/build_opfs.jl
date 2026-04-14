@@ -24,6 +24,9 @@ reconstruction_folders = filter(x -> startswith(basename(x), "Plant_"), readdir(
 # List the lidar sessions:
 LiDAR_sessions = filter(x -> startswith(basename(x), "SESSION"), readdir("00-data/lidar/lidar", join=true))
 
+# Ensure output directory exists before writing OPFs.
+mkpath("08-reconstruction/reconstructions")
+
 # Reconstruct the OPF for each plant from the set of meshes:
 rot = Rotations.AngleAxis(π, 0, 0, 1) # Rotate the meshes by 180° around the z-axis
 translations = DataFrame(plant=Int[], date_reconstruction=Date[], x=Any[], y=Any[], z=Any[])
@@ -53,7 +56,7 @@ for i in reconstruction_folders # i = reconstruction_folders[3]
 end
 
 # Save the translations, note that we remove the units for writing:
-CSV.write("08-reconstruction/translations.csv", transform(translations, [:x, :y, :z] .=> (x -> ustrip.(x)) .=> [:x, :y, :z]))
+CSV.write("08-reconstruction/translations.csv", DataFrames.transform(translations, [:x, :y, :z] .=> (x -> ustrip.(x)) .=> [:x, :y, :z]))
 
 # Compress the reconstructions:
 begin
@@ -78,9 +81,7 @@ end
 session = sessions[1]
 
 opf = read_opf(files_plant[findfirst(x -> x == session, sessions)])
-transform!(opf, refmesh_to_mesh!)
-transform!(opf, :geometry => (x -> [coords(i).z for i in x.mesh.vertices]) => :z, ignore_nothing=true)
-
+MultiScaleTreeGraph.transform!(opf, (node -> PlantGeom.has_geometry(node) ? map(x -> x[3], PlantGeom.GeometryBasics.coordinates(refmesh_to_mesh(node))) : nothing) => :z)
 transl = filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read("08-reconstruction/translations.csv", DataFrame))
 
 lidar = let
@@ -105,7 +106,7 @@ begin
     fig = Figure(size=(2400, 1200))
     ax = LScene(fig[1, 1])
     viz!(ax, lidar.points, color=lidar.Reflectance, markersize=5, alpha=0.5)
-    viz!(ax, opf, color=:z, showfacets=true, color_vertex=true, alpha=0.5)
+    plantviz!(ax, opf, color=:z, alpha=0.5)
     # GLMakie.save("11-outputs/Reconstruction_Plant_$(plant)_$(session).png", fig)
     fig
 end
@@ -115,9 +116,7 @@ function plot_opf_and_lidar!(ax, plant, session)
     sessions = get_sessions(plant)
     opf_file = files_plant[findfirst(x -> x == session, sessions)]
     opf = read_opf(opf_file)
-    transform!(opf, refmesh_to_mesh!)
-    transform!(opf, :geometry => (x -> [coords(i).z for i in x.mesh.vertices]) => :z, ignore_nothing=true)
-
+    MultiScaleTreeGraph.transform!(opf, (node -> PlantGeom.has_geometry(node) ? map(x -> x[3], PlantGeom.GeometryBasics.coordinates(refmesh_to_mesh(node))) : nothing) => :z)
     transl = filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read("08-reconstruction/translations.csv", DataFrame))
 
     lidar = let
@@ -125,7 +124,7 @@ function plot_opf_and_lidar!(ax, plant, session)
         folder_session = LiDAR_sessions[findfirst(x -> occursin(Dates.format(session, dateformat"dd_mm_yyyy"), basename(x)), LiDAR_sessions)]
         # Grep the plant in the session:
         session_files = readdir(folder_session, join=true)
-        plant_file = session_files[findfirst(x -> occursin("Plant$(plant).txt", basename(x)), session_files)]
+        plant_file = session_files[findfirst(x -> occursin(Regex("^Plant$(plant).txt\$"), basename(x)), session_files)]
         df_ = CSV.read(plant_file, DataFrame, header=["X", "Y", "Z", "Reflectance"], skipto=2)
         LiDAR_points = Meshes.Point[]
         LiDAR_reflectance = Float64[]
@@ -138,7 +137,7 @@ function plot_opf_and_lidar!(ax, plant, session)
     end
 
     viz!(ax, lidar.points, color=lidar.Reflectance, markersize=0.1, alpha=0.1)
-    viz!(ax, opf, color=:z, showfacets=true, color_vertex=true, alpha=0.5)
+    plantviz!(ax, opf, color=:z, alpha=0.5)
 end
 
 
