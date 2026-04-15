@@ -2,24 +2,24 @@
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12704284.svg)](https://doi.org/10.5281/zenodo.12704284)
 
--   [Ecotron 2021](#ecotron-2021)
-    -   [Folder structure](#folder-structure)
-    -   [Database](#database)
-    -   [Notebook links](#notebook-links)
-        -   [Climate](#climate)
-        -   [Time synchronization](#time-synchronization)
-        -   [CO₂ fluxes](#co-fluxes)
-        -   [Leaf temperature](#leaf-temperature)
-        -   [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
-        -   [Leaf gas exchange](#leaf-gas-exchange)
-        -   [SPAD](#spad)
-        -   [Making the database](#making-the-database)
-        -   [3D reconstructions](#3d-reconstructions)
-    -   [Usage](#usage)
-        -   [Pluto](#pluto)
-            -   [Install Pluto](#install-pluto)
-            -   [Open a notebook](#open-a-notebook)
-        -   [Download and instantiate](#download-and-instantiate)
+- [Ecotron 2021 {#ecotron-2021}](#ecotron-2021-ecotron-2021)
+  - [Folder structure {#folder-structure}](#folder-structure-folder-structure)
+  - [Database {#database}](#database-database)
+  - [Notebook links {#notebook-links}](#notebook-links-notebook-links)
+    - [Climate {#climate}](#climate-climate)
+    - [Time synchronization {#time-synchronization}](#time-synchronization-time-synchronization)
+    - [CO₂ fluxes](#co-fluxes)
+    - [Leaf temperature {#leaf-temperature}](#leaf-temperature-leaf-temperature)
+    - [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
+    - [Leaf gas exchange {#leaf-gas-exchange}](#leaf-gas-exchange-leaf-gas-exchange)
+    - [SPAD {#spad}](#spad-spad)
+    - [Making the database {#making-the-database}](#making-the-database-making-the-database)
+    - [3D reconstructions](#3d-reconstructions)
+  - [Usage {#usage}](#usage-usage)
+    - [Pluto {#pluto}](#pluto-pluto)
+      - [Install Pluto {#install-pluto}](#install-pluto-install-pluto)
+      - [Open a notebook {#open-a-notebook}](#open-a-notebook-open-a-notebook)
+    - [Download and instantiate {#download-and-instantiate}](#download-and-instantiate-download-and-instantiate)
 
 The Ecotron is a controlled environment facility for plants located in Montpellier, France. In this work, we did an experiment that investigated the behaviour of oil palm (*Elaeis guineensis*) in response to different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day with no rainfall and near-average air temperature and humidity. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapour pressure deficit.
 
@@ -70,6 +70,7 @@ This folder
 │   │   └── Mic4_door_opening.csv  --> Door opening data for the Mic4 chamber
 │   ├── morphology_and_biomass     --> Morphological and biomass data from destruction at the end (weight, height, etc.)
 │   │   ├── bulbs_weight.csv       --> Bulb weight data
+│   │   ├── leaf_size.csv.         --> Leaf dimensions data
 │   │   ├── leaves_weight.csv      --> Leaves weight data
 │   │   └── roots_weight.csv       --> Roots weight data
 │   ├── picarro_flux                --> CO2 flux data from the Picarro
