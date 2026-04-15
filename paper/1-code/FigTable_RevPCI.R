@@ -373,7 +373,7 @@ ggsave(filename = "2-figuresTables/reconstruction.pdf", width = 10, height = 11)
 
 ### evolution of area
 
-fullarea=fread('../00-data/LiDAR/reconstructions/surface.csv')
+fullarea = fread('../00-data/LiDAR/reconstructions/plant_surface_from_mesh.csv')
 fullarea[fullarea$plant=='P5','plant']='P4'
 
 fullarea=merge(fullarea,cal)
