@@ -119,9 +119,9 @@ function plot_opf_and_lidar!(ax, plant, session)
     opf_file = files_plant[findfirst(x -> x == session, sessions)]
     opf = read_opf(opf_file)
     MultiScaleTreeGraph.transform!(opf, (node -> PlantGeom.has_geometry(node) ? map(x -> x[3], PlantGeom.GeometryBasics.coordinates(refmesh_to_mesh(node))) : nothing) => :z)
-    transl = filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read("08-reconstruction/translations.csv", DataFrame))
     z_value = vcat(descendants(opf, :z, ignore_nothing=true)...)
     merged_mesh, face2node = PlantGeom.build_merged_mesh_with_map(opf)
+    transl = filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read("08-reconstruction/translations.csv", DataFrame))
 
     lidar = let
         # 1. Find the lidar session corresponding to the reconstruction:
