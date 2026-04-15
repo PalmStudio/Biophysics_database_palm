@@ -71,7 +71,7 @@ Each plant was monitored in the microcosm 3 for a sequence of one or more scenar
 df_scenario = let
     df_ = CSV.read("../00-data/scenario_sequence/SequenceScenarioMicro3.csv", DataFrame)
     transform!(df_, :Date => (x -> Date.(x, dateformat"dd/mm/yyyy")) => :Date)
-	df_.Scenario[df_.Scenario .== "Cloudy"] .= "LowPAR"
+    df_.Scenario[df_.Scenario.=="Cloudy"] .= "LowPAR"
     df_
 end
 
@@ -98,19 +98,19 @@ scenario_id = CSV.read("../00-data/scenario_sequence/scenario_id_actual.csv", Da
 
 # ╔═╡ aa619abf-00ee-44a2-8e69-f1eaaab38fdf
 let
-	# This was done only once, but we keep it for posterity
-	if false
-	# From the file from Raphaël:
-	df_ = CSV.read("../00-data/scenario_sequence/Tag_database.csv", DataFrame)
-	df_ = combine(
-		groupby(df_, [:DateTime_start, :DateTime_end, :Sequence]),
-		:DateTime_start_sequence => (x -> only(unique(x))) => :DateTime_start_sequence,
-		:DateTime_end_sequence => (x -> only(unique(x))) => :DateTime_end_sequence,
-		:Scenario_cor => (x -> only(unique(x))) => :Scenario_actual,
-		:outlier => (x -> only(unique(x))) => :outlier,
-	)
-	CSV.write("../00-data/scenario_sequence/scenario_id_actual.csv", df_)
-	end
+    # This was done only once, but we keep it for posterity
+    if false
+        # From the file from Raphaël:
+        df_ = CSV.read("../00-data/scenario_sequence/Tag_database.csv", DataFrame)
+        df_ = combine(
+            groupby(df_, [:DateTime_start, :DateTime_end, :Sequence]),
+            :DateTime_start_sequence => (x -> only(unique(x))) => :DateTime_start_sequence,
+            :DateTime_end_sequence => (x -> only(unique(x))) => :DateTime_end_sequence,
+            :Scenario_cor => (x -> only(unique(x))) => :Scenario_actual,
+            :outlier => (x -> only(unique(x))) => :outlier,
+        )
+        CSV.write("../00-data/scenario_sequence/scenario_id_actual.csv", df_)
+    end
 end
 
 # ╔═╡ b67defe6-42cf-4bf6-b2ed-714d1b14f6ec
@@ -232,7 +232,7 @@ surface = let
     end
 
     f = readdir(reconstruction_dir, join=true)
-    surface_file_index = findfirst(x -> x == "surface.csv", [basename(i) for i in f])
+    surface_file_index = findfirst(x -> x == "plant_surface_from_mesh.csv", [basename(i) for i in f])
     df_ = CSV.read(f[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy", delim=" ", ignorerepeated=true)
     select!(
         df_,
@@ -448,8 +448,8 @@ db_5min = let
     db_ = leftjoin(db_, leaf_temperature_5min, on=[:DateTime_start_output => :DateTime_start], makeunique=true)
     transform!(db_, :DateTime_start_output => (x -> Date.(x)) => :Date)
     db_ = leftjoin(db_, df_scenario, on=:Date, makeunique=true)
-	db_ = leftjoin(db_, select(scenario_id, :DateTime_start, :Scenario_actual, :outlier), on=:DateTime_start_output => :DateTime_start, makeunique=true)
-	
+    db_ = leftjoin(db_, select(scenario_id, :DateTime_start, :Scenario_actual, :outlier), on=:DateTime_start_output => :DateTime_start, makeunique=true)
+
     #filter!(row -> !ismissing(row.Plant_1), db_)
 
     # Adding the plant sequence:
@@ -471,7 +471,7 @@ db_5min = let
     select!(
         db_,
         # :Scenario,
-		:Scenario_actual => :Scenario,
+        :Scenario_actual => :Scenario,
         #:Plant_1 => :Plant,
         :leaf => :Leaf,
         :DateTime_start_output,
@@ -479,7 +479,7 @@ db_5min = let
         :DateTime_end => :DateTime_end_CO2_in,
         :DateTime_start_sequence,
         :DateTime_end_sequence,
-		:outlier,
+        :outlier,
         #:DateTime_end_CO2_in,
         :CO2_flux_umol_s => :CO2_outflux_umol_s,
         :CO2_dry_input,
@@ -524,11 +524,11 @@ db_5min = let
         db_,
         :DateTime_start,
         :DateTime_end,
-        :Scenario, 
-		:Sequence,
+        :Scenario,
+        :Sequence,
         :Plant, :Leaf,
         :DateTime_start_sequence, :DateTime_end_sequence,
-		:outlier,
+        :outlier,
         :
     )
 
@@ -594,10 +594,10 @@ pTemp_all = let
     p = data(df_) *
         mapping(:DateTime_start => Time => "Time", :Tl_mean, color=:Leaf, row=:Scenario, col=:Plant => string) *
         visual(Scatter) +
-		data(df_) *
-		mapping(:DateTime_start => Time => "Time", :Ta_measurement => :Tair, row=:Scenario, col=:Plant => string) *
+        data(df_) *
+        mapping(:DateTime_start => Time => "Time", :Ta_measurement => :Tair, row=:Scenario, col=:Plant => string) *
         visual(Scatter, color=:red)
-		
+
     draw(p, axis=(width=150, height=200, xticks=datetimeticks(df_.DateTime_start, Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
 end
 
@@ -632,7 +632,7 @@ db_10min = let
     db_ = leftjoin(db_, leaf_temperature_10min, on=[:DateTime_start_input => :DateTime_start], makeunique=true)
     transform!(db_, :DateTime_start_input => (x -> Date.(x)) => :Date)
     db_ = leftjoin(db_, df_scenario, on=:Date, makeunique=true)
-	db_ = leftjoin(db_, select(scenario_id, :DateTime_start, :Scenario_actual, :outlier), on=:DateTime_start_output => :DateTime_start, makeunique=true)
+    db_ = leftjoin(db_, select(scenario_id, :DateTime_start, :Scenario_actual, :outlier), on=:DateTime_start_output => :DateTime_start, makeunique=true)
 
     # filter!(row -> !ismissing(row.Plant_1), db_)
 
@@ -654,8 +654,8 @@ db_10min = let
 
     select!(
         db_,
-		:Scenario_actual => :Scenario,
-		:outlier,
+        :Scenario_actual => :Scenario,
+        :outlier,
         #:Plant_1 => :Plant,
         :leaf => :Leaf,
         :DateTime_start_input => :DateTime_start,
@@ -707,11 +707,11 @@ db_10min = let
         db_,
         :DateTime_start,
         :DateTime_end,
-        :Scenario, 
-		:Sequence,
+        :Scenario,
+        :Sequence,
         :Plant, :Leaf,
         :DateTime_start_sequence, :DateTime_end_sequence,
-		:outlier,
+        :outlier,
         :
     )
 
@@ -2659,7 +2659,7 @@ version = "4.1.0+0"
 # ╟─bd722b73-66b5-4012-a543-ab6243e93584
 # ╠═6d1e495e-edf0-4baa-bd43-affc5ce95bf0
 # ╟─248ebaab-c078-4c63-8247-57db235f3401
-# ╠═4088884b-f1de-40e3-82e6-95118def79b7
+# ╟─4088884b-f1de-40e3-82e6-95118def79b7
 # ╟─688984ea-7c45-4dc8-97f6-94467a3caa83
 # ╟─1b91d8e4-d5aa-48c8-adeb-6ed5a9965ec1
 # ╟─d6ba6743-3ba0-4e04-b2bf-431a524ce6e5
