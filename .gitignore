@@ -41,6 +41,7 @@ generation_report.html
 !00-data/morphology_and_biomass/leaves_weight.csv
 !00-data/morphology_and_biomass/bulbs_weight.csv
 !00-data/morphology_and_biomass/roots_weight.csv
+!00-data/morphology_and_biomass/leaf_size.csv
 !00-data/lidar/reconstructions.tar.bz2
 
 !01-climate/climate_mic3_5min.csv
