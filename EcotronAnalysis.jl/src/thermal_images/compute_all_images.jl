@@ -26,7 +26,7 @@ function compute_jpg_temperature_batch(
 )
     # n = partitions[1]
     mask_files = readdir(mask_dir, join=true)
-    mask_files = filter(x -> occursin(r".csv$", x), mask_files)
+    mask_files = filter(x -> occursin(r"^P.csv$", x), mask_files)
 
     image_files = readdir(img_dir, join=true)
     image_files = filter(x -> !startswith(basename(x), ".") && endswith(basename(x), ".jpg"), image_files)
