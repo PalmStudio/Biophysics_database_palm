@@ -1,25 +1,25 @@
-# Ecotron 2021 {#ecotron-2021}
+# Ecotron 2021
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.12704284.svg)](https://doi.org/10.5281/zenodo.12704284)
 
-- [Ecotron 2021 {#ecotron-2021}](#ecotron-2021-ecotron-2021)
-  - [Folder structure {#folder-structure}](#folder-structure-folder-structure)
-  - [Database {#database}](#database-database)
-  - [Notebook links {#notebook-links}](#notebook-links-notebook-links)
-    - [Climate {#climate}](#climate-climate)
-    - [Time synchronization {#time-synchronization}](#time-synchronization-time-synchronization)
+- [Ecotron 2021](#ecotron-2021)
+  - [Folder structure](#folder-structure)
+  - [Database](#database)
+  - [Notebook links](#notebook-links)
+    - [Climate](#climate)
+    - [Time synchronization](#time-synchronization)
     - [CO₂ fluxes](#co-fluxes)
-    - [Leaf temperature {#leaf-temperature}](#leaf-temperature-leaf-temperature)
+    - [Leaf temperature](#leaf-temperature)
     - [H₂O fluxes (transpiration)](#ho-fluxes-transpiration)
-    - [Leaf gas exchange {#leaf-gas-exchange}](#leaf-gas-exchange-leaf-gas-exchange)
-    - [SPAD {#spad}](#spad-spad)
-    - [Making the database {#making-the-database}](#making-the-database-making-the-database)
+    - [Leaf gas exchange](#leaf-gas-exchange)
+    - [SPAD](#spad)
+    - [Making the database](#making-the-database)
     - [3D reconstructions](#3d-reconstructions)
-  - [Usage {#usage}](#usage-usage)
-    - [Pluto {#pluto}](#pluto-pluto)
-      - [Install Pluto {#install-pluto}](#install-pluto-install-pluto)
-      - [Open a notebook {#open-a-notebook}](#open-a-notebook-open-a-notebook)
-    - [Download and instantiate {#download-and-instantiate}](#download-and-instantiate-download-and-instantiate)
+  - [Usage](#usage)
+    - [Pluto](#pluto)
+      - [Install Pluto](#install-pluto)
+      - [Open a notebook](#open-a-notebook)
+    - [Download and instantiate](#download-and-instantiate)
 
 The Ecotron is a controlled environment facility for plants located in Montpellier, France. In this work, we did an experiment that investigated the behaviour of oil palm (*Elaeis guineensis*) in response to different environmental conditions. The conditions were defined based on an average daily variation from Libo, Indonesia, *i.e.* a day with no rainfall and near-average air temperature and humidity. This base condition was then modified by adding more CO2, less radiation, more or less temperature, and more or less vapour pressure deficit.
 
@@ -53,7 +53,7 @@ Here are the reconstructions of the plants on top of the point clouds over time:
 
 ![3d reconstruction](11-outputs/Reconstructions_LiDAR_all.png)
 
-## Folder structure {#folder-structure}
+## Folder structure
 
 ``` text
 This folder
@@ -148,7 +148,7 @@ This folder
 └── README.md                      --> This file
 ```
 
-## Database {#database}
+## Database
 
 The database of all processed data is in the `09-database` folder or in the releases of this repository. It is available in two versions: one aggregated to match the 10-minute CO2 measurement and one aggregated to match the 5-minute output CO2 measurement.
 
@@ -224,17 +224,16 @@ The database has the following columns:
 |  |  |  |  |  |
 |  |  |  |  |  |
 
-## Notebook links {#notebook-links}
-
+## Notebook links
 You may paste the commands into a terminal to open the Pluto notebooks. Note that you must install Julia first and Pluto on your global environment. See the [Usage](#usage) section for more details.
 
-### Climate {#climate}
+### Climate
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "01-climate/climate_notebook.jl")'
 ```
 
-### Time synchronization {#time-synchronization}
+### Time synchronization
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "02-time-synchronization/time_synchronization_notebook.jl")'
@@ -246,7 +245,7 @@ julia -e 'using Pluto; Pluto.run(notebook = "02-time-synchronization/time_synchr
 julia -e 'using Pluto; Pluto.run(notebook = "03-CO2/CO2_notebook.jl")'
 ```
 
-### Leaf temperature {#leaf-temperature}
+### Leaf temperature
 
 Computation: The leaf temperature is computed in a Julia script rather than a Pluto notebook because it takes a long time to process. You can find the script in the `04-thermal_camera_measurements/1-compute_leaf_temperature.jl`.
 
@@ -264,7 +263,7 @@ Computation: The leaf temperature is computed in a Julia script rather than a Pl
 julia -e 'using Pluto; Pluto.run(notebook = "05-transpiration/transpiration_notebook.jl")'
 ```
 
-### Leaf gas exchange {#leaf-gas-exchange}
+### Leaf gas exchange
 
 These are the A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves.
 
@@ -272,13 +271,13 @@ These are the A-Cᵢ and Gs-A/(Cₐ√Dₗ) response curves.
 julia -e 'using Pluto; Pluto.run(notebook = "06-walz/notebook_walz.jl")'
 ```
 
-### SPAD {#spad}
+### SPAD
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "07-spad/notebook_spad.jl")'
 ```
 
-### Making the database {#making-the-database}
+### Making the database
 
 ``` bash
 julia -e 'using Pluto; Pluto.run(notebook = "09-database/database_notebook.jl")'
@@ -296,13 +295,13 @@ Note that if you want to do the 3D reconstructions of the plants alone, it can b
 
 Also, note that one of the data archive is not included in this repository because it is too large. You can download it from the Zenodo repository. It is named `lidar.tar.bz2`, and should be located in `00-data/lidar/lidar.tar.bz2`. We use the [unzip-http](https://github.com/saulpw/unzip-http) tool to extract and download only the necessary files from the whole archive.
 
-## Usage {#usage}
+## Usage
 
-### Pluto {#pluto}
+### Pluto
 
 Most of the resources are Pluto reactive notebooks. You know when a Julia script (a `.jl` file) is a notebook when it starts with "\### A Pluto.jl notebook \###". In this case, Pluto is used to execute the file.
 
-#### Install Pluto {#install-pluto}
+#### Install Pluto
 
 To install Pluto, enter the package manager mode in Julia by pressing `]` in the REPL, and then execute the following code:
 
@@ -316,7 +315,7 @@ Then, each time you want to use Pluto, type the following command in the REPL (i
 using Pluto
 ```
 
-#### Open a notebook {#open-a-notebook}
+#### Open a notebook
 
 There are different ways to open a notebook, but the same function is always used: `Pluto.run()`.
 
@@ -337,7 +336,7 @@ Pluto.run(notebook = "01-climate/climate_notebook.jl")
 
 Watch [this video](https://www.youtube.com/watch?v=jdEqGOv8ycc&list=PLLiJ249IkzRFxZGALbKy75_ZyHxYCUmuk&index=4) if you need more details about how to use Pluto.
 
-### Download and instantiate {#download-and-instantiate}
+### Download and instantiate
 
 If you want to use the resources from this repository locally, the best way is to download a local copy (or clone it if you know GIT). To do so, click on the green button in this page called "Code":
 
