@@ -106,7 +106,9 @@ begin
     fig = Figure(size=(2400, 1200))
     ax = LScene(fig[1, 1])
     viz!(ax, lidar.points, color=lidar.Reflectance, markersize=5, alpha=0.5)
-    plantviz!(ax, opf, color=:z, alpha=0.5)
+    z_value = vcat(descendants(opf, :z, ignore_nothing=true)...)
+    merged_mesh, face2node = PlantGeom.build_merged_mesh_with_map(opf)
+    mesh!(ax, merged_mesh, color=z_value, alpha=0.5)
     # GLMakie.save("11-outputs/Reconstruction_Plant_$(plant)_$(session).png", fig)
     fig
 end
@@ -118,6 +120,8 @@ function plot_opf_and_lidar!(ax, plant, session)
     opf = read_opf(opf_file)
     MultiScaleTreeGraph.transform!(opf, (node -> PlantGeom.has_geometry(node) ? map(x -> x[3], PlantGeom.GeometryBasics.coordinates(refmesh_to_mesh(node))) : nothing) => :z)
     transl = filter(x -> x.plant == plant && x.date_reconstruction == session, CSV.read("08-reconstruction/translations.csv", DataFrame))
+    z_value = vcat(descendants(opf, :z, ignore_nothing=true)...)
+    merged_mesh, face2node = PlantGeom.build_merged_mesh_with_map(opf)
 
     lidar = let
         # 1. Find the lidar session corresponding to the reconstruction:
@@ -137,7 +141,7 @@ function plot_opf_and_lidar!(ax, plant, session)
     end
 
     viz!(ax, lidar.points, color=lidar.Reflectance, markersize=0.1, alpha=0.1)
-    plantviz!(ax, opf, color=:z, alpha=0.5)
+    mesh!(ax, merged_mesh, color=z_value, alpha=0.5)
 end
 
 
