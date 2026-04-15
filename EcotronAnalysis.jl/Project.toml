@@ -1,7 +1,7 @@
 name = "EcotronAnalysis"
 uuid = "15d6e983-43c8-42c7-802c-5e0543598720"
-authors = ["Rémi Vezy <VEZY@users.noreply.github.com> and contributors"]
 version = "0.1.0"
+authors = ["Rémi Vezy <VEZY@users.noreply.github.com> and contributors"]
 
 [deps]
 ArchGDAL = "c9ce4bd3-c3d5-55b8-8973-c0e20141b8c3"
