@@ -81,6 +81,8 @@ This folder
 │   │   └── weights.tar.bz2        --> Weight data archive
 │   ├── scenario_sequence          --> Sequence of the scenarios
 │   │   ├── README.md              --> Instructions on how to use the scenario sequence data
+│   │   ├── calendar.csv           --> Calendar of the different events happening to the plants during the experiment
+│   │   ├── scenario_id_actual.csv --> Actual scenario associated to each observation (i.e. time-step) in the experiment
 │   │   ├── SequencePlanteMicro3.csv -> Sequence of measurement in Mic3 for the plants
 │   │   └── SequenceScenarioMicro3.csv -> Sequence of the scenarios in Mic3 for each day
 │   ├── smse                       --> Reference meteorological data from Sumatra 2008-2018
