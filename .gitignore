@@ -58,6 +58,7 @@ generation_report.html
 !07-spad/SPAD_models.csv
 !09-database/database_5min.csv.bz2
 !09-database/database_10min.csv.bz2
+!09-database/database_light_experiment.csv.bz2
 !09-database/columns.csv
 !09-database/plant_surface.csv
 !08-reconstruction/translations.csv

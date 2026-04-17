@@ -30,6 +30,7 @@ begin
     using Statistics
     using PlutoUI
     using CairoMakie, AlgebraOfGraphics
+	using ZipFile
 end
 
 # ╔═╡ e85f0778-b384-11ed-304a-891e802cbdae
@@ -138,9 +139,7 @@ CO2 fluxes, measured every 10 minutes for 5 minutes. The first five minutes are 
 """
 
 # ╔═╡ 4158de69-29ff-4402-873b-7287e7e74b48
-CO2 = let
-    df_ = CSV.read("../03-CO2/CO2_fluxes.csv", DataFrame)
-end
+CO2 = CSV.read("../03-CO2/CO2_fluxes.csv", DataFrame)
 
 # ╔═╡ 3013d612-b8ff-45be-b159-aaadc19fa86f
 md"""
@@ -223,7 +222,7 @@ We measured the area of each leaf on the plants at the end of the experiment. We
 """
 
 # ╔═╡ 3a26dc05-e3e6-466e-a3eb-bbca0e5b9adf
-surface = let
+df_surface = let
     reconstruction_dir = "../00-data/lidar/reconstructions"
     if !isdir(reconstruction_dir)
         open(Bzip2DecompressorStream, "../00-data/lidar/reconstructions.tar.bz2") do io
@@ -233,7 +232,7 @@ surface = let
 
     f = readdir(reconstruction_dir, join=true)
     surface_file_index = findfirst(x -> x == "plant_surface_from_mesh.csv", [basename(i) for i in f])
-    df_ = CSV.read(f[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy", delim=" ", ignorerepeated=true)
+    df_ = CSV.read(f[surface_file_index], DataFrame, dateformat=dateformat"dd/mm/yyyy", delim=";", ignorerepeated=true)
     select!(
         df_,
         :Date,
@@ -242,6 +241,84 @@ surface = let
         # 113.0 * 114.0 is the chamber dimensions
     )
     df_
+end
+
+# ╔═╡ 430d3cde-90dc-4b74-a720-d1d09b5d5c08
+md"""
+### Dynamic IRGA
+
+We measured gas exchange at two scales to assess how ambient light conditions influence photosynthesis measurements: at the plant scale using the microcosm, and at the leaflet scale using a Walz GFS-3000. Leaflet measurements were performed under two configurations: either with the chamber light following ambient microcosm conditions (WalzOpen), or with a constant saturating light (WalzClosed).
+"""
+
+# ╔═╡ 206689af-c37a-41c8-b3f5-8d723ee0994b
+md"""
+Loading the Walz data (portable gas exchange analyser):
+"""
+
+# ╔═╡ e2f7b2d5-b8b5-41f4-8660-7bbdbbc81bbc
+df_closed_walz = let
+	df_ = CSV.read(
+		[
+			"../00-data/walz/walz/scenarii/closed/P4F70427.csv",
+			"../00-data/walz/walz/scenarii/closed/P1F60428.csv"
+		], DataFrame, delim=";", skipto=3, source="Plant" => ["P4", "P1"])
+	df_.Walz_head .= "WalzClosed"
+	select!(
+		df_, 
+		[
+			"Date","Time","PARtop","Tleaf","Tcuv","Tamb","Ttop","PARamb","rh","VPD","E","GH2O","A","ci","ca","wa","Plant","Walz_head"
+		]
+	)
+	df_
+end
+
+# ╔═╡ 824ef28f-c974-484c-af43-577df8c9938b
+df_opened_walz = let
+	df_ = CSV.read(
+		[
+			"../00-data/walz/walz/scenarii/opened/P4F70429.csv",
+			"../00-data/walz/walz/scenarii/opened/P1F60430.csv"
+		], DataFrame, delim=";", skipto=3, source="Plant" => ["P4", "P1"])
+	df_.Walz_head .= "WalzOpened"
+	select!(
+		df_, 
+		[
+			"Date","Time","PARtop","Tleaf","Tcuv","Tamb","Ttop","PARamb","rh","VPD","E","GH2O","A","ci","ca","wa","Plant","Walz_head"
+		]
+	)
+	df_
+end
+
+# ╔═╡ d7c7a0f1-b419-49d9-9b3b-a1e1f9527a4a
+md"""
+Loading the climate at 30s rate (database is at 5-min so too coarse for comparing with the IRGA):
+"""
+
+# ╔═╡ f74ee7df-e44d-4ed4-851f-4ac93aedfac6
+climate_mic3 = let
+    r = ZipFile.Reader("../00-data/climate/climate.zip")
+    mic3_files = []
+    for f in r.files
+        startswith(f.name, "Mic3") && push!(mic3_files, CSV.read(f, DataFrame, dateformat="yyyy-mm-dd HH:MM:SS"))
+    end
+    close(r)
+    mic3 = vcat(mic3_files...)
+    select!(mic3, Not(:Column1))
+	mic3.Date = Date.(mic3.DateTime)
+	
+	select(
+        unique(mic3),
+        "DateTime",
+        "consigne T\xb0C" => :Ta_instruction,
+        "mesure T\xb0C" => :Ta_measurement,
+        "consigne HR" => :Rh_instruction,
+        "mesure HR" => :Rh_measurement,
+        "consigne Rayo" => :R_instruction,
+        "mesure Rayo" => :R_measurement,
+        "mesures [CO2]" => :CO2_ppm,
+        "mesure debit CO2" => :CO2_flux,
+        "Mic"
+    )
 end
 
 # ╔═╡ 326b71c6-00b2-4046-9ac2-962a42ceaa69
@@ -261,6 +338,57 @@ md"""
 ### 10-minute database
 """
 
+# ╔═╡ 2d50eccb-e382-4535-aed7-bb5b453da92e
+md"""
+### Light variation experiment database
+"""
+
+# ╔═╡ 69e7c975-73f3-47c1-adf6-4b0fc81dfbfb
+md"""
+Join IRGA data and climate, integrated at 30s rate:
+"""
+
+# ╔═╡ 978f52c6-059b-4f67-b178-4819ff6fa95f
+df_walz_dynamic_30s = let
+	df_ = vcat(df_closed_walz, df_opened_walz)
+	df_.Time .-= Hour(2)
+	df_.DateTime = DateTime.(df_.Date, df_.Time)
+	df_.DateTime_30s = round.(df_.DateTime, Second(30))
+	df_walz_30s_ = combine(
+		groupby(df_, :DateTime_30s),
+		"Plant" => unique,
+		"Walz_head" => unique,
+		["PARtop","Tleaf","Tcuv","Tamb","Ttop","PARamb","rh","VPD","E","GH2O","A","ci","ca","wa"] .=> mean,
+		renamecols=false
+	)
+	rename!(df_walz_30s_, :DateTime_30s => :DateTime)
+	#dates_light_experiment = unique(df_walz_30s_.Date)
+	#filter!(x -> x.Date in dates_light_experiment, climate_mic3)
+	#climate_mic3 = leftjoin(
+	#	climate_mic3, 
+	#	unique(select(df_, [:Date, :Plant, :Walz_head])),
+	#	on=:Date
+	#)
+	leftjoin(df_walz_30s_, climate_mic3, on=:DateTime)
+end
+
+# ╔═╡ eafb9e49-5856-4409-ae15-fc1de93513eb
+# Tried merging with the database without success:
+#df_walz_dynamic_30s = let
+#	df_ = vcat(df_closed_walz, df_opened_walz)
+#	filter!(x -> Time(12) <= x.Time <= Time(17), df_)
+#	df_.DateTime = DateTime.(df_.Date, df_.Time)
+#	df_ = add_timeperiod(df_, CO2)
+#
+#	df_combined = combine(
+#		groupby(df_, [:Plant, :Walz_head, :DateTime_start_output]),
+#		 :DateTime_end_output => (x -> unique(x)) => :DateTime_end_output,
+#		["PARtop","Tleaf","Tcuv","Tamb","Ttop","PARamb","rh","VPD","E","GH2O","A","ci","ca","wa"] .=> mean,
+#		renamecols=false
+#    )
+#	db_light = leftjoin(dropmissing(df_, :DateTime_end_output), db_5min, on=[:DateTime_end_output => :DateTime_end, :Plant])
+#end
+
 # ╔═╡ 7d58aeb1-83fd-42e1-89a8-6a822bdbae26
 md"""
 ### CO2 flux
@@ -276,6 +404,69 @@ md"""
 ### Leaf temperature
 """
 
+# ╔═╡ 1bff6d77-ba04-4a70-9d65-f33ad0562dca
+md"""
+### Light variability effect on IRGA measurements:
+"""
+
+# ╔═╡ 48137561-4038-45d8-b253-4786b636c280
+let
+	df_ = dropmissing(df_walz_dynamic_30s, "R_measurement")
+	filter!(x -> Time(10) <= Time(x.DateTime) <= Time(17), df_)
+    p_chamber = data(df_) *
+        mapping(
+			"DateTime" => Time, "R_measurement" => "PPFD (μmol m⁻² s⁻¹)", 
+			color = "Plant",
+			layout="Walz_head"
+		) *
+        visual(Lines)
+	p_walz = data(df_) *
+        mapping(
+			"DateTime" => Time, "A" => "A μmol m⁻² s⁻¹",
+			color = "Plant",
+			layout="Walz_head"
+		) *
+        visual(Scatter)
+
+	fig = Figure(size=(700,700))
+	ax1 = draw!(
+		fig[1, 1], 
+		p_walz, 
+		scales(Layout = (; palette = wrapped(rows = 2))),
+		facet=(; linkxaxes=:none, linkyaxes=:true, singleylabel=false, hideydecorations=false),
+	)
+	ax2 = draw!(
+		fig[1, 1], 
+		p_chamber,
+		scales(Layout = (; palette = wrapped(rows = 2))),
+		facet=(; linkxaxes=:none, linkyaxes=:true, singleylabel=false, hideydecorations=false, hidexdecorations=true), 
+		axis=(;yaxisposition=:right, backgroundcolor=:transparent, xlabel="", flip_ylabel=true)
+	)
+	for ax in ax2
+		hidespines!(ax.axis, :l, :b, :t)
+		hidexdecorations!(ax.axis)
+	end
+
+	l = legend!(fig[end+1, 1], ax1, orientation=:horizontal, titleposition=:left)
+	#legend!(fig[end+1, 1], ax2, orientation=:horizontal, titleposition=:left)
+	p1_marker = MarkerElement(color = Makie.wong_colors()[1], markersize = 10, marker = :circle)
+	p4_marker = MarkerElement(color = :orange, markersize = 10, marker = :circle)
+	walz_marker = MarkerElement(color = :black, markersize = 10, marker = :circle)
+	chamber_marker = LineElement(color = :black)
+	
+	group_plant = [p1_marker, p4_marker]
+	group_source = [walz_marker, chamber_marker]
+	Legend(
+		fig[end+1, 1],
+    	[group_plant, group_source],
+		[["P1", "P4"],["A (IRGA)", "PPFD (microcosm)"]],
+    	["Plant:", "Source:",],
+		orientation=:horizontal, titleposition=:left,
+	)
+
+	fig
+end
+
 # ╔═╡ 4407340e-12f9-429a-ba76-c8479f5d9c4a
 md"""
 # Saving
@@ -289,7 +480,17 @@ Saving the measured plant surfaces:
 """
 
 # ╔═╡ dd401cb4-5c04-4b43-8583-4c6e870c6b13
-CSV.write("plant_surface.csv", surface)
+CSV.write("plant_surface.csv", df_surface)
+
+# ╔═╡ a8a532dd-5c81-4bfc-bd64-24cb8f29af4c
+md"""
+Saving the data about the variation experiment at chamber scale:
+"""
+
+# ╔═╡ a49b5ca4-acfa-4052-9529-6873a5d9d68b
+open(Bzip2CompressorStream, "database_light_experiment.csv.bz2", "w") do stream
+    CSV.write(stream, df_walz_dynamic_30s)
+end
 
 # ╔═╡ 7a00a634-6c9d-4f4c-95fc-489d0e77a2d1
 md"""
@@ -774,6 +975,7 @@ Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Tar = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
+ZipFile = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
 
 [compat]
 AlgebraOfGraphics = "~0.12.7"
@@ -782,6 +984,7 @@ CairoMakie = "~0.15.9"
 CodecBzip2 = "~0.8.5"
 DataFrames = "~1.8.2"
 PlutoUI = "~0.7.80"
+ZipFile = "~0.10.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -790,7 +993,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.12.1"
 manifest_format = "2.0"
-project_hash = "e3ee2b02c3807f16cb3a77d6db5d5a3d35348899"
+project_hash = "23fdea76313f1c9cfccd4a9b10c0324c317edfef"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2515,6 +2718,12 @@ git-tree-sha1 = "a63799ff68005991f9d9491b6e95bd3478d783cb"
 uuid = "c5fb5394-a638-5e4d-96e5-b29de1b5cf10"
 version = "1.6.0+0"
 
+[[deps.ZipFile]]
+deps = ["Libdl", "Printf", "Zlib_jll"]
+git-tree-sha1 = "f492b7fe1698e623024e873244f10d89c95c340a"
+uuid = "a5390f91-8eb1-5f08-bee0-b1d1ffed6cea"
+version = "0.10.1"
+
 [[deps.Zlib_jll]]
 deps = ["Libdl"]
 uuid = "83775a58-1f1d-513f-b197-d71354ab007a"
@@ -2646,12 +2855,22 @@ version = "4.1.0+0"
 # ╠═1c19481d-58c8-4caf-ad42-205cde510a86
 # ╟─fa7b6167-fc2d-4ae1-9287-9ecf9bbcba97
 # ╟─1da880af-e44f-4d90-80b6-6a19f88f598b
-# ╠═3a26dc05-e3e6-466e-a3eb-bbca0e5b9adf
+# ╟─3a26dc05-e3e6-466e-a3eb-bbca0e5b9adf
+# ╟─430d3cde-90dc-4b74-a720-d1d09b5d5c08
+# ╟─206689af-c37a-41c8-b3f5-8d723ee0994b
+# ╟─e2f7b2d5-b8b5-41f4-8660-7bbdbbc81bbc
+# ╟─824ef28f-c974-484c-af43-577df8c9938b
+# ╟─d7c7a0f1-b419-49d9-9b3b-a1e1f9527a4a
+# ╟─f74ee7df-e44d-4ed4-851f-4ac93aedfac6
 # ╟─326b71c6-00b2-4046-9ac2-962a42ceaa69
 # ╟─e92c7421-c8e6-47ff-81ae-9e8e25818e99
 # ╟─42bcf804-8ed0-4573-8201-1fd79bc0a140
 # ╟─2547928f-9569-4a1f-a636-7e8ecda893de
 # ╟─415a440a-8aea-4f38-893f-d22d0114a16e
+# ╟─2d50eccb-e382-4535-aed7-bb5b453da92e
+# ╟─69e7c975-73f3-47c1-adf6-4b0fc81dfbfb
+# ╟─978f52c6-059b-4f67-b178-4819ff6fa95f
+# ╟─eafb9e49-5856-4409-ae15-fc1de93513eb
 # ╟─0d542ed4-71c3-40df-a90c-feb491f055d4
 # ╟─ba1cf5f2-7459-48c5-9016-d7f998634814
 # ╟─7d58aeb1-83fd-42e1-89a8-6a822bdbae26
@@ -2664,11 +2883,15 @@ version = "4.1.0+0"
 # ╟─1b91d8e4-d5aa-48c8-adeb-6ed5a9965ec1
 # ╟─d6ba6743-3ba0-4e04-b2bf-431a524ce6e5
 # ╟─832320c2-f8b6-4b72-b559-a725509223f5
+# ╟─1bff6d77-ba04-4a70-9d65-f33ad0562dca
+# ╟─48137561-4038-45d8-b253-4786b636c280
 # ╟─4407340e-12f9-429a-ba76-c8479f5d9c4a
 # ╠═168c5c96-9252-4a5a-85d2-613b2246cd63
 # ╠═eaed2c19-60a9-4fe2-8788-6143df1062d2
 # ╟─b16f1a02-c063-48f6-a556-ac3ffc6ff4a0
 # ╠═dd401cb4-5c04-4b43-8583-4c6e870c6b13
+# ╟─a8a532dd-5c81-4bfc-bd64-24cb8f29af4c
+# ╠═a49b5ca4-acfa-4052-9529-6873a5d9d68b
 # ╟─7a00a634-6c9d-4f4c-95fc-489d0e77a2d1
 # ╟─6d1223de-d6f3-4dab-a5c0-9d1289a7401e
 # ╟─4befe24a-fc2a-4ed1-99ef-ccda6c7eaeda
