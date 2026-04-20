@@ -30,7 +30,7 @@ begin
     using Statistics
     using PlutoUI
     using CairoMakie, AlgebraOfGraphics
-	using ZipFile
+    using ZipFile
 end
 
 # ╔═╡ e85f0778-b384-11ed-304a-891e802cbdae
@@ -236,7 +236,7 @@ df_surface = let
     select!(
         df_,
         :Date,
-        :plant => ByRow(x -> parse(Int, x[2])) => :Plant,
+        :Plant => ByRow(x -> parse(Int, x[2])) => :Plant,
         :PLA => (x -> x ./ (113.0 * 114.0)) => :LAI,
         # 113.0 * 114.0 is the chamber dimensions
     )
@@ -257,36 +257,36 @@ Loading the Walz data (portable gas exchange analyser):
 
 # ╔═╡ e2f7b2d5-b8b5-41f4-8660-7bbdbbc81bbc
 df_closed_walz = let
-	df_ = CSV.read(
-		[
-			"../00-data/walz/walz/scenarii/closed/P4F70427.csv",
-			"../00-data/walz/walz/scenarii/closed/P1F60428.csv"
-		], DataFrame, delim=";", skipto=3, source="Plant" => ["P4", "P1"])
-	df_.Walz_head .= "WalzClosed"
-	select!(
-		df_, 
-		[
-			"Date","Time","PARtop","Tleaf","Tcuv","Tamb","Ttop","PARamb","rh","VPD","E","GH2O","A","ci","ca","wa","Plant","Walz_head"
-		]
-	)
-	df_
+    df_ = CSV.read(
+        [
+            "../00-data/walz/walz/scenarii/closed/P4F70427.csv",
+            "../00-data/walz/walz/scenarii/closed/P1F60428.csv"
+        ], DataFrame, delim=";", skipto=3, source="Plant" => ["P4", "P1"])
+    df_.Walz_head .= "WalzClosed"
+    select!(
+        df_,
+        [
+            "Date", "Time", "PARtop", "Tleaf", "Tcuv", "Tamb", "Ttop", "PARamb", "rh", "VPD", "E", "GH2O", "A", "ci", "ca", "wa", "Plant", "Walz_head"
+        ]
+    )
+    df_
 end
 
 # ╔═╡ 824ef28f-c974-484c-af43-577df8c9938b
 df_opened_walz = let
-	df_ = CSV.read(
-		[
-			"../00-data/walz/walz/scenarii/opened/P4F70429.csv",
-			"../00-data/walz/walz/scenarii/opened/P1F60430.csv"
-		], DataFrame, delim=";", skipto=3, source="Plant" => ["P4", "P1"])
-	df_.Walz_head .= "WalzOpened"
-	select!(
-		df_, 
-		[
-			"Date","Time","PARtop","Tleaf","Tcuv","Tamb","Ttop","PARamb","rh","VPD","E","GH2O","A","ci","ca","wa","Plant","Walz_head"
-		]
-	)
-	df_
+    df_ = CSV.read(
+        [
+            "../00-data/walz/walz/scenarii/opened/P4F70429.csv",
+            "../00-data/walz/walz/scenarii/opened/P1F60430.csv"
+        ], DataFrame, delim=";", skipto=3, source="Plant" => ["P4", "P1"])
+    df_.Walz_head .= "WalzOpened"
+    select!(
+        df_,
+        [
+            "Date", "Time", "PARtop", "Tleaf", "Tcuv", "Tamb", "Ttop", "PARamb", "rh", "VPD", "E", "GH2O", "A", "ci", "ca", "wa", "Plant", "Walz_head"
+        ]
+    )
+    df_
 end
 
 # ╔═╡ d7c7a0f1-b419-49d9-9b3b-a1e1f9527a4a
@@ -304,9 +304,9 @@ climate_mic3 = let
     close(r)
     mic3 = vcat(mic3_files...)
     select!(mic3, Not(:Column1))
-	mic3.Date = Date.(mic3.DateTime)
-	
-	select(
+    mic3.Date = Date.(mic3.DateTime)
+
+    select(
         unique(mic3),
         "DateTime",
         "consigne T\xb0C" => :Ta_instruction,
@@ -350,26 +350,26 @@ Join IRGA data and climate, integrated at 30s rate:
 
 # ╔═╡ 978f52c6-059b-4f67-b178-4819ff6fa95f
 df_walz_dynamic_30s = let
-	df_ = vcat(df_closed_walz, df_opened_walz)
-	df_.Time .-= Hour(2)
-	df_.DateTime = DateTime.(df_.Date, df_.Time)
-	df_.DateTime_30s = round.(df_.DateTime, Second(30))
-	df_walz_30s_ = combine(
-		groupby(df_, :DateTime_30s),
-		"Plant" => unique,
-		"Walz_head" => unique,
-		["PARtop","Tleaf","Tcuv","Tamb","Ttop","PARamb","rh","VPD","E","GH2O","A","ci","ca","wa"] .=> mean,
-		renamecols=false
-	)
-	rename!(df_walz_30s_, :DateTime_30s => :DateTime)
-	#dates_light_experiment = unique(df_walz_30s_.Date)
-	#filter!(x -> x.Date in dates_light_experiment, climate_mic3)
-	#climate_mic3 = leftjoin(
-	#	climate_mic3, 
-	#	unique(select(df_, [:Date, :Plant, :Walz_head])),
-	#	on=:Date
-	#)
-	leftjoin(df_walz_30s_, climate_mic3, on=:DateTime)
+    df_ = vcat(df_closed_walz, df_opened_walz)
+    df_.Time .-= Hour(2)
+    df_.DateTime = DateTime.(df_.Date, df_.Time)
+    df_.DateTime_30s = round.(df_.DateTime, Second(30))
+    df_walz_30s_ = combine(
+        groupby(df_, :DateTime_30s),
+        "Plant" => unique,
+        "Walz_head" => unique,
+        ["PARtop", "Tleaf", "Tcuv", "Tamb", "Ttop", "PARamb", "rh", "VPD", "E", "GH2O", "A", "ci", "ca", "wa"] .=> mean,
+        renamecols=false
+    )
+    rename!(df_walz_30s_, :DateTime_30s => :DateTime)
+    #dates_light_experiment = unique(df_walz_30s_.Date)
+    #filter!(x -> x.Date in dates_light_experiment, climate_mic3)
+    #climate_mic3 = leftjoin(
+    #	climate_mic3, 
+    #	unique(select(df_, [:Date, :Plant, :Walz_head])),
+    #	on=:Date
+    #)
+    leftjoin(df_walz_30s_, climate_mic3, on=:DateTime)
 end
 
 # ╔═╡ eafb9e49-5856-4409-ae15-fc1de93513eb
@@ -411,60 +411,60 @@ md"""
 
 # ╔═╡ 48137561-4038-45d8-b253-4786b636c280
 let
-	df_ = dropmissing(df_walz_dynamic_30s, "R_measurement")
-	filter!(x -> Time(10) <= Time(x.DateTime) <= Time(17), df_)
+    df_ = dropmissing(df_walz_dynamic_30s, "R_measurement")
+    filter!(x -> Time(10) <= Time(x.DateTime) <= Time(17), df_)
     p_chamber = data(df_) *
-        mapping(
-			"DateTime" => Time, "R_measurement" => "PPFD (μmol m⁻² s⁻¹)", 
-			color = "Plant",
-			layout="Walz_head"
-		) *
-        visual(Lines)
-	p_walz = data(df_) *
-        mapping(
-			"DateTime" => Time, "A" => "A μmol m⁻² s⁻¹",
-			color = "Plant",
-			layout="Walz_head"
-		) *
-        visual(Scatter)
+                mapping(
+                    "DateTime" => Time, "R_measurement" => "PPFD (μmol m⁻² s⁻¹)",
+                    color="Plant",
+                    layout="Walz_head"
+                ) *
+                visual(Lines)
+    p_walz = data(df_) *
+             mapping(
+                 "DateTime" => Time, "A" => "A μmol m⁻² s⁻¹",
+                 color="Plant",
+                 layout="Walz_head"
+             ) *
+             visual(Scatter)
 
-	fig = Figure(size=(700,700))
-	ax1 = draw!(
-		fig[1, 1], 
-		p_walz, 
-		scales(Layout = (; palette = wrapped(rows = 2))),
-		facet=(; linkxaxes=:none, linkyaxes=:true, singleylabel=false, hideydecorations=false),
-	)
-	ax2 = draw!(
-		fig[1, 1], 
-		p_chamber,
-		scales(Layout = (; palette = wrapped(rows = 2))),
-		facet=(; linkxaxes=:none, linkyaxes=:true, singleylabel=false, hideydecorations=false, hidexdecorations=true), 
-		axis=(;yaxisposition=:right, backgroundcolor=:transparent, xlabel="", flip_ylabel=true)
-	)
-	for ax in ax2
-		hidespines!(ax.axis, :l, :b, :t)
-		hidexdecorations!(ax.axis)
-	end
+    fig = Figure(size=(700, 700))
+    ax1 = draw!(
+        fig[1, 1],
+        p_walz,
+        scales(Layout=(; palette=wrapped(rows=2))),
+        facet=(; linkxaxes=:none, linkyaxes=:true, singleylabel=false, hideydecorations=false),
+    )
+    ax2 = draw!(
+        fig[1, 1],
+        p_chamber,
+        scales(Layout=(; palette=wrapped(rows=2))),
+        facet=(; linkxaxes=:none, linkyaxes=:true, singleylabel=false, hideydecorations=false, hidexdecorations=true),
+        axis=(; yaxisposition=:right, backgroundcolor=:transparent, xlabel="", flip_ylabel=true)
+    )
+    for ax in ax2
+        hidespines!(ax.axis, :l, :b, :t)
+        hidexdecorations!(ax.axis)
+    end
 
-	l = legend!(fig[end+1, 1], ax1, orientation=:horizontal, titleposition=:left)
-	#legend!(fig[end+1, 1], ax2, orientation=:horizontal, titleposition=:left)
-	p1_marker = MarkerElement(color = Makie.wong_colors()[1], markersize = 10, marker = :circle)
-	p4_marker = MarkerElement(color = :orange, markersize = 10, marker = :circle)
-	walz_marker = MarkerElement(color = :black, markersize = 10, marker = :circle)
-	chamber_marker = LineElement(color = :black)
-	
-	group_plant = [p1_marker, p4_marker]
-	group_source = [walz_marker, chamber_marker]
-	Legend(
-		fig[end+1, 1],
-    	[group_plant, group_source],
-		[["P1", "P4"],["A (IRGA)", "PPFD (microcosm)"]],
-    	["Plant:", "Source:",],
-		orientation=:horizontal, titleposition=:left,
-	)
+    l = legend!(fig[end+1, 1], ax1, orientation=:horizontal, titleposition=:left)
+    #legend!(fig[end+1, 1], ax2, orientation=:horizontal, titleposition=:left)
+    p1_marker = MarkerElement(color=Makie.wong_colors()[1], markersize=10, marker=:circle)
+    p4_marker = MarkerElement(color=:orange, markersize=10, marker=:circle)
+    walz_marker = MarkerElement(color=:black, markersize=10, marker=:circle)
+    chamber_marker = LineElement(color=:black)
 
-	fig
+    group_plant = [p1_marker, p4_marker]
+    group_source = [walz_marker, chamber_marker]
+    Legend(
+        fig[end+1, 1],
+        [group_plant, group_source],
+        [["P1", "P4"], ["A (IRGA)", "PPFD (microcosm)"]],
+        ["Plant:", "Source:",],
+        orientation=:horizontal, titleposition=:left,
+    )
+
+    fig
 end
 
 # ╔═╡ 4407340e-12f9-429a-ba76-c8479f5d9c4a
