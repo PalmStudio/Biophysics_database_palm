@@ -380,12 +380,19 @@ let
 	filter_fun = row -> Date(row.DateTime) == climate_day# Date(2021,3,30)
 	climate_ = filter(filter_fun, climate)
 
-	df_ = filter(filter_fun, leaf_temperature_df)
+	df_ = sort!(filter(filter_fun, leaf_temperature_df), [:leaf, :DateTime])
 	f = Figure()
-	ax = Makie.Axis(f[1,1])
+	
+	ax = Makie.Axis(f[1,1], title=string("Plant ", join(unique(df_.plant), ", ")))
 	p = lines!(ax, climate_.DateTime, climate_.Ta_measurement, label="Tair", color=:black)
-    scatter!(ax, df_.DateTime .+ Second(forced_delay), df_.Tl_mean, color = :red, markersize=3, alpha = 0.2, label="Tl Original" => (; markersize = 15))
-	scatter!(ax, df_.DateTime .+ Second(forced_delay), df_.Tl_mean_corrected, color = :blue, markersize=3, alpha = 0.2, label="Tl Corrected" => (; markersize = 15))
+    #scatter!(ax, df_.DateTime .+ Second(forced_delay), df_.Tl_mean, color = :red, markersize=3, alpha = 0.2, label="Tl Original" => (; markersize = 15))
+	#scatter!(ax, df_.DateTime .+ Second(forced_delay), df_.Tl_mean_corrected, color = :blue, markersize=3, alpha = 0.2, label="Tl Corrected" => (; markersize = 15))
+	
+	for (i,df_leaf_) in enumerate(groupby(df_, :leaf))
+		lines!(ax, df_leaf_.DateTime .+ Second(forced_delay), df_leaf_.Tl_mean, color = :red, alpha=0.3, label= i ==1 ? "Tl Original" => (; alpha = 1) : nothing, linewidth=0.5)
+		lines!(ax, df_leaf_.DateTime .+ Second(forced_delay), df_leaf_.Tl_mean_corrected, color = :blue, alpha=0.3, label= i ==1 ? "Tl Corrected" => (; alpha = 1) : nothing, linewidth=0.5)
+	end
+	
 	f[2, 1] = Legend(f, ax, "Source", framevisible = false, orientation = :horizontal)
 	f
 end
