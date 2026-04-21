@@ -103,7 +103,7 @@ md"""
 """
 
 # ╔═╡ 90d29494-0965-44ac-a703-50e86f9bfd5c
-begin
+let
     abline = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
     p =
         abline +
@@ -121,6 +121,27 @@ end
 # ╔═╡ 4cfbaa1a-a052-4dc0-a504-aaa9a064a55d
 md"""
 *Figure 1. Leaf temperature (y) and Air temperature (x) for the four plants, colored by leaf number.*
+"""
+
+# ╔═╡ 111bb53a-d8fc-4681-bf3b-066e71c02592
+let
+    abline = mapping([0], [1]) * visual(ABLines, color=:grey, linestyle=:dash)
+    p =
+        abline +
+        AlgebraOfGraphics.data(dropmissing(leaf_temperature_df, :Ta_measurement)) *
+        mapping(
+            :Ta_measurement => "Air temperature (°C)",
+            :Tl_mean_corrected => "Leaf temperature (°C)",
+            color=:leaf => "Leaf Number",
+            layout=:plant => string => "Plant",
+        ) *
+        visual(Scatter, markersize=3) |>
+        draw
+end
+
+# ╔═╡ 1c410dae-6948-4c25-8131-df0bd5a2f4c1
+md"""
+*Figure 1-bis. Corrected leaf temperature (y) and air temperature (x) for the four plants, colored by leaf number. Leaf temperature is corrected by a fixed offset to match Tleaf-Tair=0 during night time in average.*
 """
 
 # ╔═╡ e5227295-12eb-40a3-b4d0-291532b81fbe
@@ -362,10 +383,10 @@ let
 	df_ = filter(filter_fun, leaf_temperature_df)
 	f = Figure()
 	ax = Makie.Axis(f[1,1])
-	p = lines!(ax, climate_.DateTime, climate_.Ta_measurement)
-	#p_Tl = data(df_) * mapping(:DateTime, :Tl_mean, color=:leaf) * visual(Scatter, markersize=5)
-	#draw!(ax, p_Tl)
-    scatter!(ax, df_.DateTime .+ Second(forced_delay), df_.Tl_mean, color = :red, markersize=3, alpha = 0.2)
+	p = lines!(ax, climate_.DateTime, climate_.Ta_measurement, label="Tair", color=:black)
+    scatter!(ax, df_.DateTime .+ Second(forced_delay), df_.Tl_mean, color = :red, markersize=3, alpha = 0.2, label="Tl Original" => (; markersize = 15))
+	scatter!(ax, df_.DateTime .+ Second(forced_delay), df_.Tl_mean_corrected, color = :blue, markersize=3, alpha = 0.2, label="Tl Corrected" => (; markersize = 15))
+	f[2, 1] = Legend(f, ax, "Source", framevisible = false, orientation = :horizontal)
 	f
 end
 
@@ -377,7 +398,7 @@ Manual delay correction:
 """
 
 # ╔═╡ abd57044-5614-47c4-af29-c719fcfda804
-3512 * 2
+PlutoUI.TableOfContents()
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -2724,10 +2745,12 @@ version = "4.1.0+0"
 # ╟─28792394-5038-4640-9e45-f3bfa3bd96e1
 # ╠═3090d002-8236-46d1-8add-5a8921cbe835
 # ╟─8d49c5bc-5d82-4b88-9893-64d6056a3c24
-# ╠═64f9959f-6843-4f0c-8b62-f6c7479fd090
+# ╟─64f9959f-6843-4f0c-8b62-f6c7479fd090
 # ╟─78d82a70-d719-4fff-a0bd-fc25ed1ec1ca
 # ╟─90d29494-0965-44ac-a703-50e86f9bfd5c
 # ╟─4cfbaa1a-a052-4dc0-a504-aaa9a064a55d
+# ╟─111bb53a-d8fc-4681-bf3b-066e71c02592
+# ╟─1c410dae-6948-4c25-8131-df0bd5a2f4c1
 # ╟─e5227295-12eb-40a3-b4d0-291532b81fbe
 # ╟─52d5f1b9-142e-404b-90a5-9c56cfaae070
 # ╟─4aa263c2-75eb-4173-8f36-5dacefdaf265
@@ -2751,6 +2774,6 @@ version = "4.1.0+0"
 # ╠═52570490-82c7-438d-b848-7e48d7a1cce6
 # ╠═29769798-c6c0-40a8-a7bf-45aaae334b12
 # ╟─a42730a6-53d4-46d8-89eb-a228e81a7065
-# ╠═abd57044-5614-47c4-af29-c719fcfda804
+# ╟─abd57044-5614-47c4-af29-c719fcfda804
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

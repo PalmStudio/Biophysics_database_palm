@@ -616,7 +616,8 @@ leaf_temperature = open(Bzip2DecompressorStream, "../04-thermal_camera_measureme
         :DateTime_end_input,
         :DateTime_start_output,
         :DateTime_end_output,
-        :Tl_mean, :Tl_min, :Tl_max, :Tl_std
+        :Tl_mean, :Tl_min, :Tl_max, :Tl_std,
+		:Tl_mean_corrected, :Tl_min_corrected, :Tl_max_corrected
     )
 
     df_
