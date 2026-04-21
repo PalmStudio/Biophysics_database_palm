@@ -29,7 +29,7 @@ begin
     using Statistics
     using CairoMakie
     using AlgebraOfGraphics
-	using PlutoUI
+    using PlutoUI
 end
 
 # ╔═╡ d3a87c67-219b-4d8d-9270-4c2d5f2fc079
@@ -210,7 +210,7 @@ Import the automatic door opening detection file:
 """
 
 # ╔═╡ 5ae745aa-c443-4c00-8d18-73ec3d003538
-door_opening = CSV.read("../00-data/door_opening/Mic3_door_opening.csv", DataFrame, dateformat = "yyyy-mm-dd HH:MM:SS")
+door_opening = CSV.read("../00-data/door_opening/Mic3_door_opening.csv", DataFrame, dateformat="yyyy-mm-dd HH:MM:SS")
 
 # ╔═╡ 751e3894-5c51-4624-b4ef-2c5fca75e28f
 md"""
@@ -220,7 +220,7 @@ Import the second file, which is a file that tags some door opening / closing ev
 """
 
 # ╔═╡ 6c4e5dd0-c24d-47d3-b132-8e8c54fb3cb8
-visual_door_opening = CSV.read("../00-data/door_opening/therma_camera_door_opened.csv", DataFrame, dateformat = "yyyymmdd_HHMMSS_R")
+visual_door_opening = CSV.read("../00-data/door_opening/therma_camera_door_opened.csv", DataFrame, dateformat="yyyymmdd_HHMMSS_R")
 
 # ╔═╡ 16b4b2e6-3f56-4549-aab3-b8e028e63058
 md"""
@@ -229,33 +229,33 @@ Then we transform the opening / closing events in 0-1:
 
 # ╔═╡ 88ee1026-7ffa-46d7-bfdd-b1c9be6bd9cc
 df_visual_door_opening = let
-	OPENED = 0
-	CLOSED = 1
-	df_ = DataFrame(:DateTime => DateTime[], :door_opening => Int[])
-	for row in eachrow(visual_door_opening)
-		push!(df_, (DateTime=row.right_before_opening,door_opening=CLOSED))
+    OPENED = 0
+    CLOSED = 1
+    df_ = DataFrame(:DateTime => DateTime[], :door_opening => Int[])
+    for row in eachrow(visual_door_opening)
+        push!(df_, (DateTime=row.right_before_opening, door_opening=CLOSED))
 
-		if !ismissing(row.opened)
-			push!(df_, (DateTime=row.opened,door_opening=OPENED))
-		end
+        if !ismissing(row.opened)
+            push!(df_, (DateTime=row.opened, door_opening=OPENED))
+        end
 
-		if !ismissing(row.opened)
-			push!(df_, (DateTime=row.opened,door_opening=OPENED))
-		end
+        if !ismissing(row.opened)
+            push!(df_, (DateTime=row.opened, door_opening=OPENED))
+        end
 
-		if !ismissing(row.right_before_closing)
-			push!(df_, (DateTime=row.right_before_closing,door_opening=OPENED))
-		end
+        if !ismissing(row.right_before_closing)
+            push!(df_, (DateTime=row.right_before_closing, door_opening=OPENED))
+        end
 
-		if ismissing(row.opened) && ismissing(row.right_before_closing)
-			# This case happens when we see a change between two images but not the door opening, e.g. we removed the plant within one minute, between two image acquisitions
-			middle_time = row.right_before_opening + (row.closed-row.right_before_opening) / 2
-			push!(df_, (DateTime=middle_time,door_opening=CLOSED))
-		end
-		push!(df_, (DateTime=row.closed,door_opening=CLOSED))
-	end
+        if ismissing(row.opened) && ismissing(row.right_before_closing)
+            # This case happens when we see a change between two images but not the door opening, e.g. we removed the plant within one minute, between two image acquisitions
+            middle_time = row.right_before_opening + (row.closed - row.right_before_opening) / 2
+            push!(df_, (DateTime=middle_time, door_opening=CLOSED))
+        end
+        push!(df_, (DateTime=row.closed, door_opening=CLOSED))
+    end
 
-	df_
+    df_
 end
 
 # ╔═╡ c0df86f3-aef1-4d4a-8563-a9dbd78d99a1
@@ -264,7 +264,7 @@ Now we can compare the opening / closing events from both files, day by day:
 """
 
 # ╔═╡ a99482af-da4b-45dd-8f00-5765c6d93436
-@bind delay PlutoUI.Slider(0:-1:-10_000, default = -3572, show_value=true)
+@bind delay PlutoUI.Slider(0:-1:-10_000, default=-3572, show_value=true)
 
 # ╔═╡ 26e07604-cfa0-4531-92c1-1874152e2d43
 n_days = length(unique(Date.(df_visual_door_opening.DateTime)))
@@ -297,13 +297,13 @@ day = days[day_int]
 
 # ╔═╡ a164de9e-7b76-4afd-8119-3277122f6f00
 let
-	f = Figure(size=(1080,700))
-	ax = Axis(f[1,1])
-	df_visual_door_opening_day = DataFrames.subset(df_visual_door_opening, :DateTime => (x -> Date.(x) .== day))
-	door_opening_day = DataFrames.subset(door_opening, :DateTime => (x -> Date.(x) .== day))
-	scatter!(ax, Time.(df_visual_door_opening_day.DateTime) .+ Second(delay), df_visual_door_opening_day.door_opening)
-	scatter!(ax, Time.(door_opening_day.DateTime), door_opening_day.ouverture_porte, color=:red)
-	f
+    f = Figure(size=(1080, 700))
+    ax = Axis(f[1, 1])
+    df_visual_door_opening_day = DataFrames.subset(df_visual_door_opening, :DateTime => (x -> Date.(x) .== day))
+    door_opening_day = DataFrames.subset(door_opening, :DateTime => (x -> Date.(x) .== day))
+    scatter!(ax, Time.(df_visual_door_opening_day.DateTime) .+ Second(delay), df_visual_door_opening_day.door_opening)
+    scatter!(ax, Time.(door_opening_day.DateTime), door_opening_day.ouverture_porte, color=:red)
+    f
 end
 
 # ╔═╡ c924ff42-63c0-4105-b3a0-916fb6524fc8
@@ -446,7 +446,7 @@ df_write = vcat(
         :phase,
         :error_scale => ByRow(x -> Second(x).value) => :delay_seconds
     ),
-    DataFrame(type="thermal camera", phase="all", delay_seconds=Second(delay_camera).value)
+    DataFrame(type="thermal camera", phase="all", delay_seconds=-Second(delay_camera).value)
 )
 
 # ╔═╡ 74516f47-6df9-41fd-82ce-53a64a4fb8d3
