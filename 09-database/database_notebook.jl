@@ -638,7 +638,7 @@ leaf_temperature_5min = let
 
     select!(
         df_,
-        [:plant, :leaf, :DateTime_start, :DateTime_end, :Tl_mean, :Tl_min, :Tl_max, :Tl_std]
+        [:plant, :leaf, :DateTime_start, :DateTime_end, :Tl_mean, :Tl_min, :Tl_max, :Tl_mean_corrected, :Tl_min_corrected, :Tl_max_corrected, :Tl_std]
     )
     df_
 end
@@ -702,6 +702,9 @@ db_5min = let
         :Tl_min,
         :Tl_max,
         :Tl_std,
+		:Tl_mean_corrected,
+        :Tl_min_corrected,
+        :Tl_max_corrected,
     )
 
     # Adding the biophysical parameters now that we have the Plant properly set:
@@ -787,20 +790,21 @@ end
 
 # ╔═╡ 832320c2-f8b6-4b72-b559-a725509223f5
 pTemp_all = let
-    df_ = dropmissing(db_5min, [:DateTime_end, :Tl_mean, :Ta_measurement, :Scenario, :Plant])
+	db_5min_ = subset(db_5min, :Scenario => (x -> x .!= "Mixed"))
+    df_ = dropmissing(db_5min_, [:DateTime_end, :Tl_mean_corrected, :Ta_measurement, :Scenario, :Plant])
     transform!(
         groupby(df_, [:Plant, :Scenario, :Sequence]),
         :DateTime_start => (x -> 1:length(x)) => :time_numeric
     )
     #filter!(x -> x.DateTime_start >= first_date && x.DateTime_end <= last_date, df_)
     p = data(df_) *
-        mapping(:DateTime_start => Time => "Time", :Tl_mean, color=:Leaf, row=:Scenario, col=:Plant => string) *
-        visual(Scatter) +
+        mapping(:DateTime_start => Time => "Time", "Tl_mean_corrected" => "Temperature (°C)", color=:Leaf, row=:Scenario, col=:Plant => string) *
+        visual(Scatter, label="Tleaf") +
         data(df_) *
-        mapping(:DateTime_start => Time => "Time", :Ta_measurement => :Tair, row=:Scenario, col=:Plant => string) *
-        visual(Scatter, color=:red)
+        mapping(:DateTime_start => Time => "Time", "Ta_measurement" => "Temperature (°C)", row=:Scenario, col=:Plant => string) *
+        visual(Scatter, color=:red, label="Tair")
 
-    draw(p, axis=(width=150, height=200, xticks=datetimeticks(df_.DateTime_start, Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none))
+    draw(p, axis=(width=150, height=200, xticks=datetimeticks(df_.DateTime_start, Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none), legend=(;orientation=:horizontal, position=:bottom))
 end
 
 # ╔═╡ eaed2c19-60a9-4fe2-8788-6143df1062d2
@@ -822,7 +826,7 @@ leaf_temperature_10min = let
 
     select!(
         df_,
-        [:plant, :leaf, :DateTime_start, :DateTime_end, :Tl_mean, :Tl_min, :Tl_max, :Tl_std]
+        [:plant, :leaf, :DateTime_start, :DateTime_end, :Tl_mean, :Tl_min, :Tl_max, :Tl_mean_corrected, :Tl_min_corrected, :Tl_max_corrected, :Tl_std]
     )
     df_
 end
@@ -883,6 +887,9 @@ db_10min = let
         :Tl_mean,
         :Tl_min,
         :Tl_max,
+		:Tl_mean_corrected,
+        :Tl_min_corrected,
+        :Tl_max_corrected,
         :Tl_std,
     )
 
@@ -2847,11 +2854,11 @@ version = "4.1.0+0"
 # ╠═3025bd11-bcbf-4fa5-b67a-73be7bb6db07
 # ╟─58810c5f-a090-4896-a039-fe32e04c3b40
 # ╟─ee3738bb-afcc-4f22-86ed-6326b67acb9f
-# ╠═6d54867d-3cad-4699-85cd-fc2af74d7753
+# ╟─6d54867d-3cad-4699-85cd-fc2af74d7753
 # ╟─67086a6b-4629-4996-99ba-284ba2f6a783
-# ╠═ab3424f1-8999-411a-9816-0e4d30b9b376
+# ╟─ab3424f1-8999-411a-9816-0e4d30b9b376
 # ╟─07091f22-9c91-49bd-99b6-13638cc9bd32
-# ╠═ec8b2c6b-2535-4d12-ac78-46d8940c150c
+# ╟─ec8b2c6b-2535-4d12-ac78-46d8940c150c
 # ╟─0e03ad86-22f0-4a4a-bfd0-c283f11df029
 # ╠═1c19481d-58c8-4caf-ad42-205cde510a86
 # ╟─fa7b6167-fc2d-4ae1-9287-9ecf9bbcba97
