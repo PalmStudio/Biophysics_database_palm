@@ -20,12 +20,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.14"
 
       - name: Install unzip-http
         run: python -m pip install --upgrade pip unzip-http
 
-        - name: Download missing file
+      - name: Download missing file
         run: unzip-http -f
           https://zenodo.org/records/12704284/files/biophysics_database_palm.zip
           00-data/lidar/lidar.tar.bz2
