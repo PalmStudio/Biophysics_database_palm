@@ -17,13 +17,18 @@ jobs:
       - name: Checkout Project
         uses: actions/checkout@v2
 
-      - name: Install unzip-http
-        run:
-          pip install unzip-http
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
 
-      - name: Download missing file
-        run:
-          unzip-http -f https://zenodo.org/records/12704284/files/biophysics_database_palm.zip 00-data/lidar/lidar.tar.bz2
+      - name: Install unzip-http
+        run: python -m pip install --upgrade pip unzip-http
+
+        - name: Download missing file
+        run: unzip-http -f
+          https://zenodo.org/records/12704284/files/biophysics_database_palm.zip
+          00-data/lidar/lidar.tar.bz2
 
       - name: 🙌 Install Julia
         uses: julia-actions/setup-julia@v1
@@ -34,7 +39,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: _cache
-          key: ${{ runner.os }}-pluto_state_cache-v3-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}-${{ github.run_id }}
+          key: ${{ runner.os }}-pluto_state_cache-v3-${{ hashFiles('**/Project.toml',
+            '**/Manifest.toml') }}-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-pluto_state_cache-v3-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
 
@@ -42,15 +48,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.julia
-          key: ${{ runner.os }}-dotjulia-v1-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}-${{ github.run_id }}
+          key: ${{ runner.os }}-dotjulia-v1-${{ hashFiles('**/Project.toml',
+            '**/Manifest.toml') }}-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-dotjulia-v1-${{ hashFiles('**/Project.toml', '**/Manifest.toml') }}
 
       - name: 🪴 Generate site
-        run:
-          julia --project=website/PlutoPages/pluto-deployment-environment -e '
-          import Pkg;
-          Pkg.instantiate();
+        run: julia --project=website/PlutoPages/pluto-deployment-environment -e ' import
+          Pkg; Pkg.instantiate();
 
           include("./website/PlutoPages/generate.jl")'
 
