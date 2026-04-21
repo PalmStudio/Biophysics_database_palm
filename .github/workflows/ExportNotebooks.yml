@@ -26,9 +26,10 @@ jobs:
         run: python -m pip install --upgrade pip unzip-http
 
       - name: Download missing file
-        run: unzip-http -f
-          https://zenodo.org/records/12704284/files/biophysics_database_palm.zip
-          00-data/lidar/lidar.tar.bz2
+        run: |
+          python -m unzip_http -f \
+            https://zenodo.org/records/12704284/files/biophysics_database_palm.zip \
+            00-data/lidar/lidar.tar.bz2
 
       - name: 🙌 Install Julia
         uses: julia-actions/setup-julia@v1
