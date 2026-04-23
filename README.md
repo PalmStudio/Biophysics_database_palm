@@ -51,7 +51,7 @@ This repository does not contain the raw thermal images and the raw lidar data t
 
 Here are the reconstructions of the plants on top of the point clouds over time:
 
-![3d reconstruction](11-outputs/Reconstructions_LiDAR_all.png)
+![3d reconstruction](10-outputs/Reconstructions_LiDAR_all.png)
 
 ## Folder structure
 
@@ -141,7 +141,7 @@ This folder
 │   ├── database_5min.csv.bz2      --> Database of all processed data aggregated to match the 5min output CO2 measurement
 │   ├── database_notebook.jl       --> Notebook to process the database
 │   └── plant_surface.csv          --> Measured plant surfaces
-├── 11-outputs
+├── 10-outputs
 │   └── Reconstructions_LiDAR_all.png --> One of the outputs tracked in the repository
 ├── EcotronAnalysis.jl             --> Package to process the thermal camera data
 │   └── ...

@@ -109,7 +109,7 @@ begin
     z_value = vcat(descendants(opf, :z, ignore_nothing=true)...)
     merged_mesh, face2node = PlantGeom.build_merged_mesh_with_map(opf)
     mesh!(ax, merged_mesh, color=z_value, alpha=0.5)
-    # GLMakie.save("11-outputs/Reconstruction_Plant_$(plant)_$(session).png", fig)
+    # GLMakie.save("10-outputs/Reconstruction_Plant_$(plant)_$(session).png", fig)
     fig
 end
 
@@ -181,4 +181,4 @@ for p in [1, 2, 3, 5]
 end
 fig
 
-save("11-outputs/Reconstructions_LiDAR_all.png", fig)
+save("10-outputs/Reconstructions_LiDAR_all.png", fig)

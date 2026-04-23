@@ -22,8 +22,8 @@ generation_report.html
 *.html
 
 1-code_old/
-12-simulations/
-11-outputs/
+11-simulations/
+10-outputs/
 
 # Data to keep:
 !00-data/picarro_flux/data_mean_flux.csv
@@ -66,7 +66,7 @@ generation_report.html
 !09-database/plant_surface.csv
 !08-reconstruction/translations.csv
 !08-reconstruction/reconstructions.tar.bz2
-!11-outputs/Reconstructions_LiDAR_all.png
+!10-outputs/Reconstructions_LiDAR_all.png
 !website/content/assets/github_clone.png
 !website/content/assets/github_download.png
 .Rproj.user

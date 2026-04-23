@@ -617,7 +617,7 @@ leaf_temperature = open(Bzip2DecompressorStream, "../04-thermal_camera_measureme
         :DateTime_start_output,
         :DateTime_end_output,
         :Tl_mean, :Tl_min, :Tl_max, :Tl_std,
-		:Tl_mean_corrected, :Tl_min_corrected, :Tl_max_corrected
+        :Tl_mean_corrected, :Tl_min_corrected, :Tl_max_corrected
     )
 
     df_
@@ -702,7 +702,7 @@ db_5min = let
         :Tl_min,
         :Tl_max,
         :Tl_std,
-		:Tl_mean_corrected,
+        :Tl_mean_corrected,
         :Tl_min_corrected,
         :Tl_max_corrected,
     )
@@ -790,7 +790,7 @@ end
 
 # ╔═╡ 832320c2-f8b6-4b72-b559-a725509223f5
 pTemp_all = let
-	db_5min_ = subset(db_5min, :Scenario => (x -> x .!= "Mixed"))
+    db_5min_ = subset(db_5min, :Scenario => (x -> x .!= "Mixed"))
     df_ = dropmissing(db_5min_, [:DateTime_end, :Tl_mean_corrected, :Ta_measurement, :Scenario, :Plant])
     transform!(
         groupby(df_, [:Plant, :Scenario, :Sequence]),
@@ -804,7 +804,7 @@ pTemp_all = let
         mapping(:DateTime_start => Time => "Time", "Ta_measurement" => "Temperature (°C)", row=:Scenario, col=:Plant => string) *
         visual(Scatter, color=:red, label="Tair")
 
-    draw(p, axis=(width=150, height=200, xticks=datetimeticks(df_.DateTime_start, Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none), legend=(;orientation=:horizontal, position=:bottom))
+    draw(p, axis=(width=150, height=200, xticks=datetimeticks(df_.DateTime_start, Dates.format.(df_.DateTime_start, "HH:MM"))), facet=(; linkxaxes=:none), legend=(; orientation=:horizontal, position=:bottom))
 end
 
 # ╔═╡ eaed2c19-60a9-4fe2-8788-6143df1062d2
@@ -887,7 +887,7 @@ db_10min = let
         :Tl_mean,
         :Tl_min,
         :Tl_max,
-		:Tl_mean_corrected,
+        :Tl_mean_corrected,
         :Tl_min_corrected,
         :Tl_max_corrected,
         :Tl_std,
@@ -947,7 +947,7 @@ pCO2_all = let
 end
 
 # ╔═╡ 6d1e495e-edf0-4baa-bd43-affc5ce95bf0
-save("../11-outputs/CO2_fluxes_10min.png", pCO2_all)
+save("../10-outputs/CO2_fluxes_10min.png", pCO2_all)
 
 # ╔═╡ 688984ea-7c45-4dc8-97f6-94467a3caa83
 pH2O_all = let
