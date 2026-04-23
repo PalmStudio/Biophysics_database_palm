@@ -453,7 +453,7 @@ begin
         "../../01-climate/climate_notebook.jl",
         "../../02-time-synchronization/time_synchronization_notebook.jl",
         "../../03-CO2/CO2_notebook.jl",
-        "../../04-thermal_camera_measurements/2-visualize_temperature_notebook.jl",
+        "../../04-thermal_camera_measurements/3-visualize_temperature_notebook.jl",
         "../../05-transpiration/transpiration_notebook.jl",
         "../../06-walz/notebook_walz.jl",
         "../../07-spad/notebook_spad.jl",

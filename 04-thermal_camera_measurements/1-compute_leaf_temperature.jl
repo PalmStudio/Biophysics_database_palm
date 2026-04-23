@@ -22,17 +22,17 @@ using CodecBzip2, Tar # For the extraction of the images from the tar.bz2 file
 # Extract the images from the tar.bz2 file. This can take a while, and the
 # images are 60Go of disk space, so make sure you really need to make this.
 open(Bzip2DecompressorStream, "00-data/thermal_camera_images/images.tar.bz2") do io
-    Tar.extract(io, "../00-data/thermal_camera_images/images")
+    Tar.extract(io, "00-data/thermal_camera_images/images")
 end
 
 # Extract the masks from the tar.bz2 file:
-open(Bzip2DecompressorStream, "00-data/thermal_camera_images/thermal_camera_roi_coordinates/coordinates.tar.bz2") do io
+open(Bzip2DecompressorStream, "00-data/thermal_camera_roi_coordinates/coordinates.tar.bz2") do io
     Tar.extract(io, "00-data/thermal_camera_images/coordinates")
 end
 
 # Setting up the paths and climate data:
 img_dir = "00-data/thermal_camera_images/images/images"
-mask_dir = "00-data/thermal_camera_roi_coordinates/coordinates"
+mask_dir = "00-data/thermal_camera_images/coordinates"
 out_dir = @__DIR__
 
 # Climate data (for correcting the leaf temperature from air temperature and humidity):

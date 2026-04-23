@@ -15,7 +15,8 @@ The archive `reconstructions.tar.bz2` contains the meshes reconstructed from the
 There are also three other files:
 
 - `RecapEcotronSelectionDate.xlsx`: the dates of the lidar scans (on which the meshes were reconstructed) and dates of the scenarios
-- `surface.csv`: the evolution of the surface of each leaf in the plant over time, computed from the reconstructed meshes
+- `plant_surface_from_mesh.csv`: the evolution of the total leaf surface of plants over time, computed from the reconstructed meshes
+- `leaf_surface_from_mesh.csv`: the surface of each leaf in the plants on the last date, computed from the reconstructed meshes
 
 The archives were generated with the following commands:
 

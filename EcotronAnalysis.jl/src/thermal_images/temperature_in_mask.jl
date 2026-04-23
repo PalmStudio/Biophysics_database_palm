@@ -85,7 +85,7 @@ function temperature_in_mask(
         return df_temp
     end
 
-    climate_img = select(climate_img, [:Rh_measurement, :Ta_measurement]) # Extract Tair and Rh
+    climate_img = DataFrames.select(climate_img, [:Rh_measurement, :Ta_measurement]) # Extract Tair and Rh
 
     temp_mat = temperature_from_jpg(img_file, climate_img.Ta_measurement[1], climate_img.Rh_measurement[1]) # 1.067s for each image
     # temp_mat = temperature_from_jpg(img_file, 22.0, 0.6)
@@ -97,7 +97,7 @@ function temperature_in_mask(
     )
 
     for (k, v) in mask
-        mask_info_i = filter(:path => ==(k), mask_info)
+        mask_info_i = DataFrames.filter(:path => ==(k), mask_info)
         push!(
             df_temp,
             (mask_temperature(temp_mat, v)...,

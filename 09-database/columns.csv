@@ -1,4 +1,4 @@
-name;Unit;type;Description
+Name;Unit;Type;Description
 DateTime_start;UTC;ISODateTimeFormat;DateTime of the start of the measurement
 DateTime_end;UTC;ISODateTimeFormat;DateTime of the end of the measurement (either the 5-min output measurement window, or the whole 10-min output-input)
 Plant;-;Int;Plant ID
@@ -25,6 +25,9 @@ transpiration_diff_g_s;g plant-1 s-1;Float;Transpiration of the plant, computed 
 Tl_mean;Celsius degree;Float;Average leaf temperature of all pixels in the mask for the leaf
 Tl_min;Celsius degree;Float;Minimum leaf temperature of all pixels in the mask for the leaf
 Tl_max;Celsius degree;Float;Maximum leaf temperature of all pixels in the mask for the leaf
+Tl_mean;Celsius degree;Float;Average corrected leaf temperature of all pixels in the mask for the leaf
+Tl_min;Celsius degree;Float;Minimum corrected leaf temperature of all pixels in the mask for the leaf (corrected the offset using Tleaf-Tair=0 at night)
+Tl_max;Celsius degree;Float;Maximum corrected leaf temperature of all pixels in the mask for the leaf
 Tl_std;Celsius degree;Float;Standard deviation of the leaf temperature of all pixels in the mask for the leaf
 Date_walz;UTC;ISODateFormat;Date of measurement of the response curves on which the parameters are fitted on (VcMaxRef, JMaxRef, RdRef, g0 and g1)
 Leaf_walz;ID;Int;ID of the leaf on which the response curve was measured
